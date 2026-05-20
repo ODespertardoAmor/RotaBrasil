@@ -105,6 +105,7 @@
             font-weight:bold;
             cursor:pointer;
             transition:0.3s;
+            margin-bottom:10px;
         }
 
         button:hover{
@@ -119,6 +120,10 @@
         .online{
             background:#059669;
             margin-bottom:20px;
+        }
+
+        .register{
+            background:#2563eb;
         }
 
         .corrida{
@@ -160,7 +165,7 @@
         <div class="card" id="loginCard">
 
             <img
-                src="assets/logo.jpg"
+                src="assets/logo.png"
                 class="logo"
             >
 
@@ -182,6 +187,13 @@
                 Entrar
             </button>
 
+            <button
+                class="register"
+                onclick="register()"
+            >
+                Criar Conta
+            </button>
+
             <p class="status" id="loginStatus"></p>
 
         </div>
@@ -191,7 +203,7 @@
         <div class="card dashboard" id="dashboard">
 
             <img
-                src="assets/logo.jpg"
+                src="assets/logo.png"
                 class="logo"
             >
 
@@ -213,7 +225,7 @@
     <script>
 
         // =========================
-        // URL BACKEND RENDER
+        // API RENDER
         // =========================
 
         const API =
@@ -271,6 +283,8 @@
                 const data =
                 await response.json()
 
+                console.log(data)
+
                 if(data.token){
 
                     localStorage.setItem(
@@ -296,13 +310,80 @@
                 }else{
 
                     status.innerHTML =
-                    data.erro
+                    data.erro || "Erro login"
                 }
 
-            }catch{
+            }catch(error){
+
+                console.log(error)
 
                 status.innerHTML =
                 "Erro servidor"
+            }
+        }
+
+        // =========================
+        // REGISTER
+        // =========================
+
+        async function register(){
+
+            const email =
+            document.getElementById(
+                "email"
+            ).value
+
+            const senha =
+            document.getElementById(
+                "senha"
+            ).value
+
+            try{
+
+                const response = await fetch(
+
+                    API + "/register",
+
+                    {
+
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                            "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            nome:"Motorista",
+
+                            email,
+
+                            senha,
+
+                            telefone:"99999",
+
+                            tipo:"motorista",
+
+                            carro:"Uno",
+
+                            placa:"ABC1234"
+                        })
+                    }
+                )
+
+                const data =
+                await response.json()
+
+                console.log(data)
+
+                alert("Conta criada")
+
+            }catch(error){
+
+                console.log(error)
+
+                alert("Erro cadastro")
             }
         }
 
