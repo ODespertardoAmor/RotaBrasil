@@ -31,8 +31,11 @@ app.config["SECRET_KEY"] = "segredo"
 
 app.config["JWT_SECRET_KEY"] = "jwtsegredo"
 
+#app.config["SQLALCHEMY_DATABASE_URI"] = \
+#"postgresql://postgres:senha@localhost/uber_app"
+
 app.config["SQLALCHEMY_DATABASE_URI"] = \
-"postgresql://postgres:senha@localhost/uber_app"
+"sqlite:///uber.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
