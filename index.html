@@ -240,88 +240,75 @@
         // =========================
         // LOGIN
         // =========================
-
         async function login(){
 
-            const email =
-            document.getElementById(
-                "email"
-            ).value
+    const email =
+    document.getElementById(
+        "email"
+    ).value
 
-            const senha =
-            document.getElementById(
-                "senha"
-            ).value
+    const senha =
+    document.getElementById(
+        "senha"
+    ).value
 
-            const status =
-            document.getElementById(
-                "loginStatus"
-            )
+    const status =
+    document.getElementById(
+        "loginStatus"
+    )
 
-            try{
+    try{
 
-                const response = await fetch(
+        const response = await fetch(
 
-                    API + "/login",
+            API + "/login",
 
-                    {
-                        method:"POST",
+            {
 
-                        headers:{
-                            "Content-Type":
-                            "application/json"
-                        },
+                method:"POST",
 
-                        body: JSON.stringify({
+                headers:{
+                    "Content-Type":
+                    "application/json"
+                },
 
-                            email,
-                            senha
-                        })
-                    }
-                )
+                body: JSON.stringify({
 
-                const data =
-                await response.json()
-
-                console.log(data)
-
-                if(data.token){
-
-                    localStorage.setItem(
-                        "token",
-                        data.token
-                    )
-
-                    localStorage.setItem(
-                        "user",
-                        JSON.stringify(data.user)
-                    )
-
-                    user = data.user
-
-                    document.getElementById(
-                        "loginCard"
-                    ).style.display = "none"
-
-                    document.getElementById(
-                        "dashboard"
-                    ).style.display = "block"
-
-                }else{
-
-                    status.innerHTML =
-                    data.erro || "Erro login"
-                }
-
-            }catch(error){
-
-                console.log(error)
-
-                status.innerHTML =
-                "Erro servidor"
+                    email,
+                    senha
+                })
             }
+        )
+
+        const data =
+        await response.json()
+
+        console.log(data)
+
+        if(response.ok){
+
+            alert("Login feito")
+
+            console.log(data)
+
+        }else{
+
+            status.innerHTML =
+            data.erro || "Erro login"
         }
 
+    }catch(error){
+
+        console.log(error)
+
+        status.innerHTML =
+        "Erro servidor"
+    }
+}
+
+        
+
+                    
         // =========================
         // REGISTER
         // =========================
