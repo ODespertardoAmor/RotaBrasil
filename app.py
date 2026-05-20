@@ -512,7 +512,7 @@ def listar_motoristas():
 
 @app.route("/criar_banco")
 def criar_banco():
-
+    with app.app_context():
     db.create_all()
 
     return jsonify({
