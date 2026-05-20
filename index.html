@@ -1,1 +1,394 @@
-calma
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Motorista Uber Clone</title>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, Helvetica, sans-serif;
+        }
+
+        body{
+            background:#111827;
+            color:white;
+        }
+
+        .container{
+            width:100%;
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+        }
+
+        .card{
+            width:100%;
+            max-width:400px;
+            background:#1f2937;
+            padding:30px;
+            border-radius:20px;
+            box-shadow:0 0 20px rgba(0,0,0,0.5);
+        }
+
+        h1{
+            margin-bottom:25px;
+            text-align:center;
+            font-size:32px;
+        }
+
+        input{
+            width:100%;
+            padding:15px;
+            margin-bottom:15px;
+            border:none;
+            border-radius:10px;
+            background:#374151;
+            color:white;
+            font-size:16px;
+        }
+
+        button{
+            width:100%;
+            padding:15px;
+            border:none;
+            border-radius:10px;
+            background:#10b981;
+            color:white;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        button:hover{
+            opacity:0.9;
+        }
+
+        .dashboard{
+            display:none;
+        }
+
+        .online{
+            background:#059669;
+            margin-bottom:20px;
+        }
+
+        .corrida{
+            background:#374151;
+            padding:20px;
+            border-radius:15px;
+            margin-top:20px;
+        }
+
+        .corrida h2{
+            margin-bottom:15px;
+        }
+
+        .corrida p{
+            margin-bottom:10px;
+        }
+
+        .aceitar{
+            margin-top:15px;
+            background:#22c55e;
+        }
+
+        .status{
+            text-align:center;
+            margin-top:20px;
+            color:#9ca3af;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- LOGIN -->
+
+        <div class="card" id="loginCard">
+
+            <h1>Motorista</h1>
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Email"
+            >
+
+            <input
+                type="password"
+                id="senha"
+                placeholder="Senha"
+            >
+
+            <button onclick="login()">
+                Entrar
+            </button>
+
+            <p class="status" id="loginStatus"></p>
+
+        </div>
+
+        <!-- DASHBOARD -->
+
+        <div class="card dashboard" id="dashboard">
+
+            <h1>Painel Motorista</h1>
+
+            <button
+                class="online"
+                onclick="ficarOnline()"
+            >
+                FICAR ONLINE
+            </button>
+
+            <div id="corridaArea"></div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        const API =
+        "http://127.0.0.1:5000"
+
+        const socket = io(API)
+
+        let user = null
+
+        let corridaAtual = null
+
+        // =========================
+        // LOGIN
+        // =========================
+
+        async function login(){
+
+            const email =
+            document.getElementById(
+                "email"
+            ).value
+
+            const senha =
+            document.getElementById(
+                "senha"
+            ).value
+
+            const status =
+            document.getElementById(
+                "loginStatus"
+            )
+
+            try{
+
+                const response = await fetch(
+
+                    API + "/login",
+
+                    {
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                            "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            email,
+                            senha
+                        })
+                    }
+                )
+
+                const data =
+                await response.json()
+
+                if(data.token){
+
+                    localStorage.setItem(
+                        "token",
+                        data.token
+                    )
+
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(data.user)
+                    )
+
+                    user = data.user
+
+                    document.getElementById(
+                        "loginCard"
+                    ).style.display = "none"
+
+                    document.getElementById(
+                        "dashboard"
+                    ).style.display = "block"
+
+                }else{
+
+                    status.innerHTML =
+                    data.erro
+                }
+
+            }catch{
+
+                status.innerHTML =
+                "Erro servidor"
+            }
+        }
+
+        // =========================
+        // FICAR ONLINE
+        // =========================
+
+        function ficarOnline(){
+
+            alert("Motorista Online")
+
+            navigator.geolocation.watchPosition(
+
+                (position)=>{
+
+                    socket.emit(
+
+                        "atualizar_localizacao",
+
+                        {
+
+                            motorista_id:user.id,
+
+                            latitude:
+                            position.coords.latitude,
+
+                            longitude:
+                            position.coords.longitude
+                        }
+                    )
+
+                    console.log(
+                        "GPS enviado"
+                    )
+                }
+            )
+        }
+
+        // =========================
+        // RECEBER CORRIDA
+        // =========================
+
+        socket.on(
+
+            "nova_corrida",
+
+            (data)=>{
+
+                corridaAtual = data
+
+                mostrarCorrida(data)
+            }
+        )
+
+        // =========================
+        // MOSTRAR CORRIDA
+        // =========================
+
+        function mostrarCorrida(data){
+
+            const area =
+            document.getElementById(
+                "corridaArea"
+            )
+
+            area.innerHTML = `
+
+                <div class="corrida">
+
+                    <h2>Nova Corrida</h2>
+
+                    <p>
+                        <strong>Origem:</strong>
+                        ${data.origem}
+                    </p>
+
+                    <p>
+                        <strong>Destino:</strong>
+                        ${data.destino}
+                    </p>
+
+                    <p>
+                        <strong>Valor:</strong>
+                        R$ ${data.valor}
+                    </p>
+
+                    <button
+                        class="aceitar"
+                        onclick="aceitarCorrida()"
+                    >
+                        Aceitar Corrida
+                    </button>
+
+                </div>
+            `
+        }
+
+        // =========================
+        // ACEITAR CORRIDA
+        // =========================
+
+        async function aceitarCorrida(){
+
+            const token =
+            localStorage.getItem("token")
+
+            await fetch(
+
+                API +
+
+                "/aceitar_corrida/" +
+
+                corridaAtual.corrida_id,
+
+                {
+
+                    method:"POST",
+
+                    headers:{
+
+                        Authorization:
+                        "Bearer " + token
+                    }
+                }
+            )
+
+            alert("Corrida aceita")
+
+            document.getElementById(
+                "corridaArea"
+            ).innerHTML = ""
+        }
+
+    </script>
+
+</body>
+
+</html>
