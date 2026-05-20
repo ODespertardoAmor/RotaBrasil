@@ -3,32 +3,55 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Teste API</title>
+  <title>Teste Register</title>
 </head>
 
 <body>
 
-  <button onclick="testar()">
-    Testar API
+  <button onclick="register()">
+    Criar Conta
   </button>
 
   <script>
 
-    async function testar(){
+    async function register(){
 
       try{
 
         const response = await fetch(
 
-          "https://rotabrasil-v1cf.onrender.com/criar_banco"
+          "https://rotabrasil-v1cf.onrender.com/register",
+
+          {
+
+            method:"POST",
+
+            headers:{
+              "Content-Type":
+              "application/json"
+            },
+
+            body: JSON.stringify({
+
+              nome:"Joao",
+
+              email:"joao@gmail.com",
+
+              senha:"123",
+
+              telefone:"99999",
+
+              tipo:"motorista"
+            })
+          }
         )
 
-        const data =
-        await response.json()
+        const text =
+        await response.text()
 
-        console.log(data)
+        console.log(text)
 
-        alert(JSON.stringify(data))
+        alert(text)
 
       }catch(error){
 
