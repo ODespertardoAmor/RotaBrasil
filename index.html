@@ -21,7 +21,24 @@
         }
 
         body{
-            background:#111827;
+
+            background-image:
+
+            linear-gradient(
+                rgba(0,0,0,0.7),
+                rgba(0,0,0,0.7)
+            ),
+
+            url("assets/fundo.jpg");
+
+            background-size:cover;
+
+            background-position:center;
+
+            background-repeat:no-repeat;
+
+            background-attachment:fixed;
+
             color:white;
         }
 
@@ -37,10 +54,22 @@
         .card{
             width:100%;
             max-width:400px;
-            background:#1f2937;
+
+            background:rgba(31,41,55,0.85);
+
+            backdrop-filter:blur(10px);
+
             padding:30px;
+
             border-radius:20px;
-            box-shadow:0 0 20px rgba(0,0,0,0.5);
+
+            box-shadow:0 0 25px rgba(0,0,0,0.6);
+        }
+
+        .logo{
+            width:120px;
+            display:block;
+            margin:0 auto 20px;
         }
 
         h1{
@@ -58,6 +87,11 @@
             background:#374151;
             color:white;
             font-size:16px;
+            outline:none;
+        }
+
+        input::placeholder{
+            color:#d1d5db;
         }
 
         button{
@@ -75,6 +109,7 @@
 
         button:hover{
             opacity:0.9;
+            transform:scale(1.02);
         }
 
         .dashboard{
@@ -109,7 +144,7 @@
         .status{
             text-align:center;
             margin-top:20px;
-            color:#9ca3af;
+            color:#d1d5db;
         }
 
     </style>
@@ -123,6 +158,11 @@
         <!-- LOGIN -->
 
         <div class="card" id="loginCard">
+
+            <img
+                src="assets/logo.png"
+                class="logo"
+            >
 
             <h1>Motorista</h1>
 
@@ -150,6 +190,11 @@
 
         <div class="card dashboard" id="dashboard">
 
+            <img
+                src="assets/logo.png"
+                class="logo"
+            >
+
             <h1>Painel Motorista</h1>
 
             <button
@@ -167,8 +212,12 @@
 
     <script>
 
+        // =========================
+        // URL BACKEND RENDER
+        // =========================
+
         const API =
-        "http://127.0.0.1:5000"
+        "https://SEUAPP.onrender.com"
 
         const socket = io(API)
 
