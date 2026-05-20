@@ -2,66 +2,535 @@
 <html lang="pt-br">
 
 <head>
-  <meta charset="UTF-8">
-  <title>Teste Register</title>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Motorista Uber Clone</title>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, Helvetica, sans-serif;
+        }
+
+        body{
+
+            background-image:
+
+            linear-gradient(
+                rgba(0,0,0,0.7),
+                rgba(0,0,0,0.7)
+            ),
+
+            url("assets/fundo.jpg");
+
+            background-size:cover;
+
+            background-position:center;
+
+            background-repeat:no-repeat;
+
+            background-attachment:fixed;
+
+            color:white;
+        }
+
+        .container{
+            width:100%;
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+        }
+
+        .card{
+            width:100%;
+            max-width:400px;
+
+            background:rgba(31,41,55,0.88);
+
+            backdrop-filter:blur(10px);
+
+            padding:30px;
+
+            border-radius:20px;
+
+            box-shadow:0 0 25px rgba(0,0,0,0.6);
+        }
+
+        .logo{
+            width:120px;
+            display:block;
+            margin:0 auto 20px;
+        }
+
+        h1{
+            margin-bottom:25px;
+            text-align:center;
+            font-size:32px;
+        }
+
+        input{
+            width:100%;
+            padding:15px;
+            margin-bottom:15px;
+            border:none;
+            border-radius:10px;
+            background:#374151;
+            color:white;
+            font-size:16px;
+            outline:none;
+        }
+
+        input::placeholder{
+            color:#d1d5db;
+        }
+
+        button{
+            width:100%;
+            padding:15px;
+            border:none;
+            border-radius:10px;
+            background:#10b981;
+            color:white;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            transition:0.3s;
+            margin-bottom:10px;
+        }
+
+        button:hover{
+            opacity:0.9;
+            transform:scale(1.02);
+        }
+
+        .dashboard{
+            display:none;
+        }
+
+        .online{
+            background:#059669;
+            margin-bottom:20px;
+        }
+
+        .register{
+            background:#2563eb;
+        }
+
+        .corrida{
+            background:#374151;
+            padding:20px;
+            border-radius:15px;
+            margin-top:20px;
+        }
+
+        .corrida h2{
+            margin-bottom:15px;
+        }
+
+        .corrida p{
+            margin-bottom:10px;
+        }
+
+        .aceitar{
+            margin-top:15px;
+            background:#22c55e;
+        }
+
+        .status{
+            text-align:center;
+            margin-top:20px;
+            color:#d1d5db;
+        }
+
+    </style>
+
 </head>
 
 <body>
 
-  <button onclick="register()">
-    Criar Conta
-  </button>
+    <div class="container">
 
-  <script>
+        <!-- LOGIN -->
 
-    async function register(){
+        <div class="card" id="loginCard">
 
-      try{
+            <img
+                src="assets/logo.png"
+                class="logo"
+            >
 
-        const response = await fetch(
+            <h1>Motorista</h1>
 
-          "https://rotabrasil-v1cf.onrender.com/register",
+            <input
+                type="email"
+                id="email"
+                placeholder="Email"
+            >
 
-          {
+            <input
+                type="password"
+                id="senha"
+                placeholder="Senha"
+            >
 
-            method:"POST",
+            <button onclick="login()">
+                Entrar
+            </button>
 
-            headers:{
-              "Content-Type":
-              "application/json"
-            },
+            <button
+                class="register"
+                onclick="register()"
+            >
+                Criar Conta
+            </button>
 
-            body: JSON.stringify({
+            <p class="status" id="loginStatus"></p>
 
-              nome:"Joao",
+        </div>
 
-              email:"joao@gmail.com",
+        <!-- DASHBOARD -->
 
-              senha:"123",
+        <div class="card dashboard" id="dashboard">
 
-              telefone:"99999",
+            <img
+                src="assets/logo.png"
+                class="logo"
+            >
 
-              tipo:"motorista"
-            })
-          }
+            <h1>Painel Motorista</h1>
+
+            <button
+                class="online"
+                onclick="ficarOnline()"
+            >
+                FICAR ONLINE
+            </button>
+
+            <div id="corridaArea"></div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        // =====================================
+        // API
+        // =====================================
+
+        const API =
+        "https://rotabrasil-v1cf.onrender.com"
+
+        const socket = io(API)
+
+        let user = null
+
+        let corridaAtual = null
+
+        // =====================================
+        // REGISTER
+        // =====================================
+
+        async function register(){
+
+            const email =
+            document.getElementById(
+                "email"
+            ).value
+
+            const senha =
+            document.getElementById(
+                "senha"
+            ).value
+
+            const status =
+            document.getElementById(
+                "loginStatus"
+            )
+
+            try{
+
+                const response = await fetch(
+
+                    API + "/register",
+
+                    {
+
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                            "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            nome:"Motorista",
+
+                            email,
+
+                            senha,
+
+                            telefone:"99999",
+
+                            tipo:"motorista"
+                        })
+                    }
+                )
+
+                const text =
+                await response.text()
+
+                console.log(text)
+
+                status.innerHTML =
+                "Conta criada com sucesso"
+
+            }catch(error){
+
+                console.log(error)
+
+                status.innerHTML =
+                "Erro cadastro"
+            }
+        }
+
+        // =====================================
+        // LOGIN
+        // =====================================
+
+        async function login(){
+
+            const email =
+            document.getElementById(
+                "email"
+            ).value
+
+            const senha =
+            document.getElementById(
+                "senha"
+            ).value
+
+            const status =
+            document.getElementById(
+                "loginStatus"
+            )
+
+            try{
+
+                const response = await fetch(
+
+                    API + "/login",
+
+                    {
+
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                            "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            email,
+                            senha
+                        })
+                    }
+                )
+
+                const data =
+                await response.json()
+
+                console.log(data)
+
+                if(data.token){
+
+                    localStorage.setItem(
+                        "token",
+                        data.token
+                    )
+
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(data.user)
+                    )
+
+                    user = data.user
+
+                    document.getElementById(
+                        "loginCard"
+                    ).style.display = "none"
+
+                    document.getElementById(
+                        "dashboard"
+                    ).style.display = "block"
+
+                }else{
+
+                    status.innerHTML =
+                    data.erro || "Erro login"
+                }
+
+            }catch(error){
+
+                console.log(error)
+
+                status.innerHTML =
+                "Erro servidor"
+            }
+        }
+
+        // =====================================
+        // FICAR ONLINE
+        // =====================================
+
+        function ficarOnline(){
+
+            alert("Motorista Online")
+
+            navigator.geolocation.watchPosition(
+
+                (position)=>{
+
+                    socket.emit(
+
+                        "atualizar_localizacao",
+
+                        {
+
+                            motorista_id:user.id,
+
+                            latitude:
+                            position.coords.latitude,
+
+                            longitude:
+                            position.coords.longitude
+                        }
+                    )
+
+                    console.log(
+                        "GPS enviado"
+                    )
+                }
+            )
+        }
+
+        // =====================================
+        // RECEBER CORRIDA
+        // =====================================
+
+        socket.on(
+
+            "nova_corrida",
+
+            (data)=>{
+
+                corridaAtual = data
+
+                mostrarCorrida(data)
+            }
         )
 
-        const text =
-        await response.text()
+        // =====================================
+        // MOSTRAR CORRIDA
+        // =====================================
 
-        console.log(text)
+        function mostrarCorrida(data){
 
-        alert(text)
+            const area =
+            document.getElementById(
+                "corridaArea"
+            )
 
-      }catch(error){
+            area.innerHTML = `
 
-        console.log(error)
+                <div class="corrida">
 
-        alert("erro")
-      }
-    }
+                    <h2>Nova Corrida</h2>
 
-  </script>
+                    <p>
+                        <strong>Origem:</strong>
+                        ${data.origem}
+                    </p>
+
+                    <p>
+                        <strong>Destino:</strong>
+                        ${data.destino}
+                    </p>
+
+                    <p>
+                        <strong>Valor:</strong>
+                        R$ ${data.valor}
+                    </p>
+
+                    <button
+                        class="aceitar"
+                        onclick="aceitarCorrida()"
+                    >
+                        Aceitar Corrida
+                    </button>
+
+                </div>
+            `
+        }
+
+        // =====================================
+        // ACEITAR CORRIDA
+        // =====================================
+
+        async function aceitarCorrida(){
+
+            const token =
+            localStorage.getItem("token")
+
+            try{
+
+                await fetch(
+
+                    API +
+
+                    "/aceitar_corrida/" +
+
+                    corridaAtual.corrida_id,
+
+                    {
+
+                        method:"POST",
+
+                        headers:{
+
+                            Authorization:
+                            "Bearer " + token
+                        }
+                    }
+                )
+
+                alert("Corrida aceita")
+
+                document.getElementById(
+                    "corridaArea"
+                ).innerHTML = ""
+
+            }catch(error){
+
+                console.log(error)
+
+                alert("Erro ao aceitar corrida")
+            }
+        }
+
+    </script>
 
 </body>
 
