@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Motorista - Rota Brasil</title>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -46,6 +48,11 @@ font-weight:bold;
 cursor:pointer;
 margin-top:10px;
 transition:0.2s;
+font-size:16px;
+}
+
+button:hover{
+transform:scale(1.02);
 }
 
 .online{
@@ -63,8 +70,20 @@ background:#2563eb;
 color:white;
 }
 
-button:hover{
-transform:scale(1.02);
+.badge{
+display:inline-block;
+padding:6px 12px;
+border-radius:10px;
+background:#ef4444;
+font-size:12px;
+margin-bottom:10px;
+font-weight:bold;
+}
+
+.status{
+text-align:center;
+margin-top:10px;
+font-weight:bold;
 }
 
 .corrida{
@@ -75,28 +94,25 @@ margin-top:10px;
 border:1px solid #374151;
 }
 
-.badge{
-display:inline-block;
-padding:5px 10px;
-border-radius:10px;
-background:#22c55e;
-font-size:12px;
-margin-bottom:10px;
-}
-
-.status{
-text-align:center;
+.mapa-ilustrativo{
+width:100%;
+height:180px;
+border-radius:12px;
 margin-top:10px;
-font-weight:bold;
+background:#0f172a;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-size:18px;
+text-align:center;
+padding:10px;
+box-sizing:border-box;
 }
 
-/* Estilo para o mapa */
-.mapa-ilustrativo {
-    width: 100%;
-    height: 200px;
-    border-radius: 12px;
-    margin-top: 10px;
-    border: none;
+.info{
+margin-top:10px;
+line-height:1.7;
 }
 
 </style>
@@ -113,7 +129,9 @@ font-weight:bold;
 
 <div class="card">
 
-<div class="badge" id="statusBadge">OFFLINE</div>
+<div class="badge" id="statusBadge">
+OFFLINE
+</div>
 
 <button class="online" onclick="ficarOnline()">
 Ficar Online
@@ -143,119 +161,245 @@ Nenhuma corrida no momento
 
 <script>
 
-const API = "https://rotabrasil-v1cf.onrender.com";
+const API =
+"https://rotabrasil-v1cf.onrender.com";
+
 const socket = io(API);
 
-let user = JSON.parse(localStorage.getItem("user"));
+let user =
+JSON.parse(localStorage.getItem("user"));
 
-// Função para reproduzir a voz
-function falarMensagem(texto) {
-    if ('speechSynthesis' in window) {
-        const synth = window.speechSynthesis;
-        const utterance = new SpeechSynthesisUtterance(texto);
-        utterance.lang = 'pt-BR'; // Define o idioma para português do Brasil
-        utterance.volume = 1; // Volume máximo
-        utterance.rate = 1; // Velocidade normal
-        utterance.pitch = 1; // Tom normal
-        synth.speak(utterance);
-    }
+/* VERIFICAR LOGIN */
+
+if(!user){
+
+alert("Faça login primeiro");
+
+}
+
+/* VOZ */
+
+function falarMensagem(texto){
+
+if ('speechSynthesis' in window){
+
+const synth =
+window.speechSynthesis;
+
+const utterance =
+new SpeechSynthesisUtterance(texto);
+
+utterance.lang = 'pt-BR';
+utterance.volume = 1;
+utterance.rate = 1;
+utterance.pitch = 1;
+
+synth.speak(utterance);
+
+}
+
 }
 
 /* ONLINE */
+
 async function ficarOnline(){
 
-await fetch(API+"/ficar_online/"+user.id,{
+try{
+
+await fetch(
+API+"/ficar_online/"+user.id,
+{
 method:"POST"
-});
+}
+);
 
-document.getElementById("statusBadge").innerText = "ONLINE";
-document.getElementById("statusBadge").style.background = "#10b981";
+document.getElementById(
+"statusBadge"
+).innerText = "ONLINE";
 
-document.getElementById("statusText").innerText =
+document.getElementById(
+"statusBadge"
+).style.background = "#10b981";
+
+document.getElementById(
+"statusText"
+).innerText =
 "Você está recebendo corridas 🚗";
+
+}catch(error){
+
+console.log(error);
+
+}
+
 }
 
 /* OFFLINE */
-async function ficarOffline(){
 
-document.getElementById("statusBadge").innerText = "OFFLINE";
-document.getElementById("statusBadge").style.background = "#ef4444";
+function ficarOffline(){
 
-document.getElementById("statusText").innerText =
+document.getElementById(
+"statusBadge"
+).innerText = "OFFLINE";
+
+document.getElementById(
+"statusBadge"
+).style.background = "#ef4444";
+
+document.getElementById(
+"statusText"
+).innerText =
 "Você está offline ❌";
-}/*cancelar */
-socket.on("corrida_cancelada",(data)=>{
 
-document.getElementById("corridasArea").innerHTML = `
+}
+
+/* CORRIDA CANCELADA */
+
+socket.on(
+"corrida_cancelada",
+(data)=>{
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
 
 <div class="corrida">
 
-<h3 style="color:red;">
+<h3 style="color:#ef4444;">
 ❌ Corrida cancelada
 </h3>
+
+<p>
+O passageiro cancelou a corrida
+</p>
 
 </div>
 
 `;
 
-});
+document.getElementById(
+"statusText"
+).innerText =
+"Corrida cancelada";
+
+}
+);
 
 /* NOVA CORRIDA */
-socket.on("nova_corrida",(data)=>{
 
-    // Toca a voz quando chega uma nova corrida
-    falarMensagem("Você recebeu uma corrida");
+socket.on(
+"nova_corrida",
+(data)=>{
 
-    document.getElementById("corridasArea").innerHTML = `
+falarMensagem(
+"Você recebeu uma nova corrida"
+);
 
-    <div class="corrida">
+document.getElementById(
+"corridasArea"
+).innerHTML = `
 
-    <h3>🚗 Nova corrida</h3>
+<div class="corrida">
 
-    <p><b>Passageiro:</b> ${data.passageiro_nome}</p>
+<h3>
+🚗 Nova corrida
+</h3>
 
-    <p><b>Origem:</b> ${data.origem}</p>
+<div class="info">
 
-    <p><b>Destino:</b> ${data.destino}</p>
+<p>
+<b>Passageiro:</b>
+${data.passageiro_nome || "Passageiro"}
+</p>
 
-    <p><b>Valor:</b> R$ ${data.valor}</p>
+<p>
+<b>Origem:</b>
+${data.origem}
+</p>
 
-    <!-- Mapa ilustrativo -->
-    <iframe 
-        class="mapa-ilustrativo"
-        src="https://www.google.com/maps/embed/v1/directions?key=AIzaSyDyJPPlnIMOLp20Ef1LlTong8rYtTaNJNc&origin=${encodeURIComponent(data.origem)}&destination=${encodeURIComponent(data.destino)}&language=pt-BR"
-        allowfullscreen>
-    </iframe>
+<p>
+<b>Destino:</b>
+${data.destino}
+</p>
 
-    <button class="accept"
-    onclick="aceitar(${data.corrida_id})">
-    Aceitar corrida
-    </button>
+<p>
+<b>Valor:</b>
+R$ ${data.valor}
+</p>
 
-    </div>
+</div>
 
-    `;
+<div class="mapa-ilustrativo">
 
-});
+🗺️ Rota da corrida
 
+<br><br>
 
+${data.origem}
+
+⬇️
+
+${data.destino}
+
+</div>
+
+<button
+class="accept"
+onclick="aceitar(${data.corrida_id})"
+>
+
+Aceitar corrida
+
+</button>
+
+</div>
+
+`;
+
+}
+);
 
 /* ACEITAR */
+
 async function aceitar(id){
 
-const token = localStorage.getItem("token");
+try{
 
-const res = await fetch(API+"/aceitar_corrida/"+id,{
+const token =
+localStorage.getItem("token");
+
+const response =
+await fetch(
+
+API+"/aceitar_corrida/"+id,
+
+{
 method:"POST",
+
 headers:{
-"Authorization":"Bearer "+token
+"Authorization":
+"Bearer "+token
 }
-});
+}
 
-const data = await res.json();
+);
 
-document.getElementById("statusText").innerText =
-"🚗 Corrida aceita com sucesso!";
+const data =
+await response.json();
+
+console.log(data);
+
+document.getElementById(
+"statusText"
+).innerText =
+"🚗 Corrida aceita com sucesso";
+
+}catch(error){
+
+console.log(error);
+
+}
+
 }
 
 </script>
