@@ -1,191 +1,39 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+<!DOCTYPE html><html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Motorista - Rota Brasil</title>
-
+<title>Motorista</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Arial;
-}
-
-body{
-background:linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.7)), url('assets/fundo.jpg');
-background-size:cover;
-background-position:center;
-color:white;
-}
-
-header{
-padding:20px;
-background:#111827;
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.logo{
-font-size:24px;
-font-weight:bold;
-}
-
-.container{
-padding:20px;
-max-width:900px;
-margin:auto;
-}
-
-.card{
-background:rgba(31,41,55,0.92);
-padding:20px;
-border-radius:15px;
-margin-bottom:15px;
-}
-
-button{
-width:100%;
-padding:15px;
-border:none;
-border-radius:12px;
-font-weight:bold;
-cursor:pointer;
-margin-top:10px;
-}
-
-.online{
-background:#10b981;
-color:white;
-}
-
-.offline{
-background:#ef4444;
-color:white;
-}
-
-.accept{
-background:#2563eb;
-color:white;
-}
-
-.corrida{
-background:#374151;
-padding:15px;
-border-radius:12px;
-margin-top:10px;
-}
-
-.status{
-margin-top:10px;
-text-align:center;
-font-weight:bold;
-}
-
-</style>
-
 </head>
-<body>
+<body><h2>Motorista</h2><button onclick="online()">Ficar online</button> <button onclick="offline()">Ficar offline</button>
 
-<header>
-<div class="logo">🚗 Motorista Rota Brasil</div>
-</header>
+<div id="corridas"></div><script>
 
-<div class="container">
+const API="https://rotabrasil-v1cf.onrender.com"
+const socket=io(API)
+const user=JSON.parse(localStorage.getItem("user"))
 
-<div class="card">
-
-<h2>Status do Motorista</h2>
-
-<button class="online" onclick="ficarOnline()">
-Ficar Online
-</button>
-
-<button class="offline" onclick="ficarOffline()">
-Ficar Offline
-</button>
-
-<p class="status" id="statusMotorista">Offline</p>
-
-</div>
-
-<div class="card">
-
-<h2>Corridas Recebidas</h2>
-
-<div id="corridasArea">
-Nenhuma corrida no momento
-</div>
-
-</div>
-
-</div>
-
-<script>
-
-const API = "https://rotabrasil-v1cf.onrender.com";
-const socket = io(API);
-
-let motorista = null;
-let corridaAtual = null;
-
-// carregar user
-motorista = JSON.parse(localStorage.getItem("user"));
-
-// ONLINE
-async function ficarOnline(){
-
-await fetch(API+"/ficar_online/"+motorista.id,{method:"POST"});
-
-document.getElementById("statusMotorista").innerHTML = "🟢 Online";
+async function online(){
+await fetch(API+"/ficar_online/"+user.id,{method:"POST"})
 }
 
-// OFFLINE
-async function ficarOffline(){
+socket.on("nova_corrida",(d)=>{
 
-await fetch(API+"/ficar_offline/"+motorista.id,{method:"POST"});
+document.getElementById("corridas").innerHTML=`
+<p>${d.origem} → ${d.destino} R$${d.valor}</p>
+<button onclick="aceitar(${d.corrida_id})">Aceitar</button>
+`
+})
 
-document.getElementById("statusMotorista").innerHTML = "🔴 Offline";
+async function aceitar(id){
+
+const token=localStorage.getItem("token")
+
+await fetch(API+"/aceitar_corrida/"+id,{
+method:"POST",
+headers:{"Authorization":"Bearer "+token}
+})
+
+alert("aceita")
 }
 
-// RECEBER CORRIDA
-socket.on("nova_corrida",(data)=>{
-
-const area = document.getElementById("corridasArea");
-
-area.innerHTML = `
-
-<div class="corrida">
-<b>Nova Corrida</b><br><br>
-Origem: ${data.origem}<br>
-Destino: ${data.destino}<br>
-Valor: R$ ${data.valor}<br>
-
-<button class="accept" onclick="aceitarCorrida(${data.corrida_id})">
-Aceitar Corrida
-</button>
-
-</div>
-`;
-
-});
-
-// ACEITAR CORRIDA
-async function aceitarCorrida(id){
-
-corridaAtual = id;
-
-await fetch(API+"/aceitar_corrida/"+id,{method:"POST"});
-
-document.getElementById("corridasArea").innerHTML = "🚗 Corrida aceita!";
-}
-
-</script>
-
-</body>
+</script></body>
 </html>
