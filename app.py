@@ -499,13 +499,32 @@ def atualizar_localizacao(data):
 # LISTAR MOTORISTAS
 # =========================================
 
+
 @app.route("/motoristas_online")
 def listar_motoristas():
 
-    return jsonify(
-        motoristas_online
-    )
+    motoristas = Motorista.query.filter_by(
+        online=True
+    ).all()
 
+    lista = []
+
+    for m in motoristas:
+
+        user = User.query.get(m.user_id)
+
+        lista.append({
+
+            "id":m.id,
+
+            "nome":user.nome,
+
+            "carro":m.carro,
+
+            "placa":m.placa
+        })
+
+    return jsonify(lista)
 # =========================================
 # CRIAR BANCO
 # =========================================
