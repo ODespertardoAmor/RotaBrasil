@@ -170,13 +170,18 @@ document.getElementById("corridasArea").innerHTML = `
 
 <div class="corrida">
 
-<h4>🚗 Nova Corrida</h4>
+<h3>🚗 Nova corrida</h3>
+
+<p><b>Passageiro:</b> ${data.passageiro_nome}</p>
 
 <p><b>Origem:</b> ${data.origem}</p>
+
 <p><b>Destino:</b> ${data.destino}</p>
+
 <p><b>Valor:</b> R$ ${data.valor}</p>
 
-<button class="accept" onclick="aceitar(${data.corrida_id})">
+<button class="accept"
+onclick="aceitar(${data.corrida_id})">
 Aceitar corrida
 </button>
 
@@ -185,6 +190,8 @@ Aceitar corrida
 `;
 
 });
+
+
 
 /* ACEITAR */
 async function aceitar(id){
