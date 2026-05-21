@@ -183,7 +183,22 @@ document.getElementById("statusBadge").style.background = "#ef4444";
 
 document.getElementById("statusText").innerText =
 "Você está offline ❌";
-}
+}/*cancelar */
+socket.on("corrida_cancelada",(data)=>{
+
+document.getElementById("corridasArea").innerHTML = `
+
+<div class="corrida">
+
+<h3 style="color:red;">
+❌ Corrida cancelada
+</h3>
+
+</div>
+
+`;
+
+});
 
 /* NOVA CORRIDA */
 socket.on("nova_corrida",(data)=>{
