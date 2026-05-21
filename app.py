@@ -234,11 +234,26 @@ def cancelar_corrida(id):
 
     corrida = Corrida.query.get(id)
 
+    if not corrida:
+        return jsonify({
+            "erro":"corrida nao encontrada"
+        })
+
     corrida.status = "cancelada"
 
     db.session.commit()
 
-    return jsonify({"status": "cancelada"})
+    socketio.emit(
+        "corrida_cancelada",
+        {
+            "corrida_id": corrida.id
+        },
+        broadcast=True
+    )
+
+    return jsonify({
+        "status":"cancelada"
+    })
 @app.route("/registrar_motorista", methods=["POST"])
 def registrar_motorista():
 
