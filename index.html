@@ -90,6 +90,15 @@ margin-top:10px;
 font-weight:bold;
 }
 
+/* Estilo para o mapa */
+.mapa-ilustrativo {
+    width: 100%;
+    height: 200px;
+    border-radius: 12px;
+    margin-top: 10px;
+    border: none;
+}
+
 </style>
 
 </head>
@@ -139,6 +148,19 @@ const socket = io(API);
 
 let user = JSON.parse(localStorage.getItem("user"));
 
+// Função para reproduzir a voz
+function falarMensagem(texto) {
+    if ('speechSynthesis' in window) {
+        const synth = window.speechSynthesis;
+        const utterance = new SpeechSynthesisUtterance(texto);
+        utterance.lang = 'pt-BR'; // Define o idioma para português do Brasil
+        utterance.volume = 1; // Volume máximo
+        utterance.rate = 1; // Velocidade normal
+        utterance.pitch = 1; // Tom normal
+        synth.speak(utterance);
+    }
+}
+
 /* ONLINE */
 async function ficarOnline(){
 
@@ -166,28 +188,38 @@ document.getElementById("statusText").innerText =
 /* NOVA CORRIDA */
 socket.on("nova_corrida",(data)=>{
 
-document.getElementById("corridasArea").innerHTML = `
+    // Toca a voz quando chega uma nova corrida
+    falarMensagem("Você recebeu uma corrida");
 
-<div class="corrida">
+    document.getElementById("corridasArea").innerHTML = `
 
-<h3>🚗 Nova corrida</h3>
+    <div class="corrida">
 
-<p><b>Passageiro:</b> ${data.passageiro_nome}</p>
+    <h3>🚗 Nova corrida</h3>
 
-<p><b>Origem:</b> ${data.origem}</p>
+    <p><b>Passageiro:</b> ${data.passageiro_nome}</p>
 
-<p><b>Destino:</b> ${data.destino}</p>
+    <p><b>Origem:</b> ${data.origem}</p>
 
-<p><b>Valor:</b> R$ ${data.valor}</p>
+    <p><b>Destino:</b> ${data.destino}</p>
 
-<button class="accept"
-onclick="aceitar(${data.corrida_id})">
-Aceitar corrida
-</button>
+    <p><b>Valor:</b> R$ ${data.valor}</p>
 
-</div>
+    <!-- Mapa ilustrativo -->
+    <iframe 
+        class="mapa-ilustrativo"
+        src="https://www.google.com/maps/embed/v1/directions?key=AIzaSyDyJPPlnIMOLp20Ef1LlTong8rYtTaNJNc&origin=${encodeURIComponent(data.origem)}&destination=${encodeURIComponent(data.destino)}&language=pt-BR"
+        allowfullscreen>
+    </iframe>
 
-`;
+    <button class="accept"
+    onclick="aceitar(${data.corrida_id})">
+    Aceitar corrida
+    </button>
+
+    </div>
+
+    `;
 
 });
 
