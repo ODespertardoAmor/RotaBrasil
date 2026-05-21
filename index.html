@@ -1,39 +1,210 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-<title>Motorista</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motorista - Rota Brasil</title>
+
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-</head>
-<body><h2>Motorista</h2><button onclick="online()">Ficar online</button> <button onclick="offline()">Ficar offline</button>
 
-<div id="corridas"></div><script>
+<style>
 
-const API="https://rotabrasil-v1cf.onrender.com"
-const socket=io(API)
-const user=JSON.parse(localStorage.getItem("user"))
-
-async function online(){
-await fetch(API+"/ficar_online/"+user.id,{method:"POST"})
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
 }
 
-socket.on("nova_corrida",(d)=>{
+header{
+padding:20px;
+background:#111827;
+text-align:center;
+font-size:22px;
+font-weight:bold;
+}
 
-document.getElementById("corridas").innerHTML=`
-<p>${d.origem} → ${d.destino} R$${d.valor}</p>
-<button onclick="aceitar(${d.corrida_id})">Aceitar</button>
-`
-})
+.container{
+max-width:500px;
+margin:auto;
+padding:20px;
+}
 
+.card{
+background:#1f2937;
+padding:20px;
+border-radius:15px;
+margin-bottom:15px;
+}
+
+button{
+width:100%;
+padding:15px;
+border:none;
+border-radius:12px;
+font-weight:bold;
+cursor:pointer;
+margin-top:10px;
+transition:0.2s;
+}
+
+.online{
+background:#10b981;
+color:white;
+}
+
+.offline{
+background:#ef4444;
+color:white;
+}
+
+.accept{
+background:#2563eb;
+color:white;
+}
+
+button:hover{
+transform:scale(1.02);
+}
+
+.corrida{
+background:#111827;
+padding:15px;
+border-radius:12px;
+margin-top:10px;
+border:1px solid #374151;
+}
+
+.badge{
+display:inline-block;
+padding:5px 10px;
+border-radius:10px;
+background:#22c55e;
+font-size:12px;
+margin-bottom:10px;
+}
+
+.status{
+text-align:center;
+margin-top:10px;
+font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+🚗 Motorista Rota Brasil
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<div class="badge" id="statusBadge">OFFLINE</div>
+
+<button class="online" onclick="ficarOnline()">
+Ficar Online
+</button>
+
+<button class="offline" onclick="ficarOffline()">
+Ficar Offline
+</button>
+
+<p class="status" id="statusText">
+Aguardando ação...
+</p>
+
+</div>
+
+<div class="card">
+
+<h3>Corridas disponíveis</h3>
+
+<div id="corridasArea">
+Nenhuma corrida no momento
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "https://rotabrasil-v1cf.onrender.com";
+const socket = io(API);
+
+let user = JSON.parse(localStorage.getItem("user"));
+
+/* ONLINE */
+async function ficarOnline(){
+
+await fetch(API+"/ficar_online/"+user.id,{
+method:"POST"
+});
+
+document.getElementById("statusBadge").innerText = "ONLINE";
+document.getElementById("statusBadge").style.background = "#10b981";
+
+document.getElementById("statusText").innerText =
+"Você está recebendo corridas 🚗";
+}
+
+/* OFFLINE */
+async function ficarOffline(){
+
+document.getElementById("statusBadge").innerText = "OFFLINE";
+document.getElementById("statusBadge").style.background = "#ef4444";
+
+document.getElementById("statusText").innerText =
+"Você está offline ❌";
+}
+
+/* NOVA CORRIDA */
+socket.on("nova_corrida",(data)=>{
+
+document.getElementById("corridasArea").innerHTML = `
+
+<div class="corrida">
+
+<h4>🚗 Nova Corrida</h4>
+
+<p><b>Origem:</b> ${data.origem}</p>
+<p><b>Destino:</b> ${data.destino}</p>
+<p><b>Valor:</b> R$ ${data.valor}</p>
+
+<button class="accept" onclick="aceitar(${data.corrida_id})">
+Aceitar corrida
+</button>
+
+</div>
+
+`;
+
+});
+
+/* ACEITAR */
 async function aceitar(id){
 
-const token=localStorage.getItem("token")
+const token = localStorage.getItem("token");
 
-await fetch(API+"/aceitar_corrida/"+id,{
+const res = await fetch(API+"/aceitar_corrida/"+id,{
 method:"POST",
-headers:{"Authorization":"Bearer "+token}
-})
+headers:{
+"Authorization":"Bearer "+token
+}
+});
 
-alert("aceita")
+const data = await res.json();
+
+document.getElementById("statusText").innerText =
+"🚗 Corrida aceita com sucesso!";
 }
 
-</script></body>
+</script>
+
+</body>
 </html>
