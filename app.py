@@ -26,11 +26,18 @@ class User(db.Model):
     senha = db.Column(db.Text)
     telefone = db.Column(db.String(20))
     tipo = db.Column(db.String(20))
-
 class Motorista(db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
+
     user_id = db.Column(db.Integer)
+
     carro = db.Column(db.String(120))
+
+    placa = db.Column(db.String(20))
+
+    foto = db.Column(db.String(500))
+
     online = db.Column(db.Boolean, default=False)
 
 class Corrida(db.Model):
@@ -106,6 +113,7 @@ def login():
 
 # MOTORISTAS ONLINE
 @app.route("/motoristas_online")
+
 def motoristas_online():
 
     motoristas = Motorista.query.filter_by(online=True).all()
@@ -113,14 +121,19 @@ def motoristas_online():
     lista = []
 
     for m in motoristas:
+
         user = User.query.get(m.user_id)
+
         lista.append({
             "id": m.id,
             "nome": user.nome,
-            "carro": m.carro
+            "carro": m.carro,
+            "placa": m.placa,
+            "foto": m.foto
         })
 
     return jsonify(lista)
+
 
 # FICAR ONLINE
 @app.route("/ficar_online/<int:user_id>", methods=["POST"])
@@ -154,13 +167,19 @@ def nova_corrida():
 
     db.session.add(corrida)
     db.session.commit()
+    
+    passageiro = User.query.get(corrida.passageiro_id)
 
     socketio.emit("nova_corrida", {
+
         "corrida_id": corrida.id,
         "origem": corrida.origem,
         "destino": corrida.destino,
-        "valor": corrida.valor
-    })
+        "valor": corrida.valor,
+        "passageiro_nome": passageiro.nome
+
+    })  
+    
 
     return jsonify({
         "status": "ok",
@@ -177,21 +196,37 @@ def aceitar_corrida(id):
     corrida = Corrida.query.get(id)
 
     if not corrida:
-        return jsonify({"erro": "nao encontrada"})
+        return jsonify({"erro":"nao encontrada"})
 
     corrida.motorista_id = user_id
     corrida.status = "aceita"
 
     db.session.commit()
 
-    motorista = User.query.get(user_id)
+    motorista_user = User.query.get(user_id)
+
+    motorista = Motorista.query.filter_by(
+        user_id=user_id
+    ).first()
 
     socketio.emit("corrida_aceita", {
+
         "corrida_id": corrida.id,
-        "motorista_nome": motorista.nome
+
+        "motorista_nome": motorista_user.nome,
+
+        "placa": motorista.placa,
+
+        "carro": motorista.carro,
+
+        "foto": motorista.foto
+
     })
 
-    return jsonify({"status": "ok"})
+    return jsonify({
+        "status":"ok"
+    })
+
 
 # CANCELAR CORRIDA
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
@@ -204,7 +239,44 @@ def cancelar_corrida(id):
     db.session.commit()
 
     return jsonify({"status": "cancelada"})
+@app.route("/registrar_motorista", methods=["POST"])
+def registrar_motorista():
 
+    data = request.get_json()
+
+    nome = data.get("nome")
+    email = data.get("email")
+    senha = data.get("senha")
+
+    carro = data.get("carro")
+    placa = data.get("placa")
+    foto = data.get("foto")
+
+    user = User(
+        nome=nome,
+        email=email,
+        senha=senha,
+        tipo="motorista"
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+    motorista = Motorista(
+        user_id=user.id,
+        carro=carro,
+        placa=placa,
+        foto=foto,
+        online=False
+    )
+
+    db.session.add(motorista)
+    db.session.commit()
+
+    return jsonify({
+        "status":"motorista criado"
+    })
+    
 # RUN
 #if __name__ == "__main__":
    # socketio.run(app, debug=True)
