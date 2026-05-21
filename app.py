@@ -400,7 +400,6 @@ def solicitar_corrida():
 # =========================================
 # ACEITAR CORRIDA
 # =========================================
-
 @app.route("/aceitar_corrida/<int:id>", methods=["POST"])
 @jwt_required()
 def aceitar_corrida(id):
@@ -410,28 +409,59 @@ def aceitar_corrida(id):
     corrida = Corrida.query.get(id)
 
     if not corrida:
-
-        return jsonify({
-            "erro": "Corrida não encontrada"
-        })
+        return jsonify({"erro": "Corrida não encontrada"})
 
     corrida.motorista_id = user_id
-
     corrida.status = "aceita"
 
     db.session.commit()
+
+    motorista = User.query.get(user_id)
 
     socketio.emit(
         "corrida_aceita",
         {
             "corrida_id": corrida.id,
-            "motorista_id": user_id
+            "motorista_id": user_id,
+            "motorista_nome": motorista.nome
         }
     )
 
-    return jsonify({
-        "status": "corrida aceita"
-    })
+    return jsonify({"status": "corrida aceita"})
+
+
+
+#@app.route("/aceitar_corrida/<int:id>", methods=["POST"])
+#@jwt_required()
+#def aceitar_corrida(id):
+
+    #user_id = get_jwt_identity()
+
+   # corrida = Corrida.query.get(id)
+
+    #if not corrida:
+
+       # return jsonify({
+       #     "erro": "Corrida não encontrada"
+       # })
+
+   # corrida.motorista_id = user_id
+
+   # corrida.status = "aceita"
+
+   # db.session.commit()
+
+   # socketio.emit(
+       # "corrida_aceita",
+        #{
+          #  "corrida_id": corrida.id,
+           # "motorista_id": user_id
+        #}
+  #  )
+
+  #  return jsonify({
+      #  "status": "corrida aceita"
+   # })
 
 # =========================================
 # FINALIZAR CORRIDA
