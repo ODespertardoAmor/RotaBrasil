@@ -305,9 +305,59 @@ def perfil():
     })
 
 # =========================================
-# SOLICITAR CORRIDA
+# SOLICITAR CORRIDA nova rota
 # =========================================
+@app.route("/nova_corrida", methods=["POST"])
+def nova_corrida():
 
+    data = request.get_json()
+
+    try:
+
+        corrida = Corrida(
+
+            passageiro_id=data["passageiro_id"],
+
+            origem=data["origem"],
+
+            destino=data["destino"],
+
+            valor=data["valor"],
+
+            status="pendente"
+        )
+
+        db.session.add(corrida)
+
+        db.session.commit()
+
+        socketio.emit(
+
+            "nova_corrida",
+
+            {
+
+                "corrida_id":corrida.id,
+
+                "origem":corrida.origem,
+
+                "destino":corrida.destino,
+
+                "valor":corrida.valor
+            }
+        )
+
+        return jsonify({
+
+            "status":"corrida criada"
+        })
+
+    except Exception as e:
+
+        return jsonify({
+
+            "erro":str(e)
+        }), 500
 @app.route("/solicitar_corrida", methods=["POST"])
 @jwt_required()
 def solicitar_corrida():
