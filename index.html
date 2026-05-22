@@ -3,7 +3,8 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>Motorista - Rota Brasil</title>
 
@@ -70,6 +71,11 @@ background:#2563eb;
 color:white;
 }
 
+.route{
+background:#f59e0b;
+color:white;
+}
+
 .badge{
 display:inline-block;
 padding:6px 12px;
@@ -108,11 +114,21 @@ font-size:18px;
 text-align:center;
 padding:10px;
 box-sizing:border-box;
+border:1px solid #374151;
 }
 
 .info{
 margin-top:10px;
 line-height:1.7;
+}
+
+.rota-box{
+background:#0f172a;
+padding:15px;
+border-radius:12px;
+margin-top:15px;
+text-align:center;
+border:1px solid #374151;
 }
 
 </style>
@@ -169,7 +185,9 @@ const socket = io(API);
 let user =
 JSON.parse(localStorage.getItem("user"));
 
-/* VERIFICAR LOGIN */
+let corridaAtual = null;
+
+/* LOGIN */
 
 if(!user){
 
@@ -190,9 +208,6 @@ const utterance =
 new SpeechSynthesisUtterance(texto);
 
 utterance.lang = 'pt-BR';
-utterance.volume = 1;
-utterance.rate = 1;
-utterance.pitch = 1;
 
 synth.speak(utterance);
 
@@ -224,7 +239,7 @@ document.getElementById(
 document.getElementById(
 "statusText"
 ).innerText =
-"Você está recebendo corridas 🚗";
+"Recebendo corridas 🚗";
 
 }catch(error){
 
@@ -253,11 +268,16 @@ document.getElementById(
 
 }
 
-/* CORRIDA CANCELADA */
+/* CANCELAMENTO */
 
 socket.on(
 "corrida_cancelada",
 (data)=>{
+
+if(
+corridaAtual &&
+corridaAtual.id == data.corrida_id
+){
 
 document.getElementById(
 "corridasArea"
@@ -282,6 +302,10 @@ document.getElementById(
 ).innerText =
 "Corrida cancelada";
 
+corridaAtual = null;
+
+}
+
 }
 );
 
@@ -294,6 +318,12 @@ socket.on(
 falarMensagem(
 "Você recebeu uma nova corrida"
 );
+
+corridaAtual = {
+id:data.corrida_id,
+origem:data.origem,
+destino:data.destino
+};
 
 document.getElementById(
 "corridasArea"
@@ -331,7 +361,7 @@ R$ ${data.valor}
 
 <div class="mapa-ilustrativo">
 
-🗺️ Rota da corrida
+🗺️ Nova rota
 
 <br><br>
 
@@ -368,7 +398,6 @@ try{
 const token =
 localStorage.getItem("token");
 
-const response =
 await fetch(
 
 API+"/aceitar_corrida/"+id,
@@ -384,21 +413,74 @@ headers:{
 
 );
 
-const data =
-await response.json();
-
-console.log(data);
-
 document.getElementById(
 "statusText"
 ).innerText =
-"🚗 Corrida aceita com sucesso";
+"🚗 Indo buscar passageiro";
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="
+color:#22c55e;
+text-align:center;
+">
+🚗 Corrida Aceita
+</h2>
+
+<div class="rota-box">
+
+<h3>
+📍 Vá até a origem
+</h3>
+
+<p style="
+font-size:18px;
+margin-top:15px;
+">
+${corridaAtual.origem}
+</p>
+
+</div>
+
+<button
+class="route"
+onclick="abrirRota()"
+>
+
+🗺️ Abrir rota no Google Maps
+
+</button>
+
+</div>
+
+`;
 
 }catch(error){
 
 console.log(error);
 
 }
+
+}
+
+/* ABRIR MAPA */
+
+function abrirRota(){
+
+if(!corridaAtual) return;
+
+const url =
+
+`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(corridaAtual.origem)}`;
+
+window.open(
+url,
+"_blank"
+);
 
 }
 
