@@ -468,21 +468,57 @@ console.log(error);
 }
 
 /* ABRIR MAPA */
-
 function abrirRota(){
 
 if(!corridaAtual) return;
 
+/*
+Origem atual do motorista
+*/
+navigator.geolocation.getCurrentPosition(
+
+(position)=>{
+
+const lat =
+position.coords.latitude;
+
+const lng =
+position.coords.longitude;
+
+/*
+Destino = origem da corrida
+*/
+const destino =
+encodeURIComponent(
+corridaAtual.origem
+);
+
+/*
+Abre navegação real
+*/
 const url =
 
-`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(corridaAtual.origem)}`;
+`https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${destino}&travelmode=driving`;
 
 window.open(
 url,
 "_blank"
 );
 
+},
+
+(error)=>{
+
+alert(
+"Permita acesso à localização"
+);
+
 }
+
+);
+
+}
+
 
 </script>
 
