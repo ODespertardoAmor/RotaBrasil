@@ -518,7 +518,55 @@ alert(
 );
 
 }
+/* GPS TEMPO REAL */
 
+function iniciarGPS(){
+
+navigator.geolocation.watchPosition(
+
+async(position)=>{
+
+const latitude =
+position.coords.latitude;
+
+const longitude =
+position.coords.longitude;
+
+await fetch(
+API+"/atualizar_localizacao",
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+motorista_id:user.id,
+latitude,
+longitude
+
+})
+
+}
+);
+
+},
+
+(error)=>{
+
+console.log(error);
+
+},
+
+{
+enableHighAccuracy:true
+}
+
+);
+
+}
 
 </script>
 
