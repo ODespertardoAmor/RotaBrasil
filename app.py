@@ -208,10 +208,15 @@ def aceitar_corrida(id):
     motorista = Motorista.query.filter_by(
         user_id=user_id
     ).first()
+    socketio.emit(
 
-    socketio.emit("corrida_aceita", {
+    "corrida_aceita",
+
+    {
 
         "corrida_id": corrida.id,
+
+        "motorista_id": motorista_user.id,
 
         "motorista_nome": motorista_user.nome,
 
@@ -221,7 +226,12 @@ def aceitar_corrida(id):
 
         "foto": motorista.foto
 
-    })
+    },
+
+    broadcast=True
+
+)
+    
 
     return jsonify({
         "status":"ok"
