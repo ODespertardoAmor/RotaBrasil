@@ -227,7 +227,18 @@ API+"/ficar_online/"+user.id,
 method:"POST"
 }
 );
+async function ficarOnline(){
 
+await fetch(
+API+"/ficar_online/"+user.id,
+{
+method:"POST"
+}
+);
+
+iniciarGPS();
+
+}
 document.getElementById(
 "statusBadge"
 ).innerText = "ONLINE";
