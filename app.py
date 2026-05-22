@@ -291,7 +291,30 @@ def registrar_motorista():
     return jsonify({
         "status":"motorista criado"
     })
-    
+#=========Atualiza GPS========
+@app.route("/atualizar_localizacao", methods=["POST"])
+def atualizar_localizacao():
+
+    data = request.get_json()
+
+    motorista_id = data.get("motorista_id")
+
+    latitude = data.get("latitude")
+
+    longitude = data.get("longitude")
+
+    socketio.emit(
+        "localizacao_motorista",
+        {
+            "motorista_id": motorista_id,
+            "latitude": latitude,
+            "longitude": longitude
+        }
+    )
+
+    return jsonify({
+        "status":"localizacao atualizada"
+    })
 # RUN
 #if __name__ == "__main__":
    # socketio.run(app, debug=True)
