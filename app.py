@@ -503,6 +503,8 @@ def aceitar_corrida(id):
                 "placa": motorista.placa if motorista else "ABC-0000",
 
                 "carro": motorista.carro if motorista else "Veículo",
+                "origem": corrida.origem,
+                "destino": corrida.destino,
 
                 "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
 
