@@ -284,7 +284,10 @@ document.getElementById(
 socket.on(
 "corrida_cancelada",
 (data)=>{
-
+falarMensagem(
+"a corrida foi cancelada pelo passageiro"
+);
+  
 if(
 corridaAtual &&
 corridaAtual.id == data.corrida_id
