@@ -8,11 +8,12 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
 )
-import os
+
 
 # =========================================
 # APP
 # =========================================
+import os
 
 app = Flask(__name__)
 
@@ -23,13 +24,30 @@ app.config["SECRET_KEY"] = "segredo"
 app.config["JWT_SECRET_KEY"] = "jwtsegredo"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = \
-"sqlite:///uber.db"
+os.environ.get("DATABASE_URL")
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
 jwt = JWTManager(app)
+
+#app = Flask(__name__)
+
+#CORS(app)
+
+#app.config["SECRET_KEY"] = "segredo"
+
+#app.config["JWT_SECRET_KEY"] = "jwtsegredo"
+
+#app.config["SQLALCHEMY_DATABASE_URI"] = \
+#"sqlite:///uber.db"
+
+#app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+#db = SQLAlchemy(app)
+
+#jwt = JWTManager(app)
 
 socketio = SocketIO(
     app,
