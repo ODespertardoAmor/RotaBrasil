@@ -182,7 +182,7 @@ Nenhuma corrida disponível
 </div>
 
 </div>
-
+  
 <script>
 
 const API =
@@ -193,6 +193,37 @@ const socket = io(API);
 let user = null;
 
 let corridaAtual = null;
+
+/* SOM */
+
+function tocarSom(){
+
+const audio = new Audio(
+"https://www.soundjay.com/buttons/sounds/button-3.mp3"
+);
+
+audio.play();
+
+}
+
+/* FALAR */
+
+function falar(texto){
+
+const voz =
+new SpeechSynthesisUtterance(
+texto
+);
+
+voz.lang = "pt-BR";
+
+voz.rate = 1;
+
+speechSynthesis.speak(
+voz
+);
+
+}
 
 /* LOGIN */
 
@@ -330,16 +361,6 @@ pos.coords.longitude
 
 async function ficarOffline(){
 
-await fetch(
-
-API+"/ficar_offline/"+user.id,
-
-{
-method:"POST"
-}
-
-);
-
 document.getElementById(
 "status"
 ).innerHTML =
@@ -362,6 +383,16 @@ data
 
 corridaAtual =
 data.corrida_id;
+
+/* SOM */
+
+tocarSom();
+
+/* VOZ */
+
+falar(
+"Nova corrida recebida"
+);
 
 document.getElementById(
 "corridasArea"
@@ -393,6 +424,265 @@ document.getElementById(
 class="primary"
 onclick="aceitarCorrida(${data.corrida_id})"
 >
+Aceitar Corrida
+</button>
+
+</div>
+
+`;
+
+}
+
+);
+
+/* ACEITAR */
+
+async function aceitarCorrida(id){
+
+const token =
+localStorage.getItem(
+"token"
+);
+
+const res = await fetch(
+
+API+"/aceitar_corrida/"+id,
+
+{
+method:"POST",
+
+headers:{
+
+"Authorization":
+"Bearer "+token
+
+}
+
+}
+
+);
+
+const data =
+await res.json();
+
+console.log(data);
+
+falar(
+"Corrida aceita"
+);
+
+document.getElementById(
+"corridasArea"
+).innerHTML += `
+
+<div class="corrida">
+
+<h2 style="
+color:#22c55e;
+">
+✅ Corrida Aceita
+</h2>
+
+<iframe
+
+src="https://maps.google.com/maps?q=-23.55052,-46.633308&z=15&output=embed"
+
+style="
+width:100%;
+height:250px;
+border:none;
+border-radius:15px;
+margin-top:15px;
+"
+
+>
+
+</iframe>
+
+<a
+
+href="https://www.google.com/maps/dir/?api=1"
+
+target="_blank"
+
+>
+
+<button class="success">
+🗺️ Iniciar Navegação
+</button>
+
+</a>
+
+<button
+class="danger"
+onclick="cancelarCorrida(${id})"
+>
+Cancelar Corrida
+</button>
+
+</div>
+
+`;
+
+}
+
+/* CANCELAR */
+
+async function cancelarCorrida(id){
+
+await fetch(
+
+API+"/cancelar_corrida/"+id,
+
+{
+method:"POST"
+}
+
+);
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="
+color:red;
+">
+❌ Corrida Cancelada
+</h2>
+
+</div>
+
+`;
+
+}
+
+/* SOCKET CANCELAMENTO */
+
+socket.on(
+
+"corrida_cancelada",
+
+(data)=>{
+
+if(data.corrida_id == corridaAtual){
+
+/* SOM */
+
+tocarSom();
+
+/* VOZ */
+
+falar(
+"O passageiro cancelou a corrida"
+);
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="
+color:red;
+">
+❌ Passageiro cancelou
+</h2>
+
+</div>
+
+`;
+
+}
+
+}
+
+);
+
+/* GPS */
+
+socket.on(
+
+"localizacao_motorista",
+
+(data)=>{
+
+console.log(
+"GPS RECEBIDO",
+data
+);
+
+document.getElementById(
+"mapaMotorista"
+).innerHTML = `
+
+<div style="
+background:#111827;
+padding:20px;
+border-radius:15px;
+margin-top:15px;
+text-align:center;
+">
+
+<h2 style="
+color:#22c55e;
+">
+🛰️ Motorista em movimento
+</h2>
+
+<br>
+
+<p>
+Latitude:
+${data.latitude}
+</p>
+
+<p>
+Longitude:
+${data.longitude}
+</p>
+
+<iframe
+
+style="
+width:100%;
+height:250px;
+border:none;
+border-radius:15px;
+margin-top:15px;
+"
+
+src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"
+
+>
+
+</iframe>
+
+</div>
+
+`;
+
+}
+
+);
+
+</script>
+
+  fim
+
+
+
+
+
+document.getElementById(
+
+document.getElementById(
+"status"
+).innerHTML =
+"🔴 Offline";
+
+
 Aceitar Corrida
 </button>
 
@@ -488,70 +778,6 @@ method:"POST"
 
 );
 
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h2 style="color:red;">
-❌ Corrida Cancelada
-</h2>
-
-</div>
-
-`;
-
-}
-
-/* SOCKET CANCELAMENTO */
-
-socket.on(
-
-"corrida_cancelada",
-
-(data)=>{
-
-if(data.corrida_id == corridaAtual){
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h2 style="color:red;">
-❌ Passageiro cancelou a corrida
-</h2>
-
-</div>
-
-`;
-
-}
-
-}
-
-);
-
-/* SOCKET ACEITA */
-
-socket.on(
-
-"corrida_aceita",
-
-(data)=>{
-
-console.log(
-"CORRIDA ACEITA",
-data
-);
-
-}
-
-);
-
-</script>
 
 </body>
 </html>
