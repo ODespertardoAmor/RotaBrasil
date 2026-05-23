@@ -603,6 +603,8 @@ if __name__ == "__main__":
 
         port=port,
 
-        debug=True
+        debug=True,
+
+        allow_unsafe_werkzeug=True
 
     )
