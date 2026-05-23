@@ -500,8 +500,8 @@ margin-top:15px;
 </iframe>
 
 <a
+href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(data.origem)}&travelmode=driving"
 
-href="https://www.google.com/maps/dir/?api=1"
 
 target="_blank"
 
@@ -668,116 +668,6 @@ src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&outp
 );
 
 </script>
-
-  fim
-
-
-
-
-
-document.getElementById(
-
-document.getElementById(
-"status"
-).innerHTML =
-"🔴 Offline";
-
-
-Aceitar Corrida
-</button>
-
-</div>
-
-`;
-
-}
-
-);
-
-/* ACEITAR */
-
-async function aceitarCorrida(id){
-
-const token =
-localStorage.getItem(
-"token"
-);
-
-const res = await fetch(
-
-API+"/aceitar_corrida/"+id,
-
-{
-method:"POST",
-
-headers:{
-
-"Authorization":
-"Bearer "+token
-
-}
-
-}
-
-);
-
-const data =
-await res.json();
-
-console.log(data);
-
-document.getElementById(
-"corridasArea"
-).innerHTML += `
-
-<div class="corrida">
-
-<h2 style="color:#22c55e;">
-✅ Corrida Aceita
-</h2>
-
-<iframe
-src="https://www.google.com/maps?q=${encodeURIComponent("São Paulo")}&output=embed">
-</iframe>
-
-<a
-href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("São Paulo")}"
-target="_blank"
->
-
-<button class="success">
-🗺️ Iniciar Navegação
-</button>
-
-</a>
-
-<button
-class="danger"
-onclick="cancelarCorrida(${id})"
->
-Cancelar Corrida
-</button>
-
-</div>
-
-`;
-
-}
-
-/* CANCELAR */
-
-async function cancelarCorrida(id){
-
-await fetch(
-
-API+"/cancelar_corrida/"+id,
-
-{
-method:"POST"
-}
-
-);
-
 
 </body>
 </html>
