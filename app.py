@@ -534,8 +534,19 @@ def aceitar_corrida(id):
 
         print("SOCKET ENVIADO")
 
+        #return jsonify({
+          #  "status":"ok"
+        #})
         return jsonify({
-            "status":"ok"
+
+         "status":"ok",
+
+         "origem": corrida.origem,
+
+         "destino": corrida.destino,
+
+         "corrida_id": corrida.id
+
         })
 
     except Exception as e:
