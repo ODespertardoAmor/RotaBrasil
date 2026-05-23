@@ -466,6 +466,58 @@ const data =
 await res.json();
 
 console.log(data);
+  /* ENVIAR GPS EM TEMPO REAL */
+
+navigator.geolocation.watchPosition(
+
+(pos)=>{
+
+console.log(
+"ENVIANDO GPS"
+);
+
+fetch(
+
+API+"/atualizar_localizacao",
+
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+motorista_id:user.id,
+
+latitude:
+pos.coords.latitude,
+
+longitude:
+pos.coords.longitude
+
+})
+
+}
+
+);
+
+},
+
+(err)=>{
+
+console.log(err);
+
+},
+
+{
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:5000
+}
+
+);
 
 falar(
 "Corrida aceita"
