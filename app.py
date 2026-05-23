@@ -446,60 +446,84 @@ def nova_corrida():
 @jwt_required()
 def aceitar_corrida(id):
 
-    user_id = int(
-        get_jwt_identity()
-    )
+    print("ROTA ACEITAR INICIADA")
 
-    corrida = Corrida.query.get(id)
+    try:
 
-    if not corrida:
+        user_id = int(
+            get_jwt_identity()
+        )
+
+        print("USER ID")
+        print(user_id)
+
+        corrida = Corrida.query.get(id)
+
+        print("CORRIDA")
+        print(corrida)
+
+        if not corrida:
+
+            return jsonify({
+                "erro":"corrida nao encontrada"
+            })
+
+        corrida.motorista_id = user_id
+
+        corrida.status = "aceita"
+
+        db.session.commit()
+
+        motorista_user = User.query.get(
+            user_id
+        )
+
+        print("MOTORISTA USER")
+        print(motorista_user)
+
+        motorista = Motorista.query.filter_by(
+            user_id=user_id
+        ).first()
+
+        print("MOTORISTA")
+        print(motorista)
+
+        socketio.emit(
+
+            "corrida_aceita",
+
+            {
+
+                "corrida_id": corrida.id,
+
+                "motorista_id": user_id,
+
+                "motorista_nome": motorista_user.nome if motorista_user else "Motorista",
+
+                "placa": motorista.placa if motorista else "ABC-0000",
+
+                "carro": motorista.carro if motorista else "Veículo",
+
+                "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
+
+            }
+
+        )
+
+        print("SOCKET ENVIADO")
 
         return jsonify({
-            "erro":"corrida nao encontrada"
+            "status":"ok"
         })
 
-    corrida.motorista_id = user_id
+    except Exception as e:
 
-    corrida.status = "aceita"
+        print("ERRO")
+        print(str(e))
 
-    db.session.commit()
-
-    motorista_user = User.query.get(
-        user_id
-    )
-
-    motorista = Motorista.query.filter_by(
-        user_id=user_id
-    ).first()
-
-    print("ENVIANDO SOCKET")
-
-    socketio.emit(
-
-        "corrida_aceita",
-
-        {
-
-            "corrida_id": corrida.id,
-
-            "motorista_id": motorista_user.id,
-
-            "motorista_nome": motorista_user.nome,
-
-            "placa": motorista.placa or "ABC-0000",
-
-            "carro": motorista.carro or "Veículo",
-
-            "foto": motorista.foto or "https://i.imgur.com/6VBx3io.png"
-
-        }
-
-    )
-
-    return jsonify({
-        "status":"ok"
-    })
-
+        return jsonify({
+            "erro":str(e)
+        })
 # =========================================
 # CANCELAR CORRIDA
 # =========================================
