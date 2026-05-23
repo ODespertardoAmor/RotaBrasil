@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Motorista - Rota Brasil</title>
 
@@ -20,10 +18,10 @@ color:white;
 }
 
 header{
-padding:20px;
 background:#111827;
+padding:20px;
 text-align:center;
-font-size:22px;
+font-size:24px;
 font-weight:bold;
 }
 
@@ -40,6 +38,17 @@ border-radius:15px;
 margin-bottom:15px;
 }
 
+input{
+width:100%;
+padding:15px;
+margin-bottom:10px;
+border:none;
+border-radius:10px;
+background:#111827;
+color:white;
+outline:none;
+}
+
 button{
 width:100%;
 padding:15px;
@@ -49,41 +58,30 @@ font-weight:bold;
 cursor:pointer;
 margin-top:10px;
 transition:0.2s;
-font-size:16px;
 }
 
 button:hover{
 transform:scale(1.02);
 }
 
-.online{
-background:#10b981;
-color:white;
-}
-
-.offline{
-background:#ef4444;
-color:white;
-}
-
-.accept{
+.primary{
 background:#2563eb;
 color:white;
 }
 
-.route{
-background:#f59e0b;
+.success{
+background:#10b981;
 color:white;
 }
 
-.badge{
-display:inline-block;
-padding:6px 12px;
-border-radius:10px;
+.danger{
 background:#ef4444;
-font-size:12px;
-margin-bottom:10px;
-font-weight:bold;
+color:white;
+}
+
+.warning{
+background:#f59e0b;
+color:white;
 }
 
 .status{
@@ -96,39 +94,25 @@ font-weight:bold;
 background:#111827;
 padding:15px;
 border-radius:12px;
-margin-top:10px;
-border:1px solid #374151;
-}
-
-.mapa-ilustrativo{
-width:100%;
-height:180px;
-border-radius:12px;
-margin-top:10px;
-background:#0f172a;
-display:flex;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-font-size:18px;
-text-align:center;
-padding:10px;
-box-sizing:border-box;
-border:1px solid #374151;
-}
-
-.info{
-margin-top:10px;
-line-height:1.7;
-}
-
-.rota-box{
-background:#0f172a;
-padding:15px;
-border-radius:12px;
 margin-top:15px;
-text-align:center;
 border:1px solid #374151;
+}
+
+img{
+width:90px;
+height:90px;
+border-radius:50%;
+object-fit:cover;
+margin-top:10px;
+border:3px solid #22c55e;
+}
+
+iframe{
+width:100%;
+height:250px;
+border:none;
+border-radius:15px;
+margin-top:15px;
 }
 
 </style>
@@ -143,32 +127,56 @@ border:1px solid #374151;
 
 <div class="container">
 
-<div class="card">
+<!-- LOGIN -->
 
-<div class="badge" id="statusBadge">
-OFFLINE
+<div class="card" id="loginCard">
+
+<h2>Login Motorista</h2>
+
+<input id="email" placeholder="Email">
+
+<input id="senha" type="password" placeholder="Senha">
+
+<button class="primary" onclick="login()">
+Entrar
+</button>
+
+<p id="loginStatus" class="status"></p>
+
 </div>
 
-<button class="online" onclick="ficarOnline()">
+<!-- DASHBOARD -->
+
+<div
+class="card"
+id="dashboard"
+style="display:none"
+>
+
+<h2>Painel do Motorista</h2>
+
+<button
+class="success"
+onclick="ficarOnline()"
+>
 Ficar Online
 </button>
 
-<button class="offline" onclick="ficarOffline()">
+<button
+class="danger"
+onclick="ficarOffline()"
+>
 Ficar Offline
 </button>
 
-<p class="status" id="statusText">
-Aguardando ação...
+<p id="status" class="status">
+Offline
 </p>
 
-</div>
-
-<div class="card">
-
-<h3>Corridas disponíveis</h3>
-
 <div id="corridasArea">
-Nenhuma corrida no momento
+
+Nenhuma corrida disponível
+
 </div>
 
 </div>
@@ -182,34 +190,81 @@ const API =
 
 const socket = io(API);
 
-let user =
-JSON.parse(localStorage.getItem("user"));
+let user = null;
 
 let corridaAtual = null;
 
 /* LOGIN */
 
-if(!user){
+async function login(){
 
-alert("Faça login primeiro");
+const res = await fetch(
+
+API+"/login",
+
+{
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+email:
+document.getElementById(
+"email"
+).value,
+
+senha:
+document.getElementById(
+"senha"
+).value
+
+})
 
 }
 
-/* VOZ */
+);
 
-function falarMensagem(texto){
+const data =
+await res.json();
 
-if ('speechSynthesis' in window){
+console.log(data);
 
-const synth =
-window.speechSynthesis;
+if(data.token){
 
-const utterance =
-new SpeechSynthesisUtterance(texto);
+localStorage.setItem(
+"token",
+data.token
+);
 
-utterance.lang = 'pt-BR';
+localStorage.setItem(
+"user",
+JSON.stringify(data.user)
+);
 
-synth.speak(utterance);
+user = data.user;
+
+document.getElementById(
+"loginCard"
+).style.display = "none";
+
+document.getElementById(
+"dashboard"
+).style.display = "block";
+
+document.getElementById(
+"status"
+).innerHTML =
+"Logado como "+user.nome;
+
+}else{
+
+document.getElementById(
+"loginStatus"
+).innerHTML =
+"Erro login";
 
 }
 
@@ -219,336 +274,29 @@ synth.speak(utterance);
 
 async function ficarOnline(){
 
-try{
-
 await fetch(
+
 API+"/ficar_online/"+user.id,
+
 {
 method:"POST"
 }
-);
-async function ficarOnline(){
-
-await fetch(
-API+"/ficar_online/"+user.id,
-{
-method:"POST"
-}
-);
-
-iniciarGPS();
-
-}
-document.getElementById(
-"statusBadge"
-).innerText = "ONLINE";
-
-document.getElementById(
-"statusBadge"
-).style.background = "#10b981";
-
-document.getElementById(
-"statusText"
-).innerText =
-"Recebendo corridas 🚗";
-
-}catch(error){
-
-console.log(error);
-
-}
-
-}
-
-/* OFFLINE */
-
-function ficarOffline(){
-
-document.getElementById(
-"statusBadge"
-).innerText = "OFFLINE";
-
-document.getElementById(
-"statusBadge"
-).style.background = "#ef4444";
-
-document.getElementById(
-"statusText"
-).innerText =
-"Você está offline ❌";
-
-}
-
-/* CANCELAMENTO */
-
-socket.on(
-"corrida_cancelada",
-(data)=>{
-falarMensagem(
-"a corrida foi cancelada pelo passageiro"
-);
-  
-if(
-corridaAtual &&
-corridaAtual.id == data.corrida_id
-){
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h3 style="color:#ef4444;">
-❌ Corrida cancelada
-</h3>
-
-<p>
-O passageiro cancelou a corrida
-</p>
-
-</div>
-
-`;
-
-document.getElementById(
-"statusText"
-).innerText =
-"Corrida cancelada";
-
-corridaAtual = null;
-
-}
-
-}
-);
-
-/* NOVA CORRIDA */
-
-socket.on(
-"nova_corrida",
-(data)=>{
-
-falarMensagem(
-"Você recebeu uma nova corrida"
-);
-
-corridaAtual = {
-id:data.corrida_id,
-origem:data.origem,
-destino:data.destino
-};
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h3>
-🚗 Nova corrida
-</h3>
-
-<div class="info">
-
-<p>
-<b>Passageiro:</b>
-${data.passageiro_nome || "Passageiro"}
-</p>
-
-<p>
-<b>Origem:</b>
-${data.origem}
-</p>
-
-<p>
-<b>Destino:</b>
-${data.destino}
-</p>
-
-<p>
-<b>Valor:</b>
-R$ ${data.valor}
-</p>
-
-</div>
-
-<div class="mapa-ilustrativo">
-
-🗺️ Nova rota
-
-<br><br>
-
-${data.origem}
-
-⬇️
-
-${data.destino}
-
-</div>
-
-<button
-class="accept"
-onclick="aceitar(${data.corrida_id})"
->
-
-Aceitar corrida
-
-</button>
-
-</div>
-
-`;
-
-}
-);
-
-/* ACEITAR */
-
-async function aceitar(id){
-  iniciarGPS();
-
-try{
-
-const token =
-localStorage.getItem("token");
-
-await fetch(
-
-API+"/aceitar_corrida/"+id,
-
-{
-method:"POST",
-
-headers:{
-"Authorization":
-"Bearer "+token
-}
-}
 
 );
 
 document.getElementById(
-"statusText"
-).innerText =
-"🚗 Indo buscar passageiro";
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h2 style="
-color:#22c55e;
-text-align:center;
-">
-🚗 Corrida Aceita
-</h2>
-
-<div class="rota-box">
-
-<h3>
-📍 Vá até a origem
-</h3>
-
-<p style="
-font-size:18px;
-margin-top:15px;
-">
-${corridaAtual.origem}
-</p>
-
-</div>
-
-<button
-class="route"
-onclick="abrirRota()"
->
-
-🗺️ Buscar passageiro.
-
-</button>
-
-</div>
-
-`;
-
-}catch(error){
-
-console.log(error);
-
-}
-
-}
-
-/* ABRIR MAPA */
-function abrirRota(){
-
-if(!corridaAtual) return;
-
-/*
-Origem atual do motorista
-*/
-navigator.geolocation.getCurrentPosition(
-
-(position)=>{
-
-const lat =
-position.coords.latitude;
-
-const lng =
-position.coords.longitude;
-
-/*
-Destino = origem da corrida
-*/
-const destino =
-encodeURIComponent(
-corridaAtual.origem
-);
-
-/*
-Abre navegação real
-*/
-const url =
-
-`https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${destino}&travelmode=driving`;
-
-window.open(
-url,
-"_blank"
-);
-
-},
-
-(error)=>{
-
-alert(
-"Permita acesso à localização"
-);
-
-}
-
-);
-
-}
-/* GPS TEMPO REAL */
-
-function iniciarGPS(){
+"status"
+).innerHTML =
+"🟢 Online";
 
 navigator.geolocation.watchPosition(
 
-async(position)=>{
+(pos)=>{
 
-const latitude =
-position.coords.latitude;
+fetch(
 
-const longitude =
-position.coords.longitude;
-
-await fetch(
 API+"/atualizar_localizacao",
+
 {
 method:"POST",
 
@@ -559,29 +307,249 @@ headers:{
 body:JSON.stringify({
 
 motorista_id:user.id,
-latitude,
-longitude
+
+latitude:
+pos.coords.latitude,
+
+longitude:
+pos.coords.longitude
 
 })
 
 }
+
 );
 
-},
+}
 
-(error)=>{
+);
 
-console.log(error);
+}
 
-},
+/* OFFLINE */
+
+async function ficarOffline(){
+
+await fetch(
+
+API+"/ficar_offline/"+user.id,
 
 {
-enableHighAccuracy:true
+method:"POST"
 }
 
 );
 
+document.getElementById(
+"status"
+).innerHTML =
+"🔴 Offline";
+
 }
+
+/* NOVA CORRIDA */
+
+socket.on(
+
+"nova_corrida",
+
+(data)=>{
+
+console.log(
+"NOVA CORRIDA",
+data
+);
+
+corridaAtual =
+data.corrida_id;
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2>
+🚗 Nova Corrida
+</h2>
+
+<p>
+👤 ${data.passageiro_nome}
+</p>
+
+<p>
+📍 ${data.origem}
+</p>
+
+<p>
+🏁 ${data.destino}
+</p>
+
+<p>
+💰 R$ ${data.valor}
+</p>
+
+<button
+class="primary"
+onclick="aceitarCorrida(${data.corrida_id})"
+>
+Aceitar Corrida
+</button>
+
+</div>
+
+`;
+
+}
+
+);
+
+/* ACEITAR */
+
+async function aceitarCorrida(id){
+
+const token =
+localStorage.getItem(
+"token"
+);
+
+const res = await fetch(
+
+API+"/aceitar_corrida/"+id,
+
+{
+method:"POST",
+
+headers:{
+
+"Authorization":
+"Bearer "+token
+
+}
+
+}
+
+);
+
+const data =
+await res.json();
+
+console.log(data);
+
+document.getElementById(
+"corridasArea"
+).innerHTML += `
+
+<div class="corrida">
+
+<h2 style="color:#22c55e;">
+✅ Corrida Aceita
+</h2>
+
+<iframe
+src="https://www.google.com/maps?q=${encodeURIComponent("São Paulo")}&output=embed">
+</iframe>
+
+<a
+href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent("São Paulo")}"
+target="_blank"
+>
+
+<button class="success">
+🗺️ Iniciar Navegação
+</button>
+
+</a>
+
+<button
+class="danger"
+onclick="cancelarCorrida(${id})"
+>
+Cancelar Corrida
+</button>
+
+</div>
+
+`;
+
+}
+
+/* CANCELAR */
+
+async function cancelarCorrida(id){
+
+await fetch(
+
+API+"/cancelar_corrida/"+id,
+
+{
+method:"POST"
+}
+
+);
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="color:red;">
+❌ Corrida Cancelada
+</h2>
+
+</div>
+
+`;
+
+}
+
+/* SOCKET CANCELAMENTO */
+
+socket.on(
+
+"corrida_cancelada",
+
+(data)=>{
+
+if(data.corrida_id == corridaAtual){
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="color:red;">
+❌ Passageiro cancelou a corrida
+</h2>
+
+</div>
+
+`;
+
+}
+
+}
+
+);
+
+/* SOCKET ACEITA */
+
+socket.on(
+
+"corrida_aceita",
+
+(data)=>{
+
+console.log(
+"CORRIDA ACEITA",
+data
+);
+
+}
+
+);
 
 </script>
 
