@@ -427,28 +427,26 @@ def nova_corrida():
     passageiro = User.query.get(
         corrida.passageiro_id
     )
+
     socketio.emit(
 
-    "nova_corrida",
+        "nova_corrida",
 
-    {
+        {
 
-        "corrida_id": corrida.id,
+            "corrida_id": corrida.id,
 
-        "origem": corrida.origem,
+            "origem": corrida.origem,
 
-        "destino": corrida.destino,
+            "destino": corrida.destino,
 
-        "valor": corrida.valor,
+            "valor": corrida.valor,
 
-        "distancia": corrida.distancia,
+            "passageiro_nome": passageiro.nome
 
-        "passageiro_nome": passageiro.nome
+        }
 
-    }
-
-)
-    
+    )
 
     return jsonify({
 
@@ -461,90 +459,114 @@ def nova_corrida():
 # =========================================
 # ACEITAR CORRIDA
 # =========================================
-@app.route("/aceitar_corrida/<int:id>", methods=["POST"])
+
+@app.route(
+    "/aceitar_corrida/<int:id>",
+    methods=["POST"]
+)
 @jwt_required()
 def aceitar_corrida(id):
 
-    motorista_user_id = get_jwt_identity()
+    print("ROTA ACEITAR INICIADA")
 
-    motorista_user = User.query.get(
-        motorista_user_id
-    )
+    try:
 
-    motorista = Motorista.query.filter_by(
-        user_id=motorista_user.id
-    ).first()
+        user_id = int(
+            get_jwt_identity()
+        )
 
-    corrida = Corrida.query.get(id)
+        print("USER ID")
+        print(user_id)
 
-    if not corrida:
-        return jsonify({
-            "erro":"Corrida não encontrada"
-        }),404
+        corrida = Corrida.query.get(id)
 
-    #/* JÁ ACEITA */
+        print("CORRIDA")
+        print(corrida)
 
-    if corrida.status == "aceita":
+        if not corrida:
 
-        return jsonify({
-            "erro":"Corrida já aceita"
-        }),400
+            return jsonify({
+                "erro":"corrida nao encontrada"
+            })
 
-    #/* ACEITAR */
+        corrida.motorista_id = user_id
 
-    corrida.status = "aceita"
+        corrida.status = "aceita"
 
-    corrida.motorista_id = motorista.id
-
-    db.session.commit()
-
-    passageiro = User.query.get(
-        corrida.passageiro_id
-    )
-
-    #/* PASSAGEIRO */
-
-    socketio.emit(
-
-        "corrida_aceita",
-
-        {
-
-            "corrida_id": corrida.id,
-
-            "motorista_id": motorista.id,
-
-            "motorista_nome": motorista_user.nome,
-
-            "placa": motorista.placa,
-
-            "carro": motorista.carro,
-
-            "foto": motorista.foto
-
-        }
-
-    )
-
-   # /* REMOVE PARA OUTROS */
-
-    socketio.emit(
+        db.session.commit()
+        socketio.emit(
 
         "corrida_removida",
 
         {
-
-            "corrida_id": corrida.id
-
+        "corrida_id": corrida.id
         }
 
-    )
+        )
 
-    return jsonify({
-        "status":"ok"
-    })
+        motorista_user = User.query.get(
+            user_id
+        )
 
+        print("MOTORISTA USER")
+        print(motorista_user)
 
+        motorista = Motorista.query.filter_by(
+            user_id=user_id
+        ).first()
+
+        print("MOTORISTA")
+        print(motorista)
+
+        socketio.emit(
+
+            "corrida_aceita",
+
+            {
+
+                "corrida_id": corrida.id,
+
+                "motorista_id": user_id,
+
+                "motorista_nome": motorista_user.nome if motorista_user else "Motorista",
+
+                "placa": motorista.placa if motorista else "ABC-0000",
+
+                "carro": motorista.carro if motorista else "Veículo",
+                "origem": corrida.origem,
+                "destino": corrida.destino,
+
+                "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
+
+            }
+
+        )
+
+        print("SOCKET ENVIADO")
+
+        #return jsonify({
+          #  "status":"ok"
+        #})
+        return jsonify({
+
+         "status":"ok",
+
+         "origem": corrida.origem,
+
+         "destino": corrida.destino,
+
+         "corrida_id": corrida.id
+
+        })
+
+    except Exception as e:
+
+        print("ERRO")
+        print(str(e))
+
+        return jsonify({
+            "erro":str(e)
+        })
 # =========================================
 # CANCELAR CORRIDA
 # =========================================
