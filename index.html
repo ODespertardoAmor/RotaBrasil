@@ -414,6 +414,7 @@ ${data.destino}
 <p>
 💰 R$ ${data.valor}
 </p>
+<!-- BOTÕES DA CORRIDA -->
 
 <button
 class="accept"
@@ -425,11 +426,22 @@ Aceitar corrida
 
 <button
 class="primary"
-onclick="navegar()">
+onclick="navegarPassageiro()">
 
-Navegar até passageiro
+📍 Ir até passageiro
 
 </button>
+
+<button
+class="success"
+onclick="irDestino()">
+
+🎯 Ir para destino
+
+</button>
+
+
+
 
 </div>
 
@@ -742,6 +754,50 @@ corridaAtual = null;
 
 }
 );
+  /* =========================
+   IR ATÉ PASSAGEIRO
+========================= */
+
+function navegarPassageiro(){
+
+if(!corridaAtual){
+return;
+}
+
+const partes =
+corridaAtual.origem.split(",");
+
+const latitude =
+partes[0];
+
+const longitude =
+partes[1];
+
+window.open(
+
+`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`
+
+);
+
+}
+
+/* =========================
+   IR PARA DESTINO
+========================= */
+
+function irDestino(){
+
+if(!corridaAtual){
+return;
+}
+
+window.open(
+
+`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(corridaAtual.destino)}`
+
+);
+
+}
 
 </script>
 
