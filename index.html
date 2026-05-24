@@ -713,6 +713,35 @@ corridaAtual = null;
 
 }
 );
+  socket.on(
+"corrida_removida",
+(data)=>{
+
+if(
+corridaAtual &&
+corridaAtual.corrida_id ==
+data.corrida_id
+){
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+✅ Corrida aceita
+por outro motorista
+
+</div>
+
+`;
+
+corridaAtual = null;
+
+}
+
+}
+);
 
 </script>
 
