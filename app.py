@@ -459,114 +459,90 @@ def nova_corrida():
 # =========================================
 # ACEITAR CORRIDA
 # =========================================
-
-@app.route(
-    "/aceitar_corrida/<int:id>",
-    methods=["POST"]
-)
+@app.route("/aceitar_corrida/<int:id>", methods=["POST"])
 @jwt_required()
 def aceitar_corrida(id):
 
-    print("ROTA ACEITAR INICIADA")
+    motorista_user_id = get_jwt_identity()
 
-    try:
+    motorista_user = User.query.get(
+        motorista_user_id
+    )
 
-        user_id = int(
-            get_jwt_identity()
-        )
+    motorista = Motorista.query.filter_by(
+        user_id=motorista_user.id
+    ).first()
 
-        print("USER ID")
-        print(user_id)
+    corrida = Corrida.query.get(id)
 
-        corrida = Corrida.query.get(id)
+    if not corrida:
+        return jsonify({
+            "erro":"Corrida não encontrada"
+        }),404
 
-        print("CORRIDA")
-        print(corrida)
+    /* JÁ ACEITA */
 
-        if not corrida:
+    if corrida.status == "aceita":
 
-            return jsonify({
-                "erro":"corrida nao encontrada"
-            })
+        return jsonify({
+            "erro":"Corrida já aceita"
+        }),400
 
-        corrida.motorista_id = user_id
+    /* ACEITAR */
 
-        corrida.status = "aceita"
+    corrida.status = "aceita"
 
-        db.session.commit()
-        socketio.emit(
+    corrida.motorista_id = motorista.id
+
+    db.session.commit()
+
+    passageiro = User.query.get(
+        corrida.passageiro_id
+    )
+
+    /* PASSAGEIRO */
+
+    socketio.emit(
+
+        "corrida_aceita",
+
+        {
+
+            "corrida_id": corrida.id,
+
+            "motorista_id": motorista.id,
+
+            "motorista_nome": motorista_user.nome,
+
+            "placa": motorista.placa,
+
+            "carro": motorista.carro,
+
+            "foto": motorista.foto
+
+        }
+
+    )
+
+    /* REMOVE PARA OUTROS */
+
+    socketio.emit(
 
         "corrida_removida",
 
         {
-        "corrida_id": corrida.id
+
+            "corrida_id": corrida.id
+
         }
 
-        )
+    )
 
-        motorista_user = User.query.get(
-            user_id
-        )
+    return jsonify({
+        "status":"ok"
+    })
 
-        print("MOTORISTA USER")
-        print(motorista_user)
 
-        motorista = Motorista.query.filter_by(
-            user_id=user_id
-        ).first()
-
-        print("MOTORISTA")
-        print(motorista)
-
-        socketio.emit(
-
-            "corrida_aceita",
-
-            {
-
-                "corrida_id": corrida.id,
-
-                "motorista_id": user_id,
-
-                "motorista_nome": motorista_user.nome if motorista_user else "Motorista",
-
-                "placa": motorista.placa if motorista else "ABC-0000",
-
-                "carro": motorista.carro if motorista else "Veículo",
-                "origem": corrida.origem,
-                "destino": corrida.destino,
-
-                "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
-
-            }
-
-        )
-
-        print("SOCKET ENVIADO")
-
-        #return jsonify({
-          #  "status":"ok"
-        #})
-        return jsonify({
-
-         "status":"ok",
-
-         "origem": corrida.origem,
-
-         "destino": corrida.destino,
-
-         "corrida_id": corrida.id
-
-        })
-
-    except Exception as e:
-
-        print("ERRO")
-        print(str(e))
-
-        return jsonify({
-            "erro":str(e)
-        })
 # =========================================
 # CANCELAR CORRIDA
 # =========================================
