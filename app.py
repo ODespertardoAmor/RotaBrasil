@@ -427,26 +427,28 @@ def nova_corrida():
     passageiro = User.query.get(
         corrida.passageiro_id
     )
-
     socketio.emit(
 
-        "nova_corrida",
+    "nova_corrida",
 
-        {
+    {
 
-            "corrida_id": corrida.id,
+        "corrida_id": corrida.id,
 
-            "origem": corrida.origem,
+        "origem": corrida.origem,
 
-            "destino": corrida.destino,
+        "destino": corrida.destino,
 
-            "valor": corrida.valor,
+        "valor": corrida.valor,
 
-            "passageiro_nome": passageiro.nome
+        "distancia": corrida.distancia,
 
-        }
+        "passageiro_nome": passageiro.nome
 
-    )
+    }
+
+)
+    
 
     return jsonify({
 
