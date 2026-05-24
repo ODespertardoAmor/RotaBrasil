@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>Motorista - Rota Brasil</title>
 
@@ -18,10 +22,10 @@ color:white;
 }
 
 header{
-background:#111827;
 padding:20px;
+background:#111827;
 text-align:center;
-font-size:24px;
+font-size:22px;
 font-weight:bold;
 }
 
@@ -47,6 +51,7 @@ border-radius:10px;
 background:#111827;
 color:white;
 outline:none;
+box-sizing:border-box;
 }
 
 button{
@@ -58,6 +63,7 @@ font-weight:bold;
 cursor:pointer;
 margin-top:10px;
 transition:0.2s;
+font-size:16px;
 }
 
 button:hover{
@@ -79,37 +85,28 @@ background:#ef4444;
 color:white;
 }
 
-.warning{
-background:#f59e0b;
+.accept{
+background:#22c55e;
 color:white;
 }
 
 .status{
 text-align:center;
-margin-top:10px;
+margin-top:15px;
 font-weight:bold;
 }
 
 .corrida{
 background:#111827;
 padding:15px;
-border-radius:12px;
+border-radius:15px;
 margin-top:15px;
 border:1px solid #374151;
 }
 
-img{
-width:90px;
-height:90px;
-border-radius:50%;
-object-fit:cover;
-margin-top:10px;
-border:3px solid #22c55e;
-}
-
 iframe{
 width:100%;
-height:250px;
+height:300px;
 border:none;
 border-radius:15px;
 margin-top:15px;
@@ -122,26 +119,41 @@ margin-top:15px;
 <body>
 
 <header>
- Rota Brasil 🚗
+🚗 Motorista - Rota Brasil
 </header>
 
 <div class="container">
 
 <!-- LOGIN -->
 
-<div class="card" id="loginCard">
+<div
+class="card"
+id="loginCard">
 
-<h2>Login Motorista</h2>
+<h3>
+Login motorista
+</h3>
 
-<input id="email" placeholder="Email">
+<input
+id="email"
+placeholder="Email">
 
-<input id="senha" type="password" placeholder="Senha">
+<input
+id="senha"
+type="password"
+placeholder="Senha">
 
-<button class="primary" onclick="login()">
+<button
+class="success"
+onclick="login()">
+
 Entrar
+
 </button>
 
-<p id="loginStatus" class="status"></p>
+<p
+id="loginStatus"
+class="status"></p>
 
 </div>
 
@@ -150,82 +162,64 @@ Entrar
 <div
 class="card"
 id="dashboard"
-style="display:none"
->
+style="display:none">
 
-<h2>Olá motorista!</h2>
+<h3>
+Painel motorista
+</h3>
 
 <button
-class="success"
-onclick="ficarOnline()"
->
-Ficar Online
+class="primary"
+onclick="ficarOnline()">
+
+Ficar online
+
 </button>
 
 <button
 class="danger"
-onclick="ficarOffline()"
->
-Ficar Offline
-</button>
+onclick="cancelarCorridaMotorista()">
 
-<p id="status" class="status">
-Offline
-</p>
+Cancelar corrida
+
+</button>
 
 <div id="corridasArea">
 
-Nenhuma corrida disponível
+Nenhuma corrida no momento
+
+</div>
+
+<div id="mapaArea"></div>
 
 </div>
 
 </div>
 
-</div>
-  
 <script>
 
 const API =
 "https://rotabrasil-v1cf.onrender.com";
 
-const socket = io(API);
+const socket =
+io(API);
 
-let user = null;
+let token = null;
+
+let motorista = null;
 
 let corridaAtual = null;
-// Variáveis para armazenar dados da corrida
-let dadosCorrida = null;
 
-/* SOM */
+/* VOZ */
 
-function tocarSom(){
+function falarMensagem(texto){
 
-const audio = new Audio(
-"https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3"
-);
+const msg =
+new SpeechSynthesisUtterance(texto);
 
-audio.play();
+msg.lang = "pt-BR";
 
-
-
-}
-
-/* FALAR */
-
-function falar(texto){
-
-const voz =
-new SpeechSynthesisUtterance(
-texto
-);
-
-voz.lang = "pt-BR";
-
-voz.rate = 1;
-
-speechSynthesis.speak(
-voz
-);
+speechSynthesis.speak(msg);
 
 }
 
@@ -233,11 +227,11 @@ voz
 
 async function login(){
 
-const res = await fetch(
-
+const res =
+await fetch(
 API+"/login",
-
 {
+
 method:"POST",
 
 headers:{
@@ -265,43 +259,83 @@ document.getElementById(
 const data =
 await res.json();
 
-console.log(data);
-
 if(data.token){
 
+token =
+data.token;
+
+motorista =
+data.user;
+
 localStorage.setItem(
-"token",
-data.token
+"token_motorista",
+token
 );
 
 localStorage.setItem(
-"user",
-JSON.stringify(data.user)
+"user_motorista",
+JSON.stringify(motorista)
 );
-
-user = data.user;
 
 document.getElementById(
 "loginCard"
-).style.display = "none";
+).style.display =
+"none";
 
 document.getElementById(
 "dashboard"
-).style.display = "block";
-
-document.getElementById(
-"status"
-).innerHTML =
-"Logado como "+user.nome;
+).style.display =
+"block";
 
 }else{
 
-document.getElementById(
-"loginStatus"
-).innerHTML =
-"Erro login";
+alert(
+"Erro login"
+);
 
 }
+
+}
+
+/* AUTO LOGIN */
+
+const tokenSalvo =
+localStorage.getItem(
+"token_motorista"
+);
+
+const userSalvo =
+localStorage.getItem(
+"user_motorista"
+);
+
+if(
+tokenSalvo &&
+userSalvo
+){
+
+token =
+tokenSalvo;
+
+motorista =
+JSON.parse(userSalvo);
+
+window.addEventListener(
+"load",
+()=>{
+
+document.getElementById(
+"loginCard"
+).style.display =
+"none";
+
+document.getElementById(
+"dashboard"
+).style.display =
+"block";
+
+}
+);
 
 }
 
@@ -310,74 +344,19 @@ document.getElementById(
 async function ficarOnline(){
 
 await fetch(
-
-API+"/ficar_online/"+user.id,
-
+API+"/ficar_online/"+motorista.id,
 {
 method:"POST"
 }
-
 );
 
-document.getElementById(
-"status"
-).innerHTML =
-"🟢 Online";
-
-navigator.geolocation.watchPosition(
-
-(pos)=>{
-
-fetch(
-
-API+"/atualizar_localizacao",
-
-{
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-motorista_id:user.id,
-
-latitude:
-pos.coords.latitude,
-
-longitude:
-pos.coords.longitude
-
-})
-
-}
-
+alert(
+"Você está online"
 );
 
 }
 
-);
-
-}
-
-/* OFFLINE */
-
-async function ficarOffline(){
-
-document.getElementById(
-"status"
-).innerHTML =
-"🔴 Offline";
-
-}
-
-
- /* =========================
-   NOVA CORRIDA
-========================= */
-
-let corridaAtual = null;
+/* NOVA CORRIDA */
 
 socket.on(
 
@@ -390,7 +369,7 @@ console.log(
 data
 );
 
-/* GUARDA OBJETO COMPLETO */
+/* GUARDA OBJETO */
 
 corridaAtual = data;
 
@@ -405,7 +384,7 @@ audio.play();
 /* VOZ */
 
 falarMensagem(
-"Você recebeu uma nova corrida"
+"Nova corrida recebida"
 );
 
 document.getElementById(
@@ -445,7 +424,7 @@ Aceitar corrida
 </button>
 
 <button
-class="accept"
+class="primary"
 onclick="navegar()">
 
 Navegar até passageiro
@@ -459,9 +438,104 @@ Navegar até passageiro
 }
 );
 
-/* =========================
-   NAVEGAR
-========================= */
+/* ACEITAR */
+
+async function aceitar(id){
+
+try{
+
+const res =
+await fetch(
+API+"/aceitar_corrida/"+id,
+{
+
+method:"POST",
+
+headers:{
+Authorization:
+"Bearer "+token
+}
+
+}
+);
+
+const data =
+await res.json();
+
+console.log(data);
+
+falarMensagem(
+"Corrida aceita"
+);
+
+/* GPS TEMPO REAL */
+
+navigator.geolocation.watchPosition(
+
+async(pos)=>{
+
+console.log(
+"ENVIANDO GPS"
+);
+
+await fetch(
+API+"/atualizar_localizacao",
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+motorista_id:
+motorista.id,
+
+latitude:
+pos.coords.latitude,
+
+longitude:
+pos.coords.longitude
+
+})
+
+}
+
+);
+
+},
+
+(err)=>{
+
+console.log(err);
+
+},
+
+{
+
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:10000
+
+}
+
+);
+
+}catch(err){
+
+console.log(err);
+
+alert(
+"Erro aceitar corrida"
+);
+
+}
+
+}
+
+/* NAVEGAR */
 
 function navegar(){
 
@@ -486,9 +560,96 @@ window.open(
 
 }
 
-/* =========================
-   CANCELAMENTO
-========================= */
+/* MAPA TEMPO REAL */
+
+socket.on(
+"localizacao_motorista",
+(data)=>{
+
+if(
+!corridaAtual
+){
+return;
+}
+
+if(
+data.motorista_id !=
+motorista.id
+){
+return;
+}
+
+document.getElementById(
+"mapaArea"
+).innerHTML = `
+
+<iframe
+
+src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"
+
+>
+
+</iframe>
+
+`;
+
+}
+);
+
+/* CANCELAR MOTORISTA */
+
+async function cancelarCorridaMotorista(){
+
+if(!corridaAtual){
+
+alert(
+"Nenhuma corrida ativa"
+);
+
+return;
+
+}
+
+try{
+
+await fetch(
+API+"/cancelar_corrida/"+corridaAtual.corrida_id,
+{
+method:"POST"
+}
+);
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+❌ Corrida cancelada
+
+</div>
+
+`;
+
+document.getElementById(
+"mapaArea"
+).innerHTML = "";
+
+corridaAtual = null;
+
+}catch(err){
+
+console.log(err);
+
+alert(
+"Erro cancelar corrida"
+);
+
+}
+
+}
+
+/* RECEBER CANCELAMENTO */
 
 socket.on(
 "corrida_cancelada",
@@ -542,358 +703,15 @@ O passageiro cancelou.
 
 `;
 
+document.getElementById(
+"mapaArea"
+).innerHTML = "";
+
 corridaAtual = null;
 
 }
 
 }
-);
-
-/* ACEITAR */
-
-async function aceitarCorrida(id){
-
-const token =
-localStorage.getItem(
-"token"
-);
-
-const res = await fetch(
-
-API+"/aceitar_corrida/"+id,
-
-{
-method:"POST",
-
-headers:{
-
-"Authorization":
-"Bearer "+token
-
-}
-
-}
-
-);
-
-const data =
-await res.json();
-
-console.log(data);
-  /* ENVIAR GPS EM TEMPO REAL */
-
-navigator.geolocation.watchPosition(
-
-(pos)=>{
-
-console.log(
-"ENVIANDO GPS"
-);
-
-fetch(
-
-API+"/atualizar_localizacao",
-
-{
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-motorista_id:user.id,
-
-latitude:
-pos.coords.latitude,
-
-longitude:
-pos.coords.longitude
-
-})
-
-}
-
-);
-
-},
-
-(err)=>{
-
-console.log(err);
-
-},
-
-{
-enableHighAccuracy:true,
-maximumAge:0,
-timeout:5000
-}
-
-);
-
-falar(
-"Corrida aceita, vá até o passageiro"
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML += `
-
-<div class="corrida">
-
-<h2 style="
-color:#22c55e;
-">
-✅ Corrida Aceita
-</h2>
-
-<iframe
-
-src="https://maps.google.com/maps?q=-23.55052,-46.633308&z=15&output=embed"
-
-style="
-width:100%;
-height:250px;
-border:none;
-border-radius:15px;
-margin-top:15px;
-"
-
->
-
-</iframe>
-
-<a
-
-href="google.navigation:q=${encodeURIComponent(data.origem)}"
-
->
-
-<button class="success">
-
-🛰️ Navegar até Passageiro
-
-</button>
-
-</a>
-
-<!-- NOVO BOTÃO: INICIAR CORRIDA -->
-<button
-class="warning"
-onclick="iniciarCorrida()"
->
-🚀 Iniciar Corrida (chegou ao passageiro)
-</button>
-
-<button
-class="danger"
-onclick="cancelarCorrida(${id})"
->
-Cancelar Corrida
-</button>
-
-</div>
-
-`;
-
-}
-
-// FUNÇÃO: INICIAR CORRIDA
-async function iniciarCorrida() {
-    falar("Corrida iniciada, seguindo para o destino");
-    
-    // Atualiza interface e coloca destino no GPS
-    document.getElementById("corridasArea").innerHTML += `
-    <div class="corrida">
-        <h2 style="color:#f59e0b;">🚀 Corrida em Andamento</h2>
-        
-        <iframe
-            src="https://maps.google.com/maps?q=${encodeURIComponent(dadosCorrida.destino)}&z=15&output=embed"
-            style="width:100%;height:250px;border:none;border-radius:15px;margin-top:15px;"
-        >
-        </iframe>
-
-        <a href="google.navigation:q=${encodeURIComponent(dadosCorrida.destino)}">
-            <button class="success">🛰️ Navegar até Destino</button>
-        </a>
-
-        <!-- NOVO BOTÃO: FINALIZAR CORRIDA -->
-        <button class="danger" onclick="finalizarCorrida()">🏁 Finalizar Corrida</button>
-    </div>
-    `;
-
-    // Aqui você pode adicionar chamada para API para avisar que corrida começou
-    await fetch(API+"/iniciar_corrida/"+corridaAtual, { method:"POST" });
-}
-
-// FUNÇÃO: FINALIZAR CORRIDA
-async function finalizarCorrida() {
-    falar("Corrida finalizada, obrigado por usar a Rota Brasil");
-
-    document.getElementById("corridasArea").innerHTML = `
-    <div class="corrida">
-        <h2 style="color:#22c55e;">🏁 Corrida Finalizada com Sucesso</h2>
-        <p>Valor recebido: R$ ${dadosCorrida.valor}</p>
-    </div>
-    `;
-
-    // Resetar variáveis
-    corridaAtual = null;
-    dadosCorrida = null;
-
-    // Aqui você pode adicionar chamada para API para avisar que corrida foi finalizada
-    await fetch(API+"/finalizar_corrida/"+corridaAtual, { method:"POST" });
-}
-
-/* CANCELAR */
-
-async function cancelarCorrida(id){
-
-await fetch(
-
-API+"/cancelar_corrida/"+id,
-
-{
-method:"POST"
-}
-
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h2 style="
-color:red;
-">
-❌ Corrida Cancelada
-</h2>
-
-</div>
-
-`;
-
-// Resetar variáveis
-corridaAtual = null;
-dadosCorrida = null;
-
-}
-
-/* SOCKET CANCELAMENTO */
-
-socket.on(
-
-"corrida_cancelada",
-
-(data)=>{
-
-if(data.corrida_id == corridaAtual){
-
-/* SOM */
-
-tocarSom();
-
-/* VOZ */
-
-falar(
-"Rota Brasil, corrida cancelada"
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h2 style="
-color:red;
-">
-❌ Passageiro cancelou
-</h2>
-
-</div>
-
-`;
-
-// Resetar variáveis
-corridaAtual = null;
-dadosCorrida = null;
-
-}
-
-}
-
-);
-
-/* GPS */
-
-socket.on(
-
-"localizacao_motorista",
-
-(data)=>{
-
-console.log(
-"GPS RECEBIDO",
-data
-);
-
-document.getElementById(
-"mapaMotorista"
-).innerHTML = `
-
-<div style="
-background:#111827;
-padding:20px;
-border-radius:15px;
-margin-top:15px;
-text-align:center;
-">
-
-<h2 style="
-color:#22c55e;
-">
-🛰️ Motorista em movimento
-</h2>
-
-<br>
-
-<p>
-Latitude:
-${data.latitude}
-</p>
-
-<p>
-Longitude:
-${data.longitude}
-</p>
-
-<iframe
-
-style="
-width:100%;
-height:250px;
-border:none;
-border-radius:15px;
-margin-top:15px;
-"
-
-src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"
-
->
-
-</iframe>
-
-</div>
-
-`;
-
-}
-
 );
 
 </script>
