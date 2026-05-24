@@ -480,7 +480,7 @@ def aceitar_corrida(id):
             "erro":"Corrida não encontrada"
         }),404
 
-    /* JÁ ACEITA */
+    #/* JÁ ACEITA */
 
     if corrida.status == "aceita":
 
@@ -488,7 +488,7 @@ def aceitar_corrida(id):
             "erro":"Corrida já aceita"
         }),400
 
-    /* ACEITAR */
+    #/* ACEITAR */
 
     corrida.status = "aceita"
 
@@ -500,7 +500,7 @@ def aceitar_corrida(id):
         corrida.passageiro_id
     )
 
-    /* PASSAGEIRO */
+    #/* PASSAGEIRO */
 
     socketio.emit(
 
@@ -524,7 +524,7 @@ def aceitar_corrida(id):
 
     )
 
-    /* REMOVE PARA OUTROS */
+   # /* REMOVE PARA OUTROS */
 
     socketio.emit(
 
