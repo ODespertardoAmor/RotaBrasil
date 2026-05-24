@@ -202,6 +202,7 @@ def register():
 
     db.session.add(user)
     db.session.commit()
+    
 
     return jsonify({
         "status":"criado"
@@ -493,6 +494,15 @@ def aceitar_corrida(id):
         corrida.status = "aceita"
 
         db.session.commit()
+        socketio.emit(
+
+        "corrida_removida",
+
+        {
+        "corrida_id": corrida.id
+        }
+
+        )
 
         motorista_user = User.query.get(
             user_id
