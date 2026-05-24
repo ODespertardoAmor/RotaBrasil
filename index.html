@@ -372,7 +372,12 @@ document.getElementById(
 
 }
 
-/* NOVA CORRIDA */
+
+ /* =========================
+   NOVA CORRIDA
+========================= */
+
+let corridaAtual = null;
 
 socket.on(
 
@@ -384,23 +389,23 @@ console.log(
 "NOVA CORRIDA",
 data
 );
-corridaAtual =
-data;
 
- 
-//corridaAtual =
-//data.corrida_id;
-// Guardar dados da corrida
-dadosCorrida = data;
+/* GUARDA OBJETO COMPLETO */
+
+corridaAtual = data;
 
 /* SOM */
 
-tocarSom();
+const audio = new Audio(
+"https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3"
+);
+
+audio.play();
 
 /* VOZ */
 
-falar(
-"Nova corrida recebida"
+falarMensagem(
+"Você recebeu uma nova corrida"
 );
 
 document.getElementById(
@@ -409,20 +414,22 @@ document.getElementById(
 
 <div class="corrida">
 
-<h2>
-🚗 Nova Corrida
-</h2>
+<h3>
+🚗 Nova corrida
+</h3>
 
 <p>
 👤 ${data.passageiro_nome}
 </p>
 
 <p>
-📍 ${data.origem}
+📍 Origem:
+${data.origem}
 </p>
 
 <p>
-🏁 ${data.destino}
+🎯 Destino:
+${data.destino}
 </p>
 
 <p>
@@ -430,10 +437,19 @@ document.getElementById(
 </p>
 
 <button
-class="primary"
-onclick="aceitarCorrida(${data.corrida_id})"
->
-Aceitar Corrida
+class="accept"
+onclick="aceitar(${data.corrida_id})">
+
+Aceitar corrida
+
+</button>
+
+<button
+class="accept"
+onclick="navegar()">
+
+Navegar até passageiro
+
 </button>
 
 </div>
@@ -441,7 +457,96 @@ Aceitar Corrida
 `;
 
 }
+);
 
+/* =========================
+   NAVEGAR
+========================= */
+
+function navegar(){
+
+if(!corridaAtual){
+return;
+}
+
+const partes =
+corridaAtual.origem.split(",");
+
+const latitude =
+partes[0];
+
+const longitude =
+partes[1];
+
+window.open(
+
+`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`
+
+);
+
+}
+
+/* =========================
+   CANCELAMENTO
+========================= */
+
+socket.on(
+"corrida_cancelada",
+(data)=>{
+
+console.log(
+"CORRIDA CANCELADA",
+data
+);
+
+if(
+!corridaAtual
+){
+return;
+}
+
+if(
+data.corrida_id ==
+corridaAtual.corrida_id
+){
+
+falarMensagem(
+"Passageiro cancelou a corrida"
+);
+
+const audio = new Audio(
+"https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3"
+);
+
+audio.play();
+
+document.getElementById(
+"corridasArea"
+).innerHTML = `
+
+<div class="corrida">
+
+<h2 style="
+color:#ef4444;
+">
+
+❌ Corrida cancelada
+
+</h2>
+
+<p>
+O passageiro cancelou.
+</p>
+
+</div>
+
+`;
+
+corridaAtual = null;
+
+}
+
+}
 );
 
 /* ACEITAR */
