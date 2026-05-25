@@ -133,7 +133,7 @@ def aceitar_corrida(id):
     db.session.commit()
 
     dados_socket = {
-        "corrida_id": corrida.id,  # ✅ Enviado como NÚMERO, não string
+        "corrida_id": corrida.id,
         "motorista_id": motorista.id,
         "motorista_nome": motorista.nome,
         "carro": motorista.carro if motorista.carro else "Carro Particular",
@@ -167,10 +167,10 @@ def nova_corrida():
     db.session.add(nova)
     db.session.commit()
     
-    # ✅ CORREÇÃO PRINCIPAL: Adicionei passageiro_id e arrumei os tipos
+    # ✅ Dados completos e corretos para o motorista
     dados_chamada = {
-        "corrida_id": nova.id,  # Número inteiro
-        "passageiro_id": passageiro.id, # Faltava esse campo!
+        "corrida_id": nova.id,
+        "passageiro_id": passageiro.id,
         "passageiro_nome": passageiro.nome,
         "origem": nova.origem,
         "destino": nova.destino,
@@ -191,7 +191,6 @@ def cancelar_corrida(id):
     corrida.status = "cancelada"
     db.session.commit()
 
-    # ✅ Também enviado como número
     socketio.emit("corrida_cancelada", {"corrida_id": corrida.id})
     return jsonify({"status": "cancelada"}), 200
 
