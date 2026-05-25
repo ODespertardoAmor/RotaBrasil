@@ -119,8 +119,18 @@
     </div>
 
     <script>
+        // ❌ APAGA: const socket = io(API);
+
+
+        
         const API = "https://rotabrasil-v1cf.onrender.com";
-        const socket = io(API);
+        // ❌ APAGA: const socket = io(API);
+
+// ✅ COLOCA:
+const socket = io(API, {
+    transports: ['websocket', 'polling']
+});
+
         
         socket.on("connect", () => {
             console.log("✅ Motorista Conectado ao Socket");
