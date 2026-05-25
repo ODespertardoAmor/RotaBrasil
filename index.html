@@ -78,6 +78,12 @@
             border-radius: 15px;
             margin-top: 15px;
         }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -89,16 +95,22 @@
 
     <div class="container">
         <div class="card" id="loginCard">
-            <h3>Login motorista</h3>
+            <h3>Login / Cadastro Motorista</h3>
+            <input id="nome" placeholder="Nome (Apenas para Cadastro)">
             <input id="email" placeholder="Email" type="email">
             <input id="senha" type="password" placeholder="Senha">
+            <input id="telefone" placeholder="Telefone (Apenas para Cadastro)">
+            <input id="carro" placeholder="Carro (Ex: Uno Prata) - Apenas para Cadastro">
+            <input id="placa" placeholder="Placa (Ex: ABC1234) - Apenas para Cadastro">
+            
+            <button class="primary" onclick="registerMotorista()">Criar conta Motorista</button>
             <button class="success" onclick="login()">Entrar</button>
+            <p id="loginStatus" class="status"></p>
         </div>
 
         <div class="card" id="dashboard" style="display:none">
             <h3>Painel motorista</h3>
             <button class="primary" onclick="ficarOnline()">Ficar online</button>
-            
             <button class="danger" style="background: #475569;" onclick="logoutMotorista()">🚪 Sair da Conta</button>
             
             <div id="corridasArea">Nenhuma corrida no momento</div>
@@ -116,13 +128,43 @@
         let corridaAceita = false;
         let watchId = null; 
 
-        /* =========================
-           VOZ
-        ========================= */
         function falarMensagem(texto) {
             const msg = new SpeechSynthesisUtterance(texto);
             msg.lang = "pt-BR";
             speechSynthesis.speak(msg);
+        }
+
+        /* =========================
+           CADASTRO DO MOTORISTA (RESOLVE O PROBLEMA)
+        ========================= */
+        async function registerMotorista() {
+            try {
+                document.getElementById("loginStatus").innerHTML = "Processando cadastro...";
+                const res = await fetch(`${API}/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        nome: document.getElementById("nome").value,
+                        email: document.getElementById("email").value,
+                        senha: document.getElementById("senha").value,
+                        telefone: document.getElementById("telefone").value,
+                        tipo: "motorista", // Define rigidamente como motorista no banco
+                        carro: document.getElementById("carro").value,
+                        placa: document.getElementById("placa").value
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById("loginStatus").innerHTML = "Conta criada! Conectando...";
+                    login(); // Faz o login automático imediatamente
+                } else {
+                    alert(data.erro || "Erro ao criar conta de motorista.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao conectar com o servidor.");
+            }
         }
 
         /* =========================
@@ -142,6 +184,12 @@
                 const data = await res.json();
 
                 if (res.ok && data.token) {
+                    // VERIFICAÇÃO SE A CONTA REALMENTE É UM MOTORISTA
+                    if (data.user.tipo !== "motorista") {
+                        alert("Este e-mail pertence a uma conta de passageiro!");
+                        return;
+                    }
+
                     token = data.token;
                     motorista = data.user;
 
@@ -180,7 +228,6 @@
         function logoutMotorista() {
             localStorage.removeItem("token_motorista");
             localStorage.removeItem("user_motorista");
-            alert("Conta desconectada com sucesso!");
             window.location.reload(); 
         }
 
@@ -204,11 +251,10 @@
         socket.on("nova_corrida", (data) => {
             if (corridaAceita) return;
 
-            console.log("NOVA CORRIDA RECEBIDA:", data);
             corridaAtual = data;
 
             const audio = new Audio("https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3");
-            audio.play().catch(e => console.log("Áudio bloqueado pelo navegador"));
+            audio.play().catch(e => console.log("Áudio bloqueado"));
 
             falarMensagem("Nova corrida recebida");
 
@@ -231,10 +277,7 @@
            ACEITAR CORRIDA
         ========================= */
         async function aceitar(id) {
-            if (corridaAceita) {
-                alert("Você já está em uma corrida ativa.");
-                return;
-            }
+            if (corridaAceita) return;
 
             try {
                 const res = await fetch(`${API}/aceitar_corrida/${id}`, {
@@ -252,13 +295,13 @@
                 }
 
                 corridaAceita = true;
-                falarMensagem("Corrida aceita com sucesso");
+                falarMensagem("Corrida aceita");
 
                 document.getElementById("acoesCorrida").innerHTML = `
                     <button class="primary" onclick="navegarPassageiro()">📍 Abrir GPS até Passageiro</button>
                     <button class="success" onclick="irDestino()">🎯 Abrir GPS para Destino</button>
                     <button class="danger" onclick="cancelarCorridaMotorientado()">❌ Cancelar Corrida</button>
-                    <button class="success" style="background:#047857; margin-top:20px;" onclick="finalizarCorrida()">✅ Concluir/Finalizar Corrida</button>
+                    <button class="success" style="background:#047857; margin-top:20px;" onclick="finalizarCorrida()">✅ Finalizar Corrida</button>
                 `;
 
                 /* RASTREAMENTO GPS */
@@ -277,14 +320,13 @@
                                 })
                             });
                         },
-                        (err) => console.error("Erro no GPS:", err),
+                        (err) => console.error(err),
                         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
                     );
                 }
 
             } catch (err) {
                 console.error(err);
-                alert("Erro de conexão ao aceitar corrida.");
             }
         }
 
@@ -304,33 +346,30 @@
         });
 
         /* =========================
-           NAVEGAÇÃO
+           CORREÇÃO DOS LINKS DE NAVEGAÇÃO DO GOOGLE MAPS
         ========================= */
         function navegarPassageiro() {
             if (!corridaAtual) return;
-            const destinoUrl = encodeURIComponent(corridaAtual.origem);
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destinoUrl}&travelmode=driving`, "_blank");
+            // Abre o aplicativo de mapas direto nas coordenadas/texto de origem da corrida
+            const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(corridaAtual.origem)}&travelmode=driving`;
+            window.open(urlMaps, "_blank");
         }
 
         function irDestino() {
             if (!corridaAtual) return;
-            const destinoUrl = encodeURIComponent(corridaAtual.destino);
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destinoUrl}&travelmode=driving`, "_blank");
+            // Abre o aplicativo de mapas direto nas coordenadas/texto do destino da corrida
+            const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(corridaAtual.destino)}&travelmode=driving`;
+            window.open(urlMaps, "_blank");
         }
 
         /* =========================
            FINALIZAR CORRIDA
         ========================= */
         function finalizarCorrida() {
-            falarMensagem("Corrida finalizada com sucesso");
-            
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId); 
-            }
-
+            falarMensagem("Corrida finalizada");
+            if (watchId) navigator.geolocation.clearWatch(watchId); 
             document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
             document.getElementById("mapaArea").innerHTML = "";
-            
             corridaAtual = null;
             corridaAceita = false;
         }
@@ -340,13 +379,11 @@
         ========================= */
         async function cancelarCorridaMotorientado() {
             if (!corridaAtual) return;
-
             try {
                 const res = await fetch(`${API}/cancelar_corrida/${corridaAtual.corrida_id}`, {
                     method: "POST",
                     headers: { "Authorization": "Bearer " + token }
                 });
-
                 if (res.ok) {
                     if (watchId) navigator.geolocation.clearWatch(watchId);
                     document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
@@ -365,19 +402,13 @@
         ========================= */
         socket.on("corrida_cancelada", (data) => {
             if (!corridaAtual) return;
-
             if (data.corrida_id == corridaAtual.corrida_id) {
                 falarMensagem("O passageiro cancelou a corrida");
                 if (watchId) navigator.geolocation.clearWatch(watchId);
-
-                document.getElementById("corridasArea").innerHTML = `
-                    <div class="corrida" style="border-color:#ef4444;">❌ O passageiro cancelou esta corrida.</div>
-                `;
-                
+                document.getElementById("corridasArea").innerHTML = `<div class="corrida" style="border-color:#ef4444;">❌ O passageiro cancelou esta corrida.</div>`;
                 setTimeout(() => {
-                    document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+                    if (!corridaAceita) document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
                 }, 4000);
-
                 document.getElementById("mapaArea").innerHTML = "";
                 corridaAtual = null;
                 corridaAceita = false;
@@ -385,11 +416,10 @@
         });
 
         /* =========================
-           MAPA TEMPO REAL DO MOTORISTA
+           MAPA DO PROPRIO MOTORISTA
         ========================= */
         socket.on("localizacao_motorista", (data) => {
             if (!motorista || data.motorista_id != motorista.id) return;
-
             document.getElementById("mapaArea").innerHTML = `
                 <iframe src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"></iframe>
             `;
