@@ -3,261 +3,133 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_socketio import SocketIO
-from flask_jwt_extended import (
-    JWTManager,
-    create_access_token,
-    jwt_required,
-    get_jwt_identity
-)
-# Importando ferramentas para segurança de senhas
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-
-# =========================================
-# APP CONFIGURAÇÃO
-# =========================================
 
 app = Flask(__name__)
 CORS(app)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "segredo-super-secreto")
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "jwt-segredo-super-secreto")
-
-# Configuração e correção da URL do PostgreSQL
-database_url = os.environ.get("DATABASE_URL", "sqlite:///transporte.db") # Fallback para SQLite local
-if database_url and database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+# CONFIGURAÇÕES DO BACKEND
+app.config["SQLALCHEMY_DATABASE_DATA_BASE"] = "sqlite:///rotabrasil.db" # Substitua pela sua string do Postgres se usar em produção
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["JWT_SECRET_KEY"] = "super-secret-key-rota-brasil" # Mude em produção
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# SocketIO configurado para rodar de forma assíncrona estável
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
-# =========================================
-# MODELOS (BANCO DE DADOS)
-# =========================================
-
-class User(db.Model):
+# ==========================================
+# MODELOS DO BANCO DE DADOS (TABELAS)
+# ==========================================
+class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    senha = db.Column(db.Text, nullable=False) # Armazenará o hash criptografado
+    nome = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    senha = db.Column(db.String(200), nullable=False)
     telefone = db.Column(db.String(20))
-    tipo = db.Column(db.String(20), default="passageiro") # passageiro ou motorista
-
-    # Relacionamento para facilitar a busca do perfil de motorista se houver
-    motorista_perfil = db.relationship('Motorista', backref='user', uselist=False)
-
-
-class Motorista(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
-    carro = db.Column(db.String(120), default="Veículo")
-    placa = db.Column(db.String(20), default="ABC-0000")
-    foto = db.Column(db.String(500), default="https://i.imgur.com/6VBx3io.png")
+    tipo = db.Column(db.String(20), default="passageiro") # 'passageiro' ou 'motorista'
+    carro = db.Column(db.String(50), nullable=True)
+    placa = db.Column(db.String(20), nullable=True)
     online = db.Column(db.Boolean, default=False)
-
 
 class Corrida(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    passageiro_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    motorista_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    passageiro_id = db.Column(db.Integer, nullable=False)
+    motorista_id = db.Column(db.Integer, nullable=True)
     origem = db.Column(db.String(255), nullable=False)
     destino = db.Column(db.String(255), nullable=False)
     valor = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(50), default="pendente") # pendente, aceita, cancelada, finalizada
+    distancia = db.Column(db.String(20), nullable=True)
+    status = db.Column(db.String(20), default="pendente") # 'pendente', 'aceita', 'cancelada', 'finalizada'
 
-
-# =========================================
-# INICIALIZAÇÃO AUTOMÁTICA DO BANCO
-# =========================================
-
-with app.app_context():
-    db.create_all()
-
-# =========================================
-# ROTAS DE AUTENTICAÇÃO
-# =========================================
-
+# ==========================================
+# ROTAS DE AUTENTICAÇÃO (CADASTRO e LOGIN)
+# ==========================================
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.get_json()
-    nome = data.get("nome")
-    email = data.get("email")
-    senha = data.get("senha")
-    telefone = data.get("telefone")
-    tipo = data.get("tipo", "passageiro")
-
-    if not nome or not email or not senha:
-        return jsonify({"erro": "Campos obrigatórios faltando"}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"erro": "E-mail já cadastrado"}), 400
-
-    # Criptografando a senha antes de salvar
-    senha_criptografada = generate_password_hash(senha)
-
-    user = User(
-        nome=nome,
-        email=email,
-        senha=senha_criptografada,
-        telefone=telefone,
-        tipo=tipo
+    dados = request.get_json()
+    
+    # Criptografa a senha antes de salvar no banco
+    senha_cripto = generate_password_hash(dados.get("senha"))
+    
+    novo_usuario = Usuario(
+        nome=dados.get("nome"),
+        email=dados.get("email"),
+        senha=senha_cripto,
+        telefone=dados.get("telefone"),
+        tipo=dados.get("tipo", "passageiro"),
+        carro=dados.get("carro"),
+        placa=dados.get("placa")
     )
-    db.session.add(user)
+    
+    db.session.add(novo_usuario)
     db.session.commit()
-
-    return jsonify({"status": "criado", "user_id": user.id}), 201
-
-
-@app.route("/registrar_motorista", methods=["POST"])
-def registrar_motorista():
-    data = request.get_json()
-    nome = data.get("nome")
-    email = data.get("email")
-    senha = data.get("senha")
-    carro = data.get("carro", "Veículo")
-    placa = data.get("placa", "ABC-0000")
-    foto = data.get("foto", "https://i.imgur.com/6VBx3io.png")
-
-    if not nome or not email or not senha:
-        return jsonify({"erro": "Campos obrigatórios faltando"}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({"erro": "E-mail já cadastrado"}), 400
-
-    senha_criptografada = generate_password_hash(senha)
-
-    user = User(
-        nome=nome,
-        email=email,
-        senha=senha_criptografada,
-        tipo="motorista"
-    )
-    db.session.add(user)
-    db.session.commit()
-
-    motorista = Motorista(
-        user_id=user.id,
-        carro=carro,
-        placa=placa,
-        foto=foto,
-        online=False
-    )
-    db.session.add(motorista)
-    db.session.commit()
-
-    return jsonify({"status": "motorista criado", "user_id": user.id}), 201
-
+    return jsonify({"status": "Conta criada com sucesso!"}), 201
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    email = data.get("email")
-    senha = data.get("senha")
+    dados = request.get_json()
+    usuario = Usuario.query.filter_by(email=dados.get("email")).first()
+    
+    if not usuario or not check_password_hash(usuario.senha, dados.get("senha")):
+        return jsonify({"erro": "E-mail ou senha incorretos"}), 401
+        
+    # Gera o Token JWT contendo o ID do usuário
+    token = create_access_token(identity=str(usuario.id))
+    
+    dados_user = {
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
+        "tipo": usuario.tipo,
+        "carro": usuario.carro,
+        "placa": usuario.placa
+    }
+    
+    return jsonify({"token": token, "user": dados_user}), 200
 
-    user = User.query.filter_by(email=email).first()
-
-    # Verificando se o usuário existe E se a senha descriptografada bate
-    if not user or not check_password_hash(user.senha, senha):
-        return jsonify({"erro": "Login ou senha inválidos"}), 401
-
-    token = create_access_token(identity=str(user.id))
-
-    return jsonify({
-        "token": token,
-        "user": {
-            "id": user.id,
-            "nome": user.nome,
-            "tipo": user.tipo
-        }
-    })
-
-# =========================================
-# CONTROLE DE FLUXO DOS MOTORISTAS
-# =========================================
+# ==========================================
+# ROTAS DO FLUXO DO MOTORISTA
+# ==========================================
+@app.route("/ficar_online/<int:id>", methods=["POST"])
+def ficar_online(id):
+    motorista = Usuario.query.get(id)
+    if motorista:
+        motorista.online = True
+        db.session.commit()
+    return jsonify({"status": "Motorista online"}), 200
 
 @app.route("/motoristas_online", methods=["GET"])
 def motoristas_online():
-    motoristas = Motorista.query.filter_by(online=True).all()
+    motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
     lista = []
     for m in motoristas:
         lista.append({
             "id": m.id,
-            "user_id": m.user_id,
-            "nome": m.user.nome,
-            "carro": m.carro,
-            "placa": m.placa,
-            "foto": m.foto
+            "nome": m.nome,
+            "carro": m.carro if m.carro else "Carro Particular",
+            "placa": m.placa if m.placa else ""
         })
-    return jsonify(lista)
+    return jsonify(lista), 200
 
-
-@app.route("/ficar_online/<int:user_id>", methods=["POST"])
-def ficar_online(user_id):
-    m = Motorista.query.filter_by(user_id=user_id).first()
-    if not m:
-        m = Motorista(user_id=user_id)
-    
-    m.online = True
-    db.session.add(m)
-    db.session.commit()
-    return jsonify({"status": "online"})
-
-
-@app.route("/ficar_offline/<int:user_id>", methods=["POST"])
-def ficar_offline(user_id):
-    motorista = Motorista.query.filter_by(user_id=user_id).first()
-    if motorista:
-        motorista.online = False
-        db.session.commit()
-    return jsonify({"status": "offline"})
-
-# =========================================
-# CORE DAS CORRIDAS (REAL-TIME E SEGURANÇA)
-# =========================================
-
-@app.route("/nova_corrida", methods=["POST"])
-@jwt_required()
-def nova_corrida():
-    data = request.get_json()
-    passageiro_id = get_jwt_identity()
-
-    corrida = Corrida(
-        passageiro_id=int(passageiro_id),
-        origem=data["origem"],
-        destino=data["destino"],
-        valor=float(data["valor"]),
-        status="pendente"
-    )
-    db.session.add(corrida)
-    db.session.commit()
-
-    passageiro = User.query.get(corrida.passageiro_id)
-
-    # Emite via WebSocket para TODOS os motoristas conectados que há uma nova corrida
-    socketio.emit(
-        "nova_corrida",
-        {
-            "corrida_id": corrida.id,
-            "origem": corrida.origem,
-            "destino": corrida.destino,
-            "valor": corrida.valor,
-            "passageiro_nome": passageiro.nome
-        }
-    )
-
-    return jsonify({"status": "ok", "corrida_id": corrida.id}), 201
-# DENTRO DA SUA ROTA /aceitar_corrida NO BACKEND:
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
-    # ... (seu código que busca a corrida e o motorista no banco) ...
+    motorista_id = get_jwt_identity()
+    motorista = Usuario.query.get(motorista_id)
+    corrida = Corrida.query.get(id)
+    
+    if not corrida:
+        return jsonify({"erro": "Corrida não encontrada"}), 404
+        
+    if corrida.status != "pendente":
+        return jsonify({"erro": "Esta corrida já foi aceita por outro motorista"}), 400
 
-    # 🚨 O SEGREDO ESTÁ AQUI: Garanta que você está passando um dicionário puro com strings/números para o socket!
+    corrida.motorista_id = motorista.id
+    corrida.status = "aceita"
+    db.session.commit()
+
+    # Dicionário puro enviado ao socket para EVITAR ERRO de argumentos inválidos
     dados_socket = {
         "corrida_id": str(corrida.id),
         "motorista_id": str(motorista.id),
@@ -266,64 +138,44 @@ def aceitar_corrida(id):
         "placa": str(motorista.placa if motorista.placa else "Sem Placa")
     }
 
-    # Dispara para o passageiro que a corrida foi aceita
     socketio.emit("corrida_aceita", dados_socket)
-
-    # Dispara para os OUTROS motoristas removerem a chamada da tela
     socketio.emit("corrida_removida", {"corrida_id": str(corrida.id)})
 
     return jsonify({"status": "Corrida aceita com sucesso", "corrida_id": corrida.id}), 200
 
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"erro": str(e)}), 500
-
+# ==========================================
+# ROTAS DO FLUXO DO PASSAGEIRO
+# ==========================================
+@app.route("/nova_corrida", methods=["POST"])
+@jwt_required()
+def nova_corrida():
+    passageiro_id = get_jwt_identity()
+    passageiro = Usuario.query.get(passageiro_id)
+    dados = request.get_json()
+    
+    nova = Corrida(
+        passageiro_id=passageiro_id,
+        origem=dados.get("origem"),
+        destino=dados.get("destino"),
+        valor=float(dados.get("valor")),
+        distancia=dados.get("distancia", "0"),
+        status="pendente"
+    )
+    
+    db.session.add(nova)
+    db.session.commit()
+    
+    dados_chamada = {
+        "corrida_id": str(nova.id),
+        "passageiro_nome": str(passageiro.nome),
+        "origem": str(nova.origem),
+        "destino": str(nova.destino),
+        "valor": float(nova.valor),
+        "distancia": str(nova.distancia)
+    }
+    
+    socketio.emit("nova_corrida", dados_chamada)
+    return jsonify({"status": "Procurando motoristas", "corrida_id": nova.id}), 201
 
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
-@jwt_required()
-def cancelar_corrida(id):
-    corrida = Corrida.query.get(id)
-    if not corrida:
-        return jsonify({"erro": "Corrida não encontrada"}), 404
-
-    corrida.status = "cancelada"
-    db.session.commit()
-
-    socketio.emit("corrida_cancelada", {"corrida_id": corrida.id}, broadcast=True)
-    return jsonify({"status": "cancelada"})
-
-
-@app.route("/atualizar_localizacao", methods=["POST"])
-@jwt_required()
-def atualizar_localizacao():
-    data = request.get_json()
-    motorista_id = get_jwt_identity()
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
-
-    # Envia a posição do motorista em tempo real para o mapa do passageiro
-    socketio.emit(
-        "localizacao_motorista",
-        {
-            "motorista_id": int(motorista_id),
-            "latitude": latitude,
-            "longitude": longitude
-        },
-        broadcast=True
-    )
-    return jsonify({"status": "localizacao atualizada"})
-
-# =========================================
-# EXECUÇÃO DO PROJETO
-# =========================================
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        debug=True,
-        allow_unsafe_werkzeug=True
-    )
+@jwt
