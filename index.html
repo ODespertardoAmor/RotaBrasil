@@ -122,7 +122,9 @@
         const API = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API);
         
-        
+        socket.on("connect", () => {
+            console.log("✅ Motorista Conectado ao Socket");
+        });
 
         let token = null;
         let motorista = null;
@@ -137,7 +139,7 @@
         }
 
         /* =========================
-           CADASTRO DO MOTORISTA (RESOLVE O PROBLEMA)
+           CADASTRO DO MOTORISTA
         ========================= */
         async function registerMotorista() {
             try {
@@ -150,7 +152,7 @@
                         email: document.getElementById("email").value,
                         senha: document.getElementById("senha").value,
                         telefone: document.getElementById("telefone").value,
-                        tipo: "motorista", // Define rigidamente como motorista no banco
+                        tipo: "motorista",
                         carro: document.getElementById("carro").value,
                         placa: document.getElementById("placa").value
                     })
@@ -159,7 +161,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("loginStatus").innerHTML = "Conta criada! Conectando...";
-                    login(); // Faz o login automático imediatamente
+                    login();
                 } else {
                     alert(data.erro || "Erro ao criar conta de motorista.");
                 }
@@ -186,7 +188,6 @@
                 const data = await res.json();
 
                 if (res.ok && data.token) {
-                    // VERIFICAÇÃO SE A CONTA REALMENTE É UM MOTORISTA
                     if (data.user.tipo !== "motorista") {
                         alert("Este e-mail pertence a uma conta de passageiro!");
                         return;
@@ -225,7 +226,7 @@
         }
 
         /* =========================
-           SAIR DA CONTA (LOGOUT)
+           SAIR DA CONTA
         ========================= */
         function logoutMotorista() {
             localStorage.removeItem("token_motorista");
@@ -248,22 +249,25 @@
         }
 
         /* =========================
-           NOVA CORRIDA (CHAMADA)
+           NOVA CORRIDA (O QUE ESTAVA FALHANDO)
         ========================= */
         socket.on("nova_corrida", (data) => {
+            console.log("📥 Nova corrida recebida:", data); // Adicionei log para ver chegar
+
             if (corridaAceita) return;
 
             corridaAtual = data;
 
-            const audio = new Audio("https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3");
-            audio.play().catch(e => console.log("Áudio bloqueado"));
+            // ✅ Áudio alternativo caso o link antigo não funcione
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-notification-2576.mp3');
+            audio.play().catch(e => console.log("Áudio bloqueado pelo navegador:", e));
 
             falarMensagem("Nova corrida recebida");
 
             document.getElementById("corridasArea").innerHTML = `
                 <div class="corrida" id="cardCorrida_${data.corrida_id}">
                     <h3>🚗 Nova corrida disponível</h3>
-                    <p>👤 <b>Passageiro:</b> ${data.passageiro_nome}</p>
+                    <p>👤 <b>Passageiro:</b> ${data.passageiro_nome || 'Nome não informado'}</p>
                     <p>📍 <b>Origem:</b> ${data.origem}</p>
                     <p>🎯 <b>Destino:</b> ${data.destino}</p>
                     <p>💰 <b>Valor:</b> R$ ${parseFloat(data.valor).toFixed(2)}</p>
@@ -306,7 +310,6 @@
                     <button class="success" style="background:#047857; margin-top:20px;" onclick="finalizarCorrida()">✅ Finalizar Corrida</button>
                 `;
 
-                /* RASTREAMENTO GPS */
                 if (navigator.geolocation) {
                     watchId = navigator.geolocation.watchPosition(
                         async (pos) => {
@@ -333,7 +336,7 @@
         }
 
         /* =========================
-           REMOVER CORRIDA DA TELA (SE OUTRO ACEITOU)
+           REMOVER CORRIDA DA TELA
         ========================= */
         socket.on("corrida_removida", (data) => {
             if (corridaAtual && corridaAtual.corrida_id == data.corrida_id && !corridaAceita) {
@@ -348,18 +351,16 @@
         });
 
         /* =========================
-           CORREÇÃO DOS LINKS DE NAVEGAÇÃO DO GOOGLE MAPS
+           NAVEGAÇÃO
         ========================= */
         function navegarPassageiro() {
             if (!corridaAtual) return;
-            // Abre o aplicativo de mapas direto nas coordenadas/texto de origem da corrida
             const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(corridaAtual.origem)}&travelmode=driving`;
             window.open(urlMaps, "_blank");
         }
 
         function irDestino() {
             if (!corridaAtual) return;
-            // Abre o aplicativo de mapas direto nas coordenadas/texto do destino da corrida
             const urlMaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(corridaAtual.destino)}&travelmode=driving`;
             window.open(urlMaps, "_blank");
         }
