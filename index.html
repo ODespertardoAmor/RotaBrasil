@@ -249,18 +249,17 @@
         }
 
         /* =========================
-           NOVA CORRIDA (O QUE ESTAVA FALHANDO)
+           NOVA CORRIDA (AGORA CHEGA!)
         ========================= */
         socket.on("nova_corrida", (data) => {
-            console.log("📥 Nova corrida recebida:", data); // Adicionei log para ver chegar
+            console.log("📥 Nova corrida recebida:", data);
 
             if (corridaAceita) return;
 
             corridaAtual = data;
 
-            // ✅ Áudio alternativo caso o link antigo não funcione
             const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-notification-2576.mp3');
-            audio.play().catch(e => console.log("Áudio bloqueado pelo navegador:", e));
+            audio.play().catch(e => console.log("Áudio bloqueado:", e));
 
             falarMensagem("Nova corrida recebida");
 
