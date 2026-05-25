@@ -119,10 +119,9 @@
     </div>
 
     <script>
-        const socket = io("https://rotabrasil-v1cf.onrender.com", {
-    transports: ["websocket"],
-    upgrade: false
-    });
+        const API = "https://rotabrasil-v1cf.onrender.com";
+        const socket = io(API);
+        
         
 
         let token = null;
