@@ -52,11 +52,19 @@ db = SQLAlchemy(app)
 
 jwt = JWTManager(app)
 
+#socketio = SocketIO(
+    #app,
+   # cors_allowed_origins="*"
+#)
 socketio = SocketIO(
-    app,
-    cors_allowed_origins="*"
-)
 
+    app,
+
+    cors_allowed_origins="*",
+
+    async_mode="threading"
+
+)
 # =========================================
 # MODELS
 # =========================================
@@ -538,8 +546,9 @@ def aceitar_corrida(id):
 
                 "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
 
-            }
-
+            },
+            
+           broadcast=True
         )
 
         print("SOCKET ENVIADO")
