@@ -22,10 +22,13 @@ app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-ke
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+# 🔧 CORREÇÃO CRUCIAL PARA O RENDER SOCKET.IO
+socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'polling'])
 
 # ==========================================
-# MODELOS DO BANCO DE DADOS
+# MODELOS DO BANCO DE DADOS (CORRIGIDO ✅)
+# REMOVI O CAMPO DISTANCIA DAQUI DE BAIXO!
 # ==========================================
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,7 +48,7 @@ class Corrida(db.Model):
     origem = db.Column(db.String(255), nullable=False)
     destino = db.Column(db.String(255), nullable=False)
     valor = db.Column(db.Float, nullable=False)
-    distancia = db.Column(db.String(20), nullable=True)
+    # 🚨 REMOVI A LINHA "distancia = ..." DAQUI! AGORA NÃO EXISTE MAIS NO BANCO
     status = db.Column(db.String(20), default="pendente")
 
 # ==========================================
@@ -146,7 +149,7 @@ def aceitar_corrida(id):
     return jsonify({"status": "Corrida aceita com sucesso", "corrida_id": corrida.id}), 200
 
 # ==========================================
-# ROTAS DO PASSAGEIRO
+# ROTAS DO PASSAGEIRO (CORRIGIDA ✅ SEM DISTANCIA NO INSERT)
 # ==========================================
 @app.route("/nova_corrida", methods=["POST"])
 @jwt_required()
@@ -155,19 +158,19 @@ def nova_corrida():
     passageiro = Usuario.query.get(passageiro_id)
     dados = request.get_json()
     
+    # 🔧 AQUI É O PRINCIPAL: REMOVI A LINHA DE "distancia" DA CRIAÇÃO DA CORRIDA
     nova = Corrida(
         passageiro_id=passageiro_id,
         origem=dados.get("origem"),
         destino=dados.get("destino"),
         valor=float(dados.get("valor")),
-       # distancia=dados.get("distancia", "0"),
         status="pendente"
     )
     
     db.session.add(nova)
     db.session.commit()
     
-    # ✅ Dados completos e corretos para o motorista
+    # ✅ AQUI EU ENVIO A DISTANCIA APENAS PARA TELA, NÃO SALVO NO BANCO!
     dados_chamada = {
         "corrida_id": nova.id,
         "passageiro_id": passageiro.id,
@@ -175,7 +178,7 @@ def nova_corrida():
         "origem": nova.origem,
         "destino": nova.destino,
         "valor": nova.valor,
-        "distancia": nova.distancia
+        "distancia": dados.get("distancia", "Calculando...") # <-- Vem do frontend, só mostra
     }
     
     socketio.emit("nova_corrida", dados_chamada)
@@ -221,11 +224,12 @@ def atualizar_localizacao():
 # EVENTO PADRÃO DO SOCKETIO
 @socketio.on("connect")
 def on_connect():
-    print(f"✅ Cliente conectado!")
+    print(f"✅ Cliente conectado com sucesso!")
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
+    # 🔧 MODO DEBUG DESLIGADO PARA PRODUÇÃO NO RENDER (MAIS ESTÁVEL)
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
