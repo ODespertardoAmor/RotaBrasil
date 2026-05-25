@@ -6,13 +6,26 @@ from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+
+import os
+
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURAÇÕES DO BACKEND
-app.config["SQLALCHEMY_DATABASE_DATA_BASE"] = "sqlite:///rotabrasil.db" # Substitua pela sua string do Postgres se usar em produção
+# CONFIGURAÇÃO INTELIGENTE PARA POSTGRESQL
+# Ele vai tentar pegar a URL do banco do Render. Se você testar no seu computador local, ele usa o SQLite como cópia.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///rotabrasil.db")
+
+# O SQLAlchemy moderno exige que a URL comece com "postgresql://", 
+# mas o Render às vezes envia como "postgres://". Essa linha corrige isso automaticamente:
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = "super-secret-key-rota-brasil" # Mude em produção
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key-rota-brasil")
+
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
