@@ -178,4 +178,51 @@ def nova_corrida():
     return jsonify({"status": "Procurando motoristas", "corrida_id": nova.id}), 201
 
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
-@jwt
+@jwt_required()
+def cancelar_corrida(id):
+    corrida = Corrida.query.get(id)
+    if not corrida:
+        return jsonify({"erro": "Corrida não encontrada"}), 404
+
+    corrida.status = "cancelada"
+    db.session.commit()
+
+    socketio.emit("corrida_cancelada", {"corrida_id": int(corrida.id)})
+    return jsonify({"status": "cancelada"}), 200
+
+# ==========================================
+# ROTAS DE MONITORAMENTO GPS
+# ==========================================
+@app.route("/atualizar_localizacao", methods=["POST"])
+@jwt_required()
+def atualizar_localizacao():
+    motorista_id = get_jwt_identity()
+    dados = request.get_json()
+    
+    latitude = dados.get("latitude")
+    longitude = dados.get("longitude")
+
+    if not latitude or not longitude:
+        return jsonify({"erro": "Coordenadas ausentes"}), 400
+
+    dados_gps = {
+        "motorista_id": str(motorista_id),
+        "latitude": float(latitude),
+        "longitude": float(longitude)
+    }
+    
+    socketio.emit("localizacao_motorista", dados_gps)
+    return jsonify({"status": "Localização atualizada"}), 200
+
+# EVENTO PADRÃO DO SOCKETIO
+@socketio.on("connect")
+def on_connect():
+    print(f"Cliente Socket conectado no Servidor!")
+
+if __name__ == "__main__":
+    # Cria o arquivo de banco de dados do zero se ele não existir
+    with app.app_context():
+        db.create_all()
+    
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)
