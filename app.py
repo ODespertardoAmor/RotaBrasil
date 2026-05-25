@@ -7,18 +7,11 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-
-import os
-
 app = Flask(__name__)
 CORS(app)
 
 # CONFIGURAÇÃO INTELIGENTE PARA POSTGRESQL
-# Ele vai tentar pegar a URL do banco do Render. Se você testar no seu computador local, ele usa o SQLite como cópia.
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///rotabrasil.db")
-
-# O SQLAlchemy moderno exige que a URL comece com "postgresql://", 
-# mas o Render às vezes envia como "postgres://". Essa linha corrige isso automaticamente:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -32,7 +25,7 @@ jwt = JWTManager(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # ==========================================
-# MODELOS DO BANCO DE DADOS (TABELAS)
+# MODELOS DO BANCO DE DADOS
 # ==========================================
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,7 +33,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     senha = db.Column(db.String(200), nullable=False)
     telefone = db.Column(db.String(20))
-    tipo = db.Column(db.String(20), default="passageiro") # 'passageiro' ou 'motorista'
+    tipo = db.Column(db.String(20), default="passageiro")
     carro = db.Column(db.String(50), nullable=True)
     placa = db.Column(db.String(20), nullable=True)
     online = db.Column(db.Boolean, default=False)
@@ -53,16 +46,14 @@ class Corrida(db.Model):
     destino = db.Column(db.String(255), nullable=False)
     valor = db.Column(db.Float, nullable=False)
     distancia = db.Column(db.String(20), nullable=True)
-    status = db.Column(db.String(20), default="pendente") # 'pendente', 'aceita', 'cancelada', 'finalizada'
+    status = db.Column(db.String(20), default="pendente")
 
 # ==========================================
-# ROTAS DE AUTENTICAÇÃO (CADASTRO e LOGIN)
+# ROTAS DE AUTENTICAÇÃO
 # ==========================================
 @app.route("/register", methods=["POST"])
 def register():
     dados = request.get_json()
-    
-    # Criptografa a senha antes de salvar no banco
     senha_cripto = generate_password_hash(dados.get("senha"))
     
     novo_usuario = Usuario(
@@ -87,7 +78,6 @@ def login():
     if not usuario or not check_password_hash(usuario.senha, dados.get("senha")):
         return jsonify({"erro": "E-mail ou senha incorretos"}), 401
         
-    # Gera o Token JWT contendo o ID do usuário
     token = create_access_token(identity=str(usuario.id))
     
     dados_user = {
@@ -102,7 +92,7 @@ def login():
     return jsonify({"token": token, "user": dados_user}), 200
 
 # ==========================================
-# ROTAS DO FLUXO DO MOTORISTA
+# ROTAS DO MOTORISTA
 # ==========================================
 @app.route("/ficar_online/<int:id>", methods=["POST"])
 def ficar_online(id):
@@ -142,22 +132,21 @@ def aceitar_corrida(id):
     corrida.status = "aceita"
     db.session.commit()
 
-    # Dicionário puro enviado ao socket para EVITAR ERRO de argumentos inválidos
     dados_socket = {
-        "corrida_id": str(corrida.id),
-        "motorista_id": str(motorista.id),
-        "motorista_nome": str(motorista.nome),
-        "carro": str(motorista.carro if motorista.carro else "Carro Particular"),
-        "placa": str(motorista.placa if motorista.placa else "Sem Placa")
+        "corrida_id": corrida.id,  # ✅ Enviado como NÚMERO, não string
+        "motorista_id": motorista.id,
+        "motorista_nome": motorista.nome,
+        "carro": motorista.carro if motorista.carro else "Carro Particular",
+        "placa": motorista.placa if motorista.placa else "Sem Placa"
     }
 
     socketio.emit("corrida_aceita", dados_socket)
-    socketio.emit("corrida_removida", {"corrida_id": str(corrida.id)})
+    socketio.emit("corrida_removida", {"corrida_id": corrida.id})
 
     return jsonify({"status": "Corrida aceita com sucesso", "corrida_id": corrida.id}), 200
 
 # ==========================================
-# ROTAS DO FLUXO DO PASSAGEIRO
+# ROTAS DO PASSAGEIRO
 # ==========================================
 @app.route("/nova_corrida", methods=["POST"])
 @jwt_required()
@@ -178,13 +167,15 @@ def nova_corrida():
     db.session.add(nova)
     db.session.commit()
     
+    # ✅ CORREÇÃO PRINCIPAL: Adicionei passageiro_id e arrumei os tipos
     dados_chamada = {
-        "corrida_id": str(nova.id),
-        "passageiro_nome": str(passageiro.nome),
-        "origem": str(nova.origem),
-        "destino": str(nova.destino),
-        "valor": float(nova.valor),
-        "distancia": str(nova.distancia)
+        "corrida_id": nova.id,  # Número inteiro
+        "passageiro_id": passageiro.id, # Faltava esse campo!
+        "passageiro_nome": passageiro.nome,
+        "origem": nova.origem,
+        "destino": nova.destino,
+        "valor": nova.valor,
+        "distancia": nova.distancia
     }
     
     socketio.emit("nova_corrida", dados_chamada)
@@ -200,7 +191,8 @@ def cancelar_corrida(id):
     corrida.status = "cancelada"
     db.session.commit()
 
-    socketio.emit("corrida_cancelada", {"corrida_id": int(corrida.id)})
+    # ✅ Também enviado como número
+    socketio.emit("corrida_cancelada", {"corrida_id": corrida.id})
     return jsonify({"status": "cancelada"}), 200
 
 # ==========================================
@@ -219,7 +211,7 @@ def atualizar_localizacao():
         return jsonify({"erro": "Coordenadas ausentes"}), 400
 
     dados_gps = {
-        "motorista_id": str(motorista_id),
+        "motorista_id": motorista_id,
         "latitude": float(latitude),
         "longitude": float(longitude)
     }
@@ -230,10 +222,9 @@ def atualizar_localizacao():
 # EVENTO PADRÃO DO SOCKETIO
 @socketio.on("connect")
 def on_connect():
-    print(f"Cliente Socket conectado no Servidor!")
+    print(f"✅ Cliente conectado!")
 
 if __name__ == "__main__":
-    # Cria o arquivo de banco de dados do zero se ele não existir
     with app.app_context():
         db.create_all()
     
