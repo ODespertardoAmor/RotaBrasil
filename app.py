@@ -160,7 +160,7 @@ def nova_corrida():
         origem=dados.get("origem"),
         destino=dados.get("destino"),
         valor=float(dados.get("valor")),
-        distancia=dados.get("distancia", "0"),
+       # distancia=dados.get("distancia", "0"),
         status="pendente"
     )
     
