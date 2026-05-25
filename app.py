@@ -251,55 +251,29 @@ def nova_corrida():
     )
 
     return jsonify({"status": "ok", "corrida_id": corrida.id}), 201
-
-
-@app.route("/aceitar_corrida/<int:id>", methods=["POST"])
+# DENTRO DA SUA ROTA /aceitar_corrida NO BACKEND:
+@app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
-    try:
-        user_id = int(get_jwt_identity())
-        corrida = Corrida.query.get(id)
+    # ... (seu código que busca a corrida e o motorista no banco) ...
 
-        if not corrida:
-            return jsonify({"erro": "Corrida não encontrada"}), 404
+    # 🚨 O SEGREDO ESTÁ AQUI: Garanta que você está passando um dicionário puro com strings/números para o socket!
+    dados_socket = {
+        "corrida_id": str(corrida.id),
+        "motorista_id": str(motorista.id),
+        "motorista_nome": str(motorista.nome),
+        "carro": str(motorista.carro if motorista.carro else "Carro Particular"),
+        "placa": str(motorista.placa if motorista.placa else "Sem Placa")
+    }
 
-        # TRAVA DE CONCORRÊNCIA: Se a corrida não estiver mais pendente, outro já aceitou!
-        if corrida.status != "pendente":
-            return jsonify({"erro": "Esta corrida já foi aceita por outro motorista!"}), 400
+    # Dispara para o passageiro que a corrida foi aceita
+    socketio.emit("corrida_aceita", dados_socket)
 
-        # Atualiza a corrida com o motorista que clicou primeiro
-        corrida.motorista_id = user_id
-        corrida.status = "aceita"
-        db.session.commit()
+    # Dispara para os OUTROS motoristas removerem a chamada da tela
+    socketio.emit("corrida_removida", {"corrida_id": str(corrida.id)})
 
-        # Remove a corrida da tela dos outros motoristas
-        socketio.emit("corrida_removida", {"corrida_id": corrida.id}, broadcast=True)
+    return jsonify({"status": "Corrida aceita com sucesso", "corrida_id": corrida.id}), 200
 
-        motorista_user = User.query.get(user_id)
-        motorista = Motorista.query.filter_by(user_id=user_id).first()
-
-        # Avisa especificamente o passageiro que a corrida foi aceita
-        socketio.emit(
-            "corrida_aceita",
-            {
-                "corrida_id": corrida.id,
-                "motorista_id": user_id,
-                "motorista_nome": motorista_user.nome if motorista_user else "Motorista",
-                "placa": motorista.placa if motorista else "ABC-0000",
-                "carro": motorista.carro if motorista else "Veículo",
-                "origem": corrida.origem,
-                "destino": corrida.destino,
-                "foto": motorista.foto if motorista else "https://i.imgur.com/6VBx3io.png"
-            },
-            broadcast=True # Em produção, idealmente você enviará para a "sala/room" do passageiro
-        )
-
-        return jsonify({
-            "status": "ok",
-            "origem": corrida.origem,
-            "destino": corrida.destino,
-            "corrida_id": corrida.id
-        })
 
     except Exception as e:
         db.session.rollback()
