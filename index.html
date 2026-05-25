@@ -2,803 +2,390 @@
 <html lang="pt-br">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motorista - Rota Brasil</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+        }
 
-<meta charset="UTF-8">
+        header {
+            padding: 20px;
+            background: #111827;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+        }
 
-<title>Motorista - Rota Brasil</title>
+        .card {
+            background: #1f2937;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 10px;
+            background: #111827;
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+        }
 
-<style>
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 16px;
+        }
 
-body{
-margin:0;
-font-family:Arial;
-background:#0f172a;
-color:white;
-}
+        .primary { background: #2563eb; color: white; }
+        .success { background: #10b981; color: white; }
+        .danger { background: #ef4444; color: white; }
+        .accept { background: #22c55e; color: white; }
 
-header{
-padding:20px;
-background:#111827;
-text-align:center;
-font-size:22px;
-font-weight:bold;
-}
+        .corrida {
+            background: #111827;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+            border: 1px solid #374151;
+        }
 
-.container{
-max-width:500px;
-margin:auto;
-padding:20px;
-}
-
-.card{
-background:#1f2937;
-padding:20px;
-border-radius:15px;
-margin-bottom:15px;
-}
-
-input{
-width:100%;
-padding:15px;
-margin-bottom:10px;
-border:none;
-border-radius:10px;
-background:#111827;
-color:white;
-outline:none;
-box-sizing:border-box;
-}
-
-button{
-width:100%;
-padding:15px;
-border:none;
-border-radius:12px;
-font-weight:bold;
-cursor:pointer;
-margin-top:10px;
-font-size:16px;
-}
-
-.primary{
-background:#2563eb;
-color:white;
-}
-
-.success{
-background:#10b981;
-color:white;
-}
-
-.danger{
-background:#ef4444;
-color:white;
-}
-
-.accept{
-background:#22c55e;
-color:white;
-}
-
-.corrida{
-background:#111827;
-padding:15px;
-border-radius:15px;
-margin-top:15px;
-border:1px solid #374151;
-}
-
-iframe{
-width:100%;
-height:300px;
-border:none;
-border-radius:15px;
-margin-top:15px;
-}
-
-</style>
-
+        iframe {
+            width: 100%;
+            height: 300px;
+            border: none;
+            border-radius: 15px;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 
 <body>
 
-<header>
-🚗 Motorista - Rota Brasil
-</header>
-
-<div class="container">
-
-<!-- LOGIN -->
-
-<div
-class="card"
-id="loginCard">
-
-<h3>
-Login motorista
-</h3>
-
-<input
-id="email"
-placeholder="Email">
-
-<input
-id="senha"
-type="password"
-placeholder="Senha">
-
-<button
-class="success"
-onclick="login()">
-
-Entrar
-
-</button>
-
-</div>
-
-<!-- DASHBOARD -->
-
-<div
-class="card"
-id="dashboard"
-style="display:none">
-
-<h3>
-Painel motorista
-</h3>
-
-<button
-class="primary"
-onclick="ficarOnline()">
-
-Ficar online
-
-</button>
-
-<div id="corridasArea">
-
-Nenhuma corrida no momento
-
-</div>
-
-<div id="mapaArea"></div>
-
-</div>
-
-</div>
-
-<script>
-
-const API =
-"https://rotabrasil-v1cf.onrender.com";
-
-const socket =
-io(API);
-
-let token = null;
-
-let motorista = null;
-
-let corridaAtual = null;
-
-let corridaAceita = false;
-
-/* =========================
-   VOZ
-========================= */
-
-function falarMensagem(texto){
-
-const msg =
-new SpeechSynthesisUtterance(texto);
-
-msg.lang = "pt-BR";
-
-speechSynthesis.speak(msg);
-
-}
-
-/* =========================
-   LOGIN
-========================= */
-
-async function login(){
-
-const res =
-await fetch(
-API+"/login",
-{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-email:
-document.getElementById(
-"email"
-).value,
-
-senha:
-document.getElementById(
-"senha"
-).value
-
-})
-
-}
-
-);
-
-const data =
-await res.json();
-
-if(data.token){
-
-token =
-data.token;
-
-motorista =
-data.user;
-
-localStorage.setItem(
-"token_motorista",
-token
-);
-
-localStorage.setItem(
-"user_motorista",
-JSON.stringify(motorista)
-);
-
-document.getElementById(
-"loginCard"
-).style.display =
-"none";
-
-document.getElementById(
-"dashboard"
-).style.display =
-"block";
-
-}else{
-
-alert(
-"Erro login"
-);
-
-}
-
-}
-
-/* =========================
-   AUTO LOGIN
-========================= */
-
-const tokenSalvo =
-localStorage.getItem(
-"token_motorista"
-);
-
-const userSalvo =
-localStorage.getItem(
-"user_motorista"
-);
-
-if(
-tokenSalvo &&
-userSalvo
-){
-
-token =
-tokenSalvo;
-
-motorista =
-JSON.parse(userSalvo);
-
-window.addEventListener(
-"load",
-()=>{
-
-document.getElementById(
-"loginCard"
-).style.display =
-"none";
-
-document.getElementById(
-"dashboard"
-).style.display =
-"block";
-
-}
-);
-
-}
-
-/* =========================
-   ONLINE
-========================= */
-
-async function ficarOnline(){
-
-await fetch(
-API+"/ficar_online/"+motorista.id,
-{
-method:"POST"
-}
-);
-
-alert(
-"Você está online"
-);
-
-}
-
-/* =========================
-   NOVA CORRIDA
-========================= */
-
-socket.on(
-
-"nova_corrida",
-
-(data)=>{
-
-if(corridaAceita){
-return;
-}
-
-console.log(
-"NOVA CORRIDA",
-data
-);
-
-corridaAtual = data;
-
-const audio = new Audio(
-"https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3"
-);
-
-audio.play();
-
-falarMensagem(
-"Nova corrida recebida"
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-<h3>
-🚗 Nova corrida
-</h3>
-
-<p>
-👤 ${data.passageiro_nome}
-</p>
-
-<p>
-📍 Origem:
-${data.origem}
-</p>
-
-<p>
-🎯 Destino:
-${data.destino}
-</p>
-
-<p>
-💰 R$ ${data.valor}
-<br>
-
-📏 ${data.distancia} KM
-</p>
-
-<button
-class="accept"
-onclick="aceitar(${data.corrida_id})">
-
-Aceitar corrida
-
-</button>
-
-<button
-class="primary"
-onclick="navegarPassageiro()">
-
-📍 Ir até passageiro
-
-</button>
-
-<button
-class="success"
-onclick="irDestino()">
-
-🎯 Ir para destino
-
-</button>
-
-<button
-class="danger"
-onclick="finalizarCorrida()">
-
-✅ Finalizar corrida
-
-</button>
-
-<button
-class="danger"
-onclick="cancelarCorridaMotorista()">
-
-❌ Cancelar corrida
-
-</button>
-
-</div>
-
-`;
-
-}
-);
-
-/* =========================
-   ACEITAR
-========================= */
-
-async function aceitar(id){
-
-if(corridaAceita){
-
-alert(
-"Você já aceitou uma corrida"
-);
-
-return;
-
-}
-
-try{
-
-const res =
-await fetch(
-API+"/aceitar_corrida/"+id,
-{
-
-method:"POST",
-
-headers:{
-Authorization:
-"Bearer "+token
-}
-
-}
-);
-
-const data =
-await res.json();
-
-console.log(data);
-
-corridaAceita = true;
-
-falarMensagem(
-"Corrida aceita"
-);
-
-/* REMOVE PARA TODOS */
-
-socket.emit(
-"corrida_removida",
-{
-corrida_id:id
-}
-);
-
-/* GPS */
-
-navigator.geolocation.watchPosition(
-
-async(pos)=>{
-
-await fetch(
-API+"/atualizar_localizacao",
-{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-motorista_id:
-motorista.id,
-
-latitude:
-pos.coords.latitude,
-
-longitude:
-pos.coords.longitude
-
-})
-
-}
-
-);
-
-},
-
-(err)=>{
-
-console.log(err);
-
-},
-
-{
-
-enableHighAccuracy:true,
-maximumAge:0,
-timeout:10000
-
-}
-
-);
-
-}catch(err){
-
-console.log(err);
-
-alert(
-"Erro aceitar corrida"
-);
-
-}
-
-}
-
-/* =========================
-   REMOVER CORRIDA
-========================= */
-
-socket.on(
-"corrida_removida",
-(data)=>{
-
-if(
-corridaAtual &&
-corridaAtual.corrida_id ==
-data.corrida_id
-){
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-✅ Corrida aceita
-por outro motorista
-
-</div>
-
-`;
-
-corridaAtual = null;
-
-}
-
-}
-);
-
-/* =========================
-   NAVEGAR PASSAGEIRO
-========================= */
-
-function navegarPassageiro(){
-
-if(!corridaAtual){
-return;
-}
-
-const partes =
-corridaAtual.origem.split(",");
-
-const latitude =
-partes[0];
-
-const longitude =
-partes[1];
-
-window.open(
-
-`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`
-
-);
-
-}
-
-/* =========================
-   DESTINO
-========================= */
-
-function irDestino(){
-
-if(!corridaAtual){
-return;
-}
-
-window.open(
-
-`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(corridaAtual.destino)}`
-
-);
-
-}
-
-/* =========================
-   FINALIZAR
-========================= */
-
-function finalizarCorrida(){
-
-falarMensagem(
-"Corrida finalizada"
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-✅ Corrida finalizada
-
-</div>
-
-`;
-
-document.getElementById(
-"mapaArea"
-).innerHTML = "";
-
-corridaAtual = null;
-
-corridaAceita = false;
-
-}
-
-/* =========================
-   CANCELAR
-========================= */
-
-async function cancelarCorridaMotorista(){
-
-if(!corridaAtual){
-return;
-}
-
-await fetch(
-API+"/cancelar_corrida/"+corridaAtual.corrida_id,
-{
-method:"POST"
-}
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-❌ Corrida cancelada
-
-</div>
-
-`;
-
-document.getElementById(
-"mapaArea"
-).innerHTML = "";
-
-corridaAtual = null;
-
-corridaAceita = false;
-
-}
-
-/* =========================
-   RECEBER CANCELAMENTO
-========================= */
-
-socket.on(
-"corrida_cancelada",
-(data)=>{
-
-if(
-!corridaAtual
-){
-return;
-}
-
-if(
-data.corrida_id ==
-corridaAtual.corrida_id
-){
-
-falarMensagem(
-"Passageiro cancelou a corrida"
-);
-
-document.getElementById(
-"corridasArea"
-).innerHTML = `
-
-<div class="corrida">
-
-❌ Passageiro cancelou
-
-</div>
-
-`;
-
-document.getElementById(
-"mapaArea"
-).innerHTML = "";
-
-corridaAtual = null;
-
-corridaAceita = false;
-
-}
-
-}
-);
-
-/* =========================
-   MAPA TEMPO REAL
-========================= */
-
-socket.on(
-"localizacao_motorista",
-(data)=>{
-
-if(
-data.motorista_id !=
-motorista.id
-){
-return;
-}
-
-document.getElementById(
-"mapaArea"
-).innerHTML = `
-
-<iframe
-
-src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"
-
->
-
-</iframe>
-
-`;
-
-}
-);
-
-</script>
-
+    <header>
+        🚗 Motorista - Rota Brasil
+    </header>
+
+    <div class="container">
+        <div class="card" id="loginCard">
+            <h3>Login motorista</h3>
+            <input id="email" placeholder="Email" type="email">
+            <input id="senha" type="password" placeholder="Senha">
+            <button class="success" onclick="login()">Entrar</button>
+        </div>
+
+        <div class="card" id="dashboard" style="display:none">
+            <h3>Painel motorista</h3>
+            <button class="primary" onclick="ficarOnline()">Ficar online</button>
+            <div id="corridasArea">Nenhuma corrida no momento</div>
+            <div id="mapaArea"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = "https://rotabrasil-v1cf.onrender.com";
+        const socket = io(API);
+
+        let token = null;
+        let motorista = null;
+        let corridaAtual = null;
+        let corridaAceita = false;
+        let watchId = null; // Guarda a referência do rastreador GPS
+
+        /* =========================
+           VOZ
+        ========================= */
+        function falarMensagem(texto) {
+            const msg = new SpeechSynthesisUtterance(texto);
+            msg.lang = "pt-BR";
+            speechSynthesis.speak(msg);
+        }
+
+        /* =========================
+           LOGIN
+        ========================= */
+        async function login() {
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: document.getElementById("email").value,
+                        senha: document.getElementById("senha").value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.token) {
+                    token = data.token;
+                    motorista = data.user;
+
+                    localStorage.setItem("token_motorista", token);
+                    localStorage.setItem("user_motorista", JSON.stringify(motorista));
+
+                    document.getElementById("loginCard").style.display = "none";
+                    document.getElementById("dashboard").style.display = "block";
+                } else {
+                    alert(data.erro || "Erro no login");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        /* =========================
+           AUTO LOGIN
+        ========================= */
+        const tokenSalvo = localStorage.getItem("token_motorista");
+        const userSalvo = localStorage.getItem("user_motorista");
+
+        if (tokenSalvo && userSalvo) {
+            token = tokenSalvo;
+            motorista = JSON.parse(userSalvo);
+            window.addEventListener("load", () => {
+                document.getElementById("loginCard").style.display = "none";
+                document.getElementById("dashboard").style.display = "block";
+            });
+        }
+
+        /* =========================
+           ONLINE
+        ========================= */
+        async function ficarOnline() {
+            try {
+                const res = await fetch(`${API}/ficar_online/${motorista.id}`, { method: "POST" });
+                if (res.ok) {
+                    alert("Você está online e pronto para receber corridas!");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        /* =========================
+           NOVA CORRIDA (CHAMADA)
+        ========================= */
+        socket.on("nova_corrida", (data) => {
+            // Se o motorista já estiver em uma corrida, ignora novas ofertas
+            if (corridaAceita) return;
+
+            console.log("NOVA CORRIDA RECEBIDA:", data);
+            corridaAtual = data;
+
+            const audio = new Audio("https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/main/static/sounds/chamada.mp3");
+            audio.play().catch(e => console.log("Áudio bloqueado pelo navegador"));
+
+            falarMensagem("Nova corrida recebida");
+
+            // Exibe apenas as informações e o botão de Aceitar inicialmente
+            document.getElementById("corridasArea").innerHTML = `
+                <div class="corrida" id="cardCorrida_${data.corrida_id}">
+                    <h3>🚗 Nova corrida disponível</h3>
+                    <p>👤 <b>Passageiro:</b> ${data.passageiro_nome}</p>
+                    <p>📍 <b>Origem:</b> ${data.origem}</p>
+                    <p>🎯 <b>Destino:</b> ${data.destino}</p>
+                    <p>💰 <b>Valor:</b> R$ ${data.valor.toFixed(2)}</p>
+                    
+                    <div id="acoesCorrida">
+                        <button class="accept" onclick="aceitar(${data.corrida_id})">Aceitar corrida</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        /* =========================
+           ACEITAR CORRIDA
+        ========================= */
+        async function aceitar(id) {
+            if (corridaAceita) {
+                alert("Você já está em uma corrida ativa.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/aceitar_corrida/${id}`, {
+                    method: "POST",
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    // Trata caso outro motorista tenha aceitado primeiro (Trava do backend)
+                    alert(data.erro || "Não foi possível aceitar esta corrida.");
+                    document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+                    corridaAtual = null;
+                    return;
+                }
+
+                corridaAceita = true;
+                falarMensagem("Corrida aceita com sucesso");
+
+                // Libera os botões de ação para guiar o motorista durante o trajeto
+                document.getElementById("acoesCorrida").innerHTML = `
+                    <button class="primary" onclick="navegarPassageiro()">📍 Abrir GPS até Passageiro</button>
+                    <button class="success" onclick="irDestino()">🎯 Abrir GPS para Destino</button>
+                    <button class="danger" onclick="cancelarCorridaMotorientado()">❌ Cancelar Corrida</button>
+                    <button class="success" style="background:#047857; margin-top:20px;" onclick="finalizarCorrida()">✅ Concluir/Finalizar Corrida</button>
+                `;
+
+                /* RASTREAMENTO GPS EM TEMPO REAL */
+                if (navigator.geolocation) {
+                    watchId = navigator.geolocation.watchPosition(
+                        async (pos) => {
+                            await fetch(`${API}/atualizar_localizacao`, {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Authorization": "Bearer " + token
+                                },
+                                body: JSON.stringify({
+                                    latitude: pos.coords.latitude,
+                                    longitude: pos.coords.longitude
+                                })
+                            });
+                        },
+                        (err) => console.error("Erro no GPS:", err),
+                        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+                    );
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Erro de conexão ao aceitar corrida.");
+            }
+        }
+
+        /* =========================
+           REMOVER CORRIDA DA TELA (SE OUTRO ACEITOU)
+        ========================= */
+        socket.on("corrida_removida", (data) => {
+            if (corridaAtual && corridaAtual.corrida_id == data.corrida_id && !corridaAceita) {
+                document.getElementById("corridasArea").innerHTML = `
+                    <div class="corrida">⚡ Outro motorista aceitou esta corrida mais rápido.</div>
+                `;
+                setTimeout(() => {
+                    if (!corridaAceita) document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+                }, 4000);
+                corridaAtual = null;
+            }
+        });
+
+        /* =========================
+           NAVEGAÇÃO COM CORREÇÃO DE SINTAXE
+        ========================= */
+        function navegarPassageiro() {
+            if (!corridaAtual) return;
+            // Caso a origem venha em formato de texto amigável ou coordenadas
+            const destinoUrl = encodeURIComponent(corridaAtual.origem);
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destinoUrl}&travelmode=driving`, "_blank");
+        }
+
+        function irDestino() {
+            if (!corridaAtual) return;
+            const destinoUrl = encodeURIComponent(corridaAtual.destino);
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destinoUrl}&travelmode=driving`, "_blank");
+        }
+
+        /* =========================
+           FINALIZAR CORRIDA
+        ========================= */
+        function finalizarCorrida() {
+            falarMensagem("Corrida finalizada com sucesso");
+            
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId); // Para o rastreamento GPS
+            }
+
+            document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+            document.getElementById("mapaArea").innerHTML = "";
+            
+            corridaAtual = null;
+            corridaAceita = false;
+        }
+
+        /* =========================
+           CANCELAR CORRIDA
+        ========================= */
+        async function cancelarCorridaMotorientado() {
+            if (!corridaAtual) return;
+
+            try {
+                const res = await fetch(`${API}/cancelar_corrida/${corridaAtual.corrida_id}`, {
+                    method: "POST",
+                    headers: { "Authorization": "Bearer " + token }
+                });
+
+                if (res.ok) {
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                    document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+                    document.getElementById("mapaArea").innerHTML = "";
+                    corridaAtual = null;
+                    corridaAceita = false;
+                    alert("Corrida cancelada.");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        /* =========================
+           RECEBER CANCELAMENTO DO PASSAGEIRO
+        ========================= */
+        socket.on("corrida_cancelada", (data) => {
+            if (!corridaAtual) return;
+
+            if (data.corrida_id == corridaAtual.corrida_id) {
+                falarMensagem("O passageiro cancelou a corrida");
+                if (watchId) navigator.geolocation.clearWatch(watchId);
+
+                document.getElementById("corridasArea").innerHTML = `
+                    <div class="corrida" style="border-color:#ef4444;">❌ O passageiro cancelou esta corrida.</div>
+                `;
+                
+                setTimeout(() => {
+                    document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
+                }, 4000);
+
+                document.getElementById("mapaArea").innerHTML = "";
+                corridaAtual = null;
+                corridaAceita = false;
+            }
+        });
+
+        /* =========================
+           MAPA TEMPO REAL DO PRÓPRIO MOTORISTA
+        ========================= */
+        socket.on("localizacao_motorista", (data) => {
+            if (!motorista || data.motorista_id != motorista.id) return;
+
+            document.getElementById("mapaArea").innerHTML = `
+                <iframe src="https://maps.google.com/maps?q=${data.latitude},${data.longitude}&z=15&output=embed"></iframe>
+            `;
+        });
+    </script>
 </body>
 </html>
