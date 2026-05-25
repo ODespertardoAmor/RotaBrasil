@@ -98,6 +98,9 @@
         <div class="card" id="dashboard" style="display:none">
             <h3>Painel motorista</h3>
             <button class="primary" onclick="ficarOnline()">Ficar online</button>
+            
+            <button class="danger" style="background: #475569;" onclick="logoutMotorista()">🚪 Sair da Conta</button>
+            
             <div id="corridasArea">Nenhuma corrida no momento</div>
             <div id="mapaArea"></div>
         </div>
@@ -111,7 +114,7 @@
         let motorista = null;
         let corridaAtual = null;
         let corridaAceita = false;
-        let watchId = null; // Guarda a referência do rastreador GPS
+        let watchId = null; 
 
         /* =========================
            VOZ
@@ -172,6 +175,16 @@
         }
 
         /* =========================
+           SAIR DA CONTA (LOGOUT)
+        ========================= */
+        function logoutMotorista() {
+            localStorage.removeItem("token_motorista");
+            localStorage.removeItem("user_motorista");
+            alert("Conta desconectada com sucesso!");
+            window.location.reload(); 
+        }
+
+        /* =========================
            ONLINE
         ========================= */
         async function ficarOnline() {
@@ -189,7 +202,6 @@
            NOVA CORRIDA (CHAMADA)
         ========================= */
         socket.on("nova_corrida", (data) => {
-            // Se o motorista já estiver em uma corrida, ignora novas ofertas
             if (corridaAceita) return;
 
             console.log("NOVA CORRIDA RECEBIDA:", data);
@@ -200,14 +212,13 @@
 
             falarMensagem("Nova corrida recebida");
 
-            // Exibe apenas as informações e o botão de Aceitar inicialmente
             document.getElementById("corridasArea").innerHTML = `
                 <div class="corrida" id="cardCorrida_${data.corrida_id}">
                     <h3>🚗 Nova corrida disponível</h3>
                     <p>👤 <b>Passageiro:</b> ${data.passageiro_nome}</p>
                     <p>📍 <b>Origem:</b> ${data.origem}</p>
                     <p>🎯 <b>Destino:</b> ${data.destino}</p>
-                    <p>💰 <b>Valor:</b> R$ ${data.valor.toFixed(2)}</p>
+                    <p>💰 <b>Valor:</b> R$ ${parseFloat(data.valor).toFixed(2)}</p>
                     
                     <div id="acoesCorrida">
                         <button class="accept" onclick="aceitar(${data.corrida_id})">Aceitar corrida</button>
@@ -234,7 +245,6 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    // Trata caso outro motorista tenha aceitado primeiro (Trava do backend)
                     alert(data.erro || "Não foi possível aceitar esta corrida.");
                     document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
                     corridaAtual = null;
@@ -244,7 +254,6 @@
                 corridaAceita = true;
                 falarMensagem("Corrida aceita com sucesso");
 
-                // Libera os botões de ação para guiar o motorista durante o trajeto
                 document.getElementById("acoesCorrida").innerHTML = `
                     <button class="primary" onclick="navegarPassageiro()">📍 Abrir GPS até Passageiro</button>
                     <button class="success" onclick="irDestino()">🎯 Abrir GPS para Destino</button>
@@ -252,7 +261,7 @@
                     <button class="success" style="background:#047857; margin-top:20px;" onclick="finalizarCorrida()">✅ Concluir/Finalizar Corrida</button>
                 `;
 
-                /* RASTREAMENTO GPS EM TEMPO REAL */
+                /* RASTREAMENTO GPS */
                 if (navigator.geolocation) {
                     watchId = navigator.geolocation.watchPosition(
                         async (pos) => {
@@ -295,11 +304,10 @@
         });
 
         /* =========================
-           NAVEGAÇÃO COM CORREÇÃO DE SINTAXE
+           NAVEGAÇÃO
         ========================= */
         function navegarPassageiro() {
             if (!corridaAtual) return;
-            // Caso a origem venha em formato de texto amigável ou coordenadas
             const destinoUrl = encodeURIComponent(corridaAtual.origem);
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${destinoUrl}&travelmode=driving`, "_blank");
         }
@@ -317,7 +325,7 @@
             falarMensagem("Corrida finalizada com sucesso");
             
             if (watchId) {
-                navigator.geolocation.clearWatch(watchId); // Para o rastreamento GPS
+                navigator.geolocation.clearWatch(watchId); 
             }
 
             document.getElementById("corridasArea").innerHTML = "Nenhuma corrida no momento";
@@ -377,7 +385,7 @@
         });
 
         /* =========================
-           MAPA TEMPO REAL DO PRÓPRIO MOTORISTA
+           MAPA TEMPO REAL DO MOTORISTA
         ========================= */
         socket.on("localizacao_motorista", (data) => {
             if (!motorista || data.motorista_id != motorista.id) return;
