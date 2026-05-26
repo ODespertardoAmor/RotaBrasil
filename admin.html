@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Painel ADM</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
+}
+
+header{
+padding:20px;
+background:#111827;
+text-align:center;
+font-size:24px;
+font-weight:bold;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+padding:20px;
+}
+
+.card{
+background:#1f2937;
+padding:20px;
+border-radius:15px;
+margin-bottom:15px;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.delete{
+background:#ef4444;
+color:white;
+}
+
+.refresh{
+background:#2563eb;
+color:white;
+margin-bottom:20px;
+}
+
+.motorista{
+background:#111827;
+padding:15px;
+border-radius:15px;
+margin-top:15px;
+border:1px solid #374151;
+}
+
+.online{
+color:#22c55e;
+font-weight:bold;
+}
+
+.offline{
+color:#ef4444;
+font-weight:bold;
+}
+
+</style>
+
+</head>
+<body>
+
+<header>
+🛠️ Painel ADM — Rota Brasil
+</header>
+
+<div class="container">
+
+<button
+class="refresh"
+onclick="buscarMotoristas()">
+
+Atualizar motoristas
+
+</button>
+
+<div id="areaMotoristas">
+
+Carregando...
+
+</div>
+
+</div>
+
+<script>
+
+const API =
+"https://rotabrasil-v1cf.onrender.com";
+
+async function buscarMotoristas(){
+
+const res =
+await fetch(
+API+"/admin/motoristas"
+);
+
+const data =
+await res.json();
+
+const area =
+document.getElementById(
+"areaMotoristas"
+);
+
+area.innerHTML = "";
+
+if(data.length === 0){
+
+area.innerHTML = `
+
+<div class="card">
+Nenhum motorista cadastrado
+</div>
+
+`;
+
+return;
+
+}
+
+data.forEach((m)=>{
+
+area.innerHTML += `
+
+<div class="motorista">
+
+<h3>
+🚗 ${m.nome}
+</h3>
+
+<p>
+📧 ${m.email}
+</p>
+
+<p>
+🚘 ${m.carro}
+</p>
+
+<p>
+📍 ${m.placa}
+</p>
+
+<p class="${m.online ? 'online' : 'offline'}">
+${m.online ? 'ONLINE' : 'OFFLINE'}
+</p>
+
+<button
+class="delete"
+onclick="excluirMotorista(${m.id})">
+
+Excluir motorista
+
+</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+async function excluirMotorista(id){
+
+const confirmar = confirm(
+"Deseja excluir este motorista?"
+);
+
+if(!confirmar){
+return;
+}
+
+try{
+
+await fetch(
+API+"/admin/excluir_motorista/"+id,
+{
+method:"DELETE"
+}
+);
+
+alert(
+"Motorista excluído"
+);
+
+buscarMotoristas();
+
+}catch(err){
+
+console.log(err);
+
+alert(
+"Erro ao excluir"
+);
+
+}
+
+}
+
+buscarMotoristas();
+
+</script>
+
+</body>
+</html>
