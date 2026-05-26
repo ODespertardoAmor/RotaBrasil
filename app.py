@@ -264,6 +264,80 @@ def admin_motoristas():
 # =========================================
 # EXCLUIR MOTORISTA
 # =========================================
+# =========================================
+# LISTAR MOTORISTAS
+# =========================================
+
+@app.route("/admin/motoristas")
+def admin_motoristas():
+
+    motoristas = Usuario.query.filter_by(
+        tipo="motorista"
+    ).all()
+
+    lista = []
+
+    for m in motoristas:
+
+        lista.append({
+
+            "id": m.id,
+
+            "nome": m.nome,
+
+            "email": m.email,
+
+            "carro": m.carro if m.carro else "Carro Particular",
+
+            "placa": m.placa if m.placa else "",
+
+            "online": m.online
+
+        })
+
+    return jsonify(lista)
+
+
+# =========================================
+# EXCLUIR MOTORISTA
+# =========================================
+# =========================================
+# LISTAR MOTORISTAS
+# =========================================
+
+@app.route("/admin/motoristas")
+def admin_motoristas():
+
+    motoristas = Usuario.query.filter_by(
+        tipo="motorista"
+    ).all()
+
+    lista = []
+
+    for m in motoristas:
+
+        lista.append({
+
+            "id": m.id,
+
+            "nome": m.nome,
+
+            "email": m.email,
+
+            "carro": m.carro if m.carro else "Carro Particular",
+
+            "placa": m.placa if m.placa else "",
+
+            "online": m.online
+
+        })
+
+    return jsonify(lista)
+
+
+# =========================================
+# EXCLUIR MOTORISTA
+# =========================================
 
 @app.route(
     "/admin/excluir_motorista/<int:id>",
@@ -271,7 +345,7 @@ def admin_motoristas():
 )
 def excluir_motorista(id):
 
-    motorista = Motorista.query.get(id)
+    motorista = Usuario.query.get(id)
 
     if not motorista:
 
@@ -279,20 +353,14 @@ def excluir_motorista(id):
             "erro":"motorista nao encontrado"
         })
 
-    user = User.query.get(
-        motorista.user_id
-    )
-
     db.session.delete(motorista)
-
-    if user:
-        db.session.delete(user)
 
     db.session.commit()
 
     return jsonify({
         "status":"motorista excluido"
     })
+
 
 if __name__ == "__main__":
     with app.app_context():
