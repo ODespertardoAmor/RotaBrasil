@@ -225,6 +225,74 @@ def atualizar_localizacao():
 @socketio.on("connect")
 def on_connect():
     print(f"✅ Cliente conectado com sucesso!")
+# =========================================
+# LISTAR MOTORISTAS
+# =========================================
+
+@app.route("/admin/motoristas")
+def admin_motoristas():
+
+    motoristas = Motorista.query.all()
+
+    lista = []
+
+    for m in motoristas:
+
+        user = User.query.get(m.user_id)
+
+        lista.append({
+
+            "id": m.id,
+
+            "user_id": m.user_id,
+
+            "nome": user.nome if user else "Motorista",
+
+            "email": user.email if user else "",
+
+            "carro": m.carro,
+
+            "placa": m.placa,
+
+            "online": m.online
+
+        })
+
+    return jsonify(lista)
+
+
+# =========================================
+# EXCLUIR MOTORISTA
+# =========================================
+
+@app.route(
+    "/admin/excluir_motorista/<int:id>",
+    methods=["DELETE"]
+)
+def excluir_motorista(id):
+
+    motorista = Motorista.query.get(id)
+
+    if not motorista:
+
+        return jsonify({
+            "erro":"motorista nao encontrado"
+        })
+
+    user = User.query.get(
+        motorista.user_id
+    )
+
+    db.session.delete(motorista)
+
+    if user:
+        db.session.delete(user)
+
+    db.session.commit()
+
+    return jsonify({
+        "status":"motorista excluido"
+    })
 
 if __name__ == "__main__":
     with app.app_context():
