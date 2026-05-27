@@ -728,7 +728,31 @@
             `;
             limparTelaCorrida();
         }
+        await fetch(
+API+"/avaliar",
+{
 
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+token
+},
+
+body:JSON.stringify({
+
+corrida_id:corridaAtual,
+
+avaliado_id:motoristaAtual,
+
+nota,
+
+comentario
+
+})
+
+}
+);
         async function cancelarCorridaMotorientado() {
             if (!corridaAtual) return;
             try {
