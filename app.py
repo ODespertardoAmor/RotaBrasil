@@ -411,7 +411,39 @@ def excluir_passageiro(id):
     return jsonify({
         "status":"passageiro excluido"
     }), 200    
+#========≠ROTA DE AVALIAÇÃO======
+@app.route(
+    "/avaliar",
+    methods=["POST"]
+)
+@jwt_required()
+def avaliar():
 
+    user_id = get_jwt_identity()
+
+    dados = request.get_json()
+
+    avaliacao = Avaliacao(
+
+        corrida_id=dados.get("corrida_id"),
+
+        avaliador_id=user_id,
+
+        avaliado_id=dados.get("avaliado_id"),
+
+        nota=dados.get("nota"),
+
+        comentario=dados.get("comentario")
+
+    )
+
+    db.session.add(avaliacao)
+
+    db.session.commit()
+
+    return jsonify({
+        "status":"avaliado"
+    })
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
