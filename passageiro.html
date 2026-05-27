@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>ADM Passageiros</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
+}
+
+header{
+padding:20px;
+background:#111827;
+text-align:center;
+font-size:24px;
+font-weight:bold;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+padding:20px;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.refresh{
+background:#2563eb;
+color:white;
+margin-bottom:20px;
+}
+
+.delete{
+background:#ef4444;
+color:white;
+}
+
+.card{
+background:#111827;
+padding:15px;
+border-radius:15px;
+margin-bottom:15px;
+border:1px solid #374151;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+👥 ADM Passageiros
+</header>
+
+<div class="container">
+
+<button
+class="refresh"
+onclick="buscarPassageiros()">
+
+Atualizar passageiros
+
+</button>
+
+<div id="area">
+
+Carregando...
+
+</div>
+
+</div>
+
+<script>
+
+const API =
+"https://rotabrasil-v1cf.onrender.com";
+
+async function buscarPassageiros(){
+
+const res =
+await fetch(
+API+"/admin/passageiros"
+);
+
+const data =
+await res.json();
+
+const area =
+document.getElementById(
+"area"
+);
+
+area.innerHTML = "";
+
+if(data.length == 0){
+
+area.innerHTML = `
+
+<div class="card">
+
+Nenhum passageiro
+
+</div>
+
+`;
+
+return;
+
+}
+
+data.forEach((p)=>{
+
+area.innerHTML += `
+
+<div class="card">
+
+<h3>
+👤 ${p.nome}
+</h3>
+
+<p>
+📧 ${p.email}
+</p>
+
+<p>
+📱 ${p.telefone}
+</p>
+
+<button
+class="delete"
+onclick="excluir(${p.id})">
+
+Excluir passageiro
+
+</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+async function excluir(id){
+
+const confirmar =
+confirm(
+"Excluir passageiro?"
+);
+
+if(!confirmar){
+return;
+}
+
+await fetch(
+
+API+"/admin/excluir_passageiro/"+id,
+
+{
+method:"DELETE"
+}
+
+);
+
+alert(
+"Passageiro excluído"
+);
+
+buscarPassageiros();
+
+}
+
+buscarPassageiros();
+
+</script>
+
+</body>
+</html>
