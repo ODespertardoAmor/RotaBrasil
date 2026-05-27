@@ -187,12 +187,55 @@ alert(
 "Passageiro excluído"
 );
 
-buscarPassageiros();
+}
+  async function carregarAvaliacoes(){
+
+    const res =
+    await fetch(API+"/admin/avaliacoes");
+
+    const data =
+    await res.json();
+
+    let html = "";
+
+    data.forEach(a=>{
+
+        html += `
+
+        <div class="card">
+
+            <h3>
+            ⭐ ${a.nota}/5
+            </h3>
+
+            <p>
+            Avaliador:
+            ${a.avaliador}
+            </p>
+
+            <p>
+            Avaliado:
+            ${a.avaliado}
+            </p>
+
+            <p>
+            ${a.comentario || ""}
+            </p>
+
+        </div>
+
+        `;
+
+    });
+
+    document.getElementById(
+    "avaliacoes"
+    ).innerHTML = html;
 
 }
 
 buscarPassageiros();
-
+carregarAvaliacoes();
 </script>
 
 </body>
