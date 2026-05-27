@@ -288,10 +288,18 @@ def on_connect():
 
 
 # =========================================
-# EXCLUIR MOTORISTA
+# Rota para recriar bd /perigosa
 # =========================================
+Recrear banco @app.route("/recriar")
+def recriar():
+
+    db.drop_all()
+
+    db.create_all()
+
+    return "banco recriado"
 # =========================================
-# LISTAR MOTORISTAS
+
 # =========================================
 
 
@@ -444,6 +452,37 @@ def avaliar():
     return jsonify({
         "status":"avaliado"
     })
+ #========Avaliacoes no painel ===≠==   
+@app.route("/admin/avaliacoes")
+def admin_avaliacoes():
+
+    avaliacoes = Avaliacao.query.all()
+
+    lista = []
+
+    for a in avaliacoes:
+
+        avaliador = Usuario.query.get(a.avaliador_id)
+
+        avaliado = Usuario.query.get(a.avaliado_id)
+
+        lista.append({
+
+            "id": a.id,
+
+            "corrida_id": a.corrida_id,
+
+            "avaliador": avaliador.nome if avaliador else "Usuário",
+
+            "avaliado": avaliado.nome if avaliado else "Usuário",
+
+            "nota": a.nota,
+
+            "comentario": a.comentario
+
+        })
+
+    return jsonify(lista)   
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
