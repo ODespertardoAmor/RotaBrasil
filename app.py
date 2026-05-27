@@ -268,75 +268,7 @@ def admin_motoristas():
 # LISTAR MOTORISTAS
 # =========================================
 
-@app.route("/admin/motoristas")
-def admin_motoristas():
 
-    motoristas = Usuario.query.filter_by(
-        tipo="motorista"
-    ).all()
-
-    lista = []
-
-    for m in motoristas:
-
-        lista.append({
-
-            "id": m.id,
-
-            "nome": m.nome,
-
-            "email": m.email,
-
-            "carro": m.carro if m.carro else "Carro Particular",
-
-            "placa": m.placa if m.placa else "",
-
-            "online": m.online
-
-        })
-
-    return jsonify(lista)
-
-
-# =========================================
-# EXCLUIR MOTORISTA
-# =========================================
-# =========================================
-# LISTAR MOTORISTAS
-# =========================================
-
-@app.route("/admin/motoristas")
-def admin_motoristas():
-
-    motoristas = Usuario.query.filter_by(
-        tipo="motorista"
-    ).all()
-
-    lista = []
-
-    for m in motoristas:
-
-        lista.append({
-
-            "id": m.id,
-
-            "nome": m.nome,
-
-            "email": m.email,
-
-            "carro": m.carro if m.carro else "Carro Particular",
-
-            "placa": m.placa if m.placa else "",
-
-            "online": m.online
-
-        })
-
-    return jsonify(lista)
-
-
-# =========================================
-# EXCLUIR MOTORISTA
 # =========================================
 
 @app.route(
