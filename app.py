@@ -290,7 +290,7 @@ def on_connect():
 # =========================================
 # Rota para recriar bd /perigosa
 # =========================================
-Recrear banco @app.route("/recriar")
+@app.route("/recriar")
 def recriar():
 
     db.drop_all()
