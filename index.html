@@ -718,6 +718,8 @@
         }
 
         function finalizarCorrida() {
+            enviarAvaliacao(5, "Motorista excelente");
+            
             falarMensagem("Corrida finalizada com sucesso! Bom trabalho!");
             if (watchId) navigator.geolocation.clearWatch(watchId); 
             corridaAtual = null;
@@ -728,31 +730,47 @@
             `;
             limparTelaCorrida();
         }
-        await fetch(
-API+"/avaliar",
-{
+     async function enviarAvaliacao(nota, comentario="") {
 
-method:"POST",
+    if(!corridaAtual){
+        return;
+    }
 
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer "+token
-},
+    try{
 
-body:JSON.stringify({
+        await fetch(API+"/avaliar", {
 
-corrida_id:corridaAtual,
+            method:"POST",
 
-avaliado_id:motoristaAtual,
+            headers:{
+                "Content-Type":"application/json",
+                "Authorization":"Bearer "+token
+            },
 
-nota,
+            body:JSON.stringify({
 
-comentario
+                corrida_id: corridaAtual.corrida_id,
 
-})
+                avaliado_id: motorista.id,
+
+                nota: nota,
+
+                comentario: comentario
+
+            })
+
+        });
+
+        alert("Avaliação enviada!");
+
+    }catch(err){
+
+        console.log(err);
+
+    }
 
 }
-);
+
         async function cancelarCorridaMotorientado() {
             if (!corridaAtual) return;
             try {
