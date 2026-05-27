@@ -732,26 +732,26 @@
         }
      async function enviarAvaliacao(nota, comentario="") {
 
-    if(!corridaAtual){
+    if (!corridaAtual) {
         return;
     }
 
-    try{
+    try {
 
-        await fetch(API+"/avaliar", {
+        await fetch(API + "/avaliar", {
 
-            method:"POST",
+            method: "POST",
 
-            headers:{
-                "Content-Type":"application/json",
-                "Authorization":"Bearer "+token
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
             },
 
-            body:JSON.stringify({
+            body: JSON.stringify({
 
                 corrida_id: corridaAtual.corrida_id,
 
-                avaliado_id: passageiro.id,
+                avaliado_id: corridaAtual.passageiro_id,
 
                 nota: nota,
 
@@ -761,11 +761,12 @@
 
         });
 
-        alert("Avaliação enviada!");
+        alert("✅ Avaliação enviada!");
 
-    }catch(err){
+    } catch(err) {
 
         console.log(err);
+        alert("Erro ao enviar avaliação");
 
     }
 
