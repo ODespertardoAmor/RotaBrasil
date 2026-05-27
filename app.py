@@ -229,36 +229,36 @@ def on_connect():
 # LISTAR MOTORISTAS
 # =========================================
 
-@app.route("/admin/motoristas")
-def admin_motoristas():
+#@app.route("/admin/motoristas")
+#def admin_motoristas():
 
-    motoristas = Motorista.query.all()
+   # motoristas = Motorista.query.all()
 
-    lista = []
+   # lista = []
 
-    for m in motoristas:
+    #for m in motoristas:
 
-        user = User.query.get(m.user_id)
+       # user = User.query.get(m.user_id)
 
-        lista.append({
+       # lista.append({
 
-            "id": m.id,
+            #"id": m.id,
 
-            "user_id": m.user_id,
+            #"user_id": m.user_id,
 
-            "nome": user.nome if user else "Motorista",
+           # "nome": user.nome if user else "Motorista",
 
-            "email": user.email if user else "",
+           # "email": user.email if user else "",
 
-            "carro": m.carro,
+           # "carro": m.carro,
 
-            "placa": m.placa,
+           # "placa": m.placa,
 
-            "online": m.online
+            #"online": m.online
 
-        })
+       # })
 
-    return jsonify(lista)
+   # return jsonify(lista)
 
 
 # =========================================
@@ -269,6 +269,44 @@ def admin_motoristas():
 # =========================================
 
 
+# =========================================
+
+# =========================================
+# LISTAR MOTORISTAS ADM
+# =========================================
+
+@app.route("/admin/motoristas")
+def admin_motoristas():
+
+    motoristas = Usuario.query.filter_by(
+        tipo="motorista"
+    ).all()
+
+    lista = []
+
+    for m in motoristas:
+
+        lista.append({
+
+            "id": m.id,
+
+            "nome": m.nome,
+
+            "email": m.email,
+
+            "carro": m.carro if m.carro else "Carro Particular",
+
+            "placa": m.placa if m.placa else "",
+
+            "online": m.online
+
+        })
+
+    return jsonify(lista), 200
+
+
+# =========================================
+# EXCLUIR MOTORISTA ADM
 # =========================================
 
 @app.route(
@@ -283,7 +321,7 @@ def excluir_motorista(id):
 
         return jsonify({
             "erro":"motorista nao encontrado"
-        })
+        }), 404
 
     db.session.delete(motorista)
 
@@ -291,8 +329,7 @@ def excluir_motorista(id):
 
     return jsonify({
         "status":"motorista excluido"
-    })
-
+    }), 200
 
 if __name__ == "__main__":
     with app.app_context():
