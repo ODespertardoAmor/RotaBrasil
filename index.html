@@ -718,7 +718,7 @@
         }
 
         function finalizarCorrida() {
-            enviarAvaliacao(5, "Motorista excelente");
+            enviarAvaliacao(5, "Passageira excelente");
             
             falarMensagem("Corrida finalizada com sucesso! Bom trabalho!");
             if (watchId) navigator.geolocation.clearWatch(watchId); 
@@ -751,7 +751,7 @@
 
                 corrida_id: corridaAtual.corrida_id,
 
-                avaliado_id: motorista.id,
+                avaliado_id: passageiro.id,
 
                 nota: nota,
 
