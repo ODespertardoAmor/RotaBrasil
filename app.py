@@ -330,6 +330,61 @@ def excluir_motorista(id):
     return jsonify({
         "status":"motorista excluido"
     }), 200
+# =========================================
+# LISTAR PASSAGEIROS ADM
+# =========================================
+
+@app.route("/admin/passageiros")
+def admin_passageiros():
+
+    passageiros = Usuario.query.filter_by(
+        tipo="passageiro"
+    ).all()
+
+    lista = []
+
+    for p in passageiros:
+
+        lista.append({
+
+            "id": p.id,
+
+            "nome": p.nome,
+
+            "email": p.email,
+
+            "telefone": p.telefone if p.telefone else ""
+
+        })
+
+    return jsonify(lista), 200
+
+
+# =========================================
+# EXCLUIR PASSAGEIRO ADM
+# =========================================
+
+@app.route(
+    "/admin/excluir_passageiro/<int:id>",
+    methods=["DELETE"]
+)
+def excluir_passageiro(id):
+
+    passageiro = Usuario.query.get(id)
+
+    if not passageiro:
+
+        return jsonify({
+            "erro":"passageiro nao encontrado"
+        }), 404
+
+    db.session.delete(passageiro)
+
+    db.session.commit()
+
+    return jsonify({
+        "status":"passageiro excluido"
+    }), 200    
 
 if __name__ == "__main__":
     with app.app_context():
