@@ -50,7 +50,33 @@ class Corrida(db.Model):
     valor = db.Column(db.Float, nullable=False)
     # 🚨 REMOVI A LINHA "distancia = ..." DAQUI! AGORA NÃO EXISTE MAIS NO BANCO
     status = db.Column(db.String(20), default="pendente")
+#===========SISTEMA DE AVALIACAO=======
+class Avaliacao(db.Model):
 
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    corrida_id = db.Column(
+        db.Integer
+    )
+
+    avaliador_id = db.Column(
+        db.Integer
+    )
+
+    avaliado_id = db.Column(
+        db.Integer
+    )
+
+    nota = db.Column(
+        db.Integer
+    )
+
+    comentario = db.Column(
+        db.String(255)
+    )
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO
 # ==========================================
