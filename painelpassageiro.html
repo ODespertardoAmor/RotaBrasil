@@ -969,6 +969,48 @@
             }
         });
 
+  async function enviarAvaliacao(nota, comentario="") {
+
+    if (!corridaAtual) {
+        return;
+    }
+
+    try {
+
+        await fetch(API + "/avaliar", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+
+            body: JSON.stringify({
+
+                corrida_id: corridaAtual.corrida_id,
+
+                avaliado_id: corridaAtual.motorista_id,
+
+                nota: nota,
+
+                comentario: comentario
+
+            })
+
+        });
+
+        alert("✅ Avaliação enviada!");
+
+    } catch(err) {
+
+        console.log(err);
+        alert("Erro ao enviar avaliação");
+
+    }
+
+}
+        
     </script>
 </body>
 </html>
