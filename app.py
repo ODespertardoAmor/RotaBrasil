@@ -484,32 +484,25 @@ def admin_avaliacoes():
 #=======≠===Minhas Avaliações ==========     
 @app.route("/minhas_avaliacoes", methods=["GET"])
 @jwt_required()
-def minhas_avaliacoes(current_user):
+def minhas_avaliacoes():
+
+    usuario_id = get_jwt_identity()
 
     conn = conectar()
     c = conn.cursor(dictionary=True)
 
-    try:
+    c.execute("""
+        SELECT nota, comentario, created_at
+        FROM avaliacoes
+        WHERE avaliado_id = %s
+        ORDER BY id DESC
+    """, (usuario_id,))
 
-        c.execute("""
-            SELECT nota, comentario, created_at
-            FROM avaliacoes
-            WHERE avaliado_id = %s
-            ORDER BY id DESC
-        """, (current_user["id"],))
+    avaliacoes = c.fetchall()
 
-        avaliacoes = c.fetchall()
+    conn.close()
 
-        return jsonify(avaliacoes)
-
-    except Exception as e:
-
-        print("ERRO AVALIACOES:", e)
-        return jsonify([])
-
-    finally:
-
-        conn.close()
+    return jsonify(avaliacoes)
 if __name__ == "__main__":
  #  with app.app_context():
         #db.create_all()
