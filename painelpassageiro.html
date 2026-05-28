@@ -977,7 +977,50 @@
             }
         });
 
-  
+  async function carregarAvaliacoes() {
+
+    try {
+
+        const res = await fetch(API + "/minhas_avaliacoes", {
+
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+
+        });
+
+        const data = await res.json();
+
+        // média
+        document.getElementById("mediaNota").innerHTML = `
+            <h2 style="font-size:40px; color:gold;">
+                ⭐ ${parseFloat(data.media || 0).toFixed(1)}
+            </h2>
+        `;
+
+        // lista
+        let html = "";
+
+        data.avaliacoes.forEach(av => {
+
+            html += `
+                <div class="card" style="margin-top:10px;">
+                    <h3>⭐ ${av.nota}</h3>
+                    <p>${av.comentario || ""}</p>
+                </div>
+            `;
+
+        });
+
+        document.getElementById("listaAvaliacoes").innerHTML = html;
+
+    } catch(err) {
+
+        console.log(err);
+
+    }
+
+}
         
     </script>
 </body>
