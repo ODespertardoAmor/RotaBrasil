@@ -708,6 +708,9 @@
             document.getElementById('txtTempo').innerText = `${Math.round(distancia * 3.5)} min`;
             document.getElementById('txtValor').innerText = `R$ ${valorFinal.toFixed(2)}`;
             document.getElementById('cardValor').style.display = 'block';
+            document.getElementById("dashboard").style.display = "block";
+
+            carregarAvaliacoes();
         }
 
         /* =========================
