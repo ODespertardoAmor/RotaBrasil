@@ -30,6 +30,16 @@ socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'pol
 # MODELOS DO BANCO DE DADOS (CORRIGIDO ✅)
 # REMOVI O CAMPO DISTANCIA DAQUI DE BAIXO!
 # ==========================================
+conn = conectar()
+c = conn.cursor()
+
+c.execute("""
+ALTER TABLE usuarios
+ADD COLUMN online INT DEFAULT 0
+""")
+
+conn.commit()
+conn.close()
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
@@ -119,7 +129,31 @@ def login():
     }
     
     return jsonify({"token": token, "user": dados_user}), 200
+# =========================
+# 🔴 MOTORISTA OFFLINE
+# =========================
 
+@app.route("/ficar_offline/<int:motorista_id>", methods=["POST"])
+def ficar_offline(motorista_id):
+
+    conn = conectar()
+    c = conn.cursor()
+
+    c.execute("""
+        UPDATE usuarios
+        SET online = 0
+        WHERE id = %s
+        AND tipo = 'motorista'
+    """, (motorista_id,))
+
+    conn.commit()
+
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "mensagem": "Motorista offline"
+    })
 # ==========================================
 # ROTAS DO MOTORISTA
 # ==========================================
