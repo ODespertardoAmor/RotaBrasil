@@ -437,6 +437,43 @@
         }
 
         /* ==========================================
+           ⭐ ESTILOS NOVOS PARA AVALIAÇÃO 🩷
+        ========================================== */
+        .avaliacao-container {
+            background: rgba(22, 93, 255, 0.08);
+            border: 1px solid rgba(22, 93, 255, 0.2);
+            border-radius: var(--borda-radius-pq);
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .estrelas {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            font-size: 35px;
+            margin: 15px 0;
+            cursor: pointer;
+        }
+
+        .estrela {
+            color: #4E5969;
+            transition: all 0.2s ease;
+        }
+
+        .estrela.ativa {
+            color: #FF7D00;
+            transform: scale(1.15);
+            filter: drop-shadow(0 0 4px rgba(255, 125, 0, 0.5));
+        }
+
+        .comentario-input {
+            min-height: 80px;
+            resize: none;
+            margin-top: 10px;
+        }
+
+        /* ==========================================
            🗺️ MAPA (ESTILO CLEAN)
         ========================================== */
         #mapa {
@@ -469,6 +506,7 @@
             .card { padding: 20px 18px; }
             .valor-grande { font-size: 32px; }
             .status-icon { font-size: 45px; }
+            .estrelas { font-size: 30px; }
         }
     </style>
 </head>
@@ -619,6 +657,7 @@
         let autocompleteService = new google.maps.places.AutocompleteService();
         let distancia = 0;
         let valorFinal = 0;
+        let notaSelecionada = 0; // ⭐ Variável nova para nota
 
         // 🔊 VOZ E ÁUDIO MESMO PADRÃO
         function falar(texto) {
@@ -805,7 +844,14 @@
                 const data = await res.json();
                 if(!res.ok) throw data;
 
-                corridaAtual = { id: data.corrida_id, origem, destino, valor: valorFinal };
+                corridaAtual = { 
+                    id: data.corrida_id, 
+                    corrida_id: data.corrida_id, // 👈 Adicionei para padronizar
+                    origem, 
+                    destino, 
+                    valor: valorFinal,
+                    motorista_id: null // Será preenchido quando aceito
+                };
                 mostrarStatusBuscando();
 
             } catch(err) {
@@ -833,9 +879,12 @@
             `;
         }
 
-        function mostrarStatusAceito(motoristaDados) {
+        function mostrarStatusAceito(dados) {
             tocarSom('sucesso');
-            falar(`Corrida aceita! Motorista ${motoristaDados.motorista_nome} está indo até você!`);
+            falar(`Corrida aceita! Motorista ${dados.motorista_nome} está indo até você!`);
+
+            // 🆕 Salva o ID do motorista na corrida atual para avaliação
+            corridaAtual.motorista_id = dados.motorista_id;
 
             document.getElementById('cardMapa').style.display = 'block';
             inicializarMapa();
@@ -847,28 +896,78 @@
                     <div class="status-subtexto">Seu motorista chegou rápido! Fique atento ao mapa 🗺️</div>
                     
                     <div class="motorista-info">
-                        <div class="motorista-foto">${motoristaDados.motorista_nome.charAt(0)}</div>
+                        <div class="motorista-foto">${dados.motorista_nome.charAt(0)}</div>
                         <div class="motorista-dados">
-                            <div class="motorista-nome">${motoristaDados.motorista_nome}</div>
-                            <div class="motorista-carro">${motoristaDados.carro || 'Carro' } • Placa: ${motoristaDados.placa || '----'}</div>
+                            <div class="motorista-nome">${dados.motorista_nome}</div>
+                            <div class="motorista-carro">${dados.carro || 'Carro' } • Placa: ${dados.placa || '----'}</div>
                         </div>
                     </div>
                 </div>
             `;
         }
 
+        // ⭐⭐⭐ MODIFICAÇÃO PRINCIPAL AQUI: QUANDO FINALIZA, CHAMA TELA DE AVALIAÇÃO ⭐⭐⭐
         function mostrarStatusFinalizado() {
             tocarSom('sucesso');
-            falar("Viagem finalizada! Obrigado por viajar conosco!");
+            falar("Viagem finalizada! Que nota você dá para essa corrida?");
+            
+            // 🎨 AGORA MOSTRA A TELA DE AVALIAÇÃO LOGO APÓS FINALIZAR
             document.getElementById('conteudoStatus').innerHTML = `
                 <div class="status-container">
                     <i class="fas fa-flag-checkered status-icon status-aceito"></i>
                     <div class="status-texto">Viagem Finalizada! 🎉</div>
-                    <div class="status-subtexto">Agradecemos sua preferência! Volte sempre 🙏❤️</div>
+                    <div class="status-subtexto">Obrigado por viajar com a Rota Brasil! Avalie seu motorista 👇⭐</div>
+
+                    <div class="avaliacao-container">
+                        <h3 style="color: #FF7D00; margin-bottom:5px;">⭐ Avalie sua Experiência</h3>
+                        <p style="font-size:14px; color:var(--cor-texto-secundario);">Toque em uma estrela para dar sua nota</p>
+                        
+                        <div class="estrelas" id="estrelasAvaliacao">
+                            <i class="fas fa-star estrela" data-nota="1"></i>
+                            <i class="fas fa-star estrela" data-nota="2"></i>
+                            <i class="fas fa-star estrela" data-nota="3"></i>
+                            <i class="fas fa-star estrela" data-nota="4"></i>
+                            <i class="fas fa-star estrela" data-nota="5"></i>
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fas fa-pen input-icon"></i>
+                            <input type="text" id="comentario" class="comentario-input" placeholder="Deixe um comentário (opcional)..." maxlength="200">
+                        </div>
+
+                        <button class="btn-primary" id="btnEnviarAvaliacao" onclick="enviarAvaliacaoFinal()" disabled>
+                            <i class="fas fa-paper-plane"></i> ENVIAR AVALIAÇÃO
+                        </button>
+                    </div>
+
                     <br>
-                    <button class="btn-primary" onclick="novaViagem()">🚀 Fazer Nova Viagem</button>
+                    <button class="btn-success" onclick="novaViagem()">🚀 Fazer Nova Viagem</button>
                 </div>
             `;
+
+            // ⭐ ADICIONA EVENTO DE CLIQUE NAS ESTRELAS
+            setTimeout(() => {
+                const estrelas = document.querySelectorAll('.estrela');
+                const btnEnviar = document.getElementById('btnEnviarAvaliacao');
+
+                estrelas.forEach(estrela => {
+                    estrela.addEventListener('click', () => {
+                        notaSelecionada = parseInt(estrela.dataset.nota);
+                        
+                        // Remove todas ativas
+                        estrelas.forEach(e => e.classList.remove('ativa'));
+                        // Adiciona até a clicada
+                        for(let i = 0; i < notaSelecionada; i++){
+                            estrelas[i].classList.add('ativa');
+                        }
+
+                        // Libera botão
+                        btnEnviar.disabled = false;
+                        btnEnviar.classList.remove('btn-blocked');
+                        tocarSom('sucesso');
+                    });
+                });
+            }, 100);
         }
 
         function mostrarStatusCancelado(motivo="") {
@@ -918,6 +1017,7 @@
 
         function novaViagem() {
             corridaAtual = null;
+            notaSelecionada = 0;
             document.getElementById('origem').value = '';
             document.getElementById('destino').value = '';
             document.getElementById('cardStatus').style.display = 'none';
@@ -926,6 +1026,83 @@
             document.getElementById('btnChamar').disabled = false;
             document.getElementById('btnChamar').classList.remove('btn-blocked');
             document.getElementById('btnChamar').innerHTML = "🚀 CHAMAR ROTA BRASIL";
+        }
+
+        /* =========================
+           ⭐ FUNÇÃO DE AVALIAÇÃO (ATUALIZADA E LIGADA A ROTA)
+        ========================= */
+        async function enviarAvaliacaoFinal() {
+            if (!corridaAtual || !notaSelecionada || !corridaAtual.motorista_id) {
+                alert("⚠️ Selecione uma estrela para avaliar!");
+                return;
+            }
+
+            const comentario = document.getElementById('comentario').value.trim();
+
+            try {
+                // 🔗 LIGAÇÃO DIRETA COM A ROTA /avaliar DO BACKEND
+                const res = await fetch(API + "/avaliar", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        corrida_id: corridaAtual.corrida_id,
+                        avaliado_id: corridaAtual.motorista_id,
+                        avaliador_id: passageiro._id, // 👈 Envia quem avaliou
+                        nota: notaSelecionada,
+                        comentario: comentario
+                    })
+                });
+
+                const data = await res.json();
+
+                if(res.ok) {
+                    tocarSom('sucesso');
+                    falar("Avaliação enviada com sucesso! Obrigado!");
+                    alert("✅ Avaliação enviada com sucesso! Obrigado por contribuir!");
+                    
+                    // Desabilita tudo após enviar
+                    document.getElementById('btnEnviarAvaliacao').innerHTML = "✅ ENVIADO";
+                    document.getElementById('btnEnviarAvaliacao').disabled = true;
+                    document.getElementById('btnEnviarAvaliacao').classList.add('btn-blocked');
+                    
+                    // Desabilita estrelas
+                    document.querySelectorAll('.estrela').forEach(e => e.style.pointerEvents = 'none');
+                } else {
+                    throw data;
+                }
+
+            } catch(err) {
+                console.log(err);
+                tocarSom('alerta');
+                alert("❌ Erro ao enviar avaliação: " + (err.erro || "Tente novamente"));
+            }
+        }
+
+        // Mantém sua função antiga também por compatibilidade
+        async function enviarAvaliacao(nota, comentario="") {
+            if (!corridaAtual) return;
+            try {
+                await fetch(API + "/avaliar", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        corrida_id: corridaAtual.corrida_id,
+                        avaliado_id: corridaAtual.motorista_id,
+                        nota: nota,
+                        comentario: comentario
+                    })
+                });
+                alert("✅ Avaliação enviada!");
+            } catch(err) {
+                console.log(err);
+                alert("Erro ao enviar avaliação");
+            }
         }
 
         /* =========================
@@ -956,10 +1133,13 @@
             }
         });
 
-        // SIMULA FINALIZAÇÃO (Você pode ligar rota finalizar depois)
+        // ✅✅✅ AQUI É A LIGAÇÃO MAIS IMPORTANTE!!! ✅✅✅
+        // Quando o motorista clica em "Finalizar Corrida" no app DELE, ele emite esse evento.
+        // AGORA ASSIM QUE CHEGA AQUI, CHAMA DIRETO A TELA DE AVALIAÇÃO 🩷⭐
         socket.on("corrida_finalizada", (dados) => {
             if(!corridaAtual || dados.corrida_id != corridaAtual.id) return;
-            mostrarStatusFinalizado();
+            console.log("🏁 Corrida finalizada pelo motorista! Abrindo avaliação...");
+            mostrarStatusFinalizado(); // 👈 Agora chama a função que TEM A AVALIAÇÃO
         });
 
         // Fechar sugestões ao clicar fora
@@ -968,48 +1148,6 @@
                 document.querySelectorAll('.suggestions').forEach(s => s.style.display = 'none');
             }
         });
-
-  async function enviarAvaliacao(nota, comentario="") {
-
-    if (!corridaAtual) {
-        return;
-    }
-
-    try {
-
-        await fetch(API + "/avaliar", {
-
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-
-            body: JSON.stringify({
-
-                corrida_id: corridaAtual.corrida_id,
-
-                avaliado_id: corridaAtual.motorista_id,
-
-                nota: nota,
-
-                comentario: comentario
-
-            })
-
-        });
-
-        alert("✅ Avaliação enviada!");
-
-    } catch(err) {
-
-        console.log(err);
-        alert("Erro ao enviar avaliação");
-
-    }
-
-}
         
     </script>
 </body>
