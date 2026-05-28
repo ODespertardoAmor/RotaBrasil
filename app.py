@@ -452,7 +452,9 @@ def avaliar():
     return jsonify({
         "status":"avaliado"
     })
- #========Avaliacoes no painel ===≠==   
+  
+#======== Avaliações no painel ADM ========
+
 @app.route("/admin/avaliacoes")
 def admin_avaliacoes():
 
@@ -481,6 +483,8 @@ def admin_avaliacoes():
             "comentario": a.comentario
 
         })
+
+    return jsonify(lista)
 #=======≠===Minhas Avaliações ==========     
 @app.route("/minhas_avaliacoes", methods=["GET"])
 @jwt_required()
