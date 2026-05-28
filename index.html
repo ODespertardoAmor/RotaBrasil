@@ -529,13 +529,7 @@
         /* =========================
            🟢 FICAR ONLINE
         ========================= */
-        <div class="card">
-    <h3>⭐ Minha Avaliação</h3>
-
-    <div id="mediaNota"></div>
-
-    <div id="listaAvaliacoes"></div>
-</div>
+        
         async function ficarOnline() {
             try {
                 const res = await fetch(`${API}/ficar_online/${motorista.id}`, { method: "POST" });
