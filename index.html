@@ -842,6 +842,8 @@
 
         const res = await fetch(API + "/minhas_avaliacoes", {
 
+            method: "GET",
+
             headers: {
                 "Authorization": "Bearer " + token
             }
@@ -850,32 +852,48 @@
 
         const data = await res.json();
 
-        // média
-        document.getElementById("mediaNota").innerHTML = `
-            <h2 style="font-size:40px; color:gold;">
-                ⭐ ${parseFloat(data.media || 0).toFixed(1)}
-            </h2>
-        `;
-
-        // lista
         let html = "";
 
-        data.avaliacoes.forEach(av => {
+        let soma = 0;
 
-            html += `
+        if(data.length === 0){
+
+            html = `
                 <div class="card" style="margin-top:10px;">
-                    <h3>⭐ ${av.nota}</h3>
-                    <p>${av.comentario || ""}</p>
+                    <p>Nenhuma avaliação ainda.</p>
                 </div>
             `;
 
-        });
+            document.getElementById("mediaNota").innerHTML =
+                "⭐ Média: 0.0 / 5";
+
+        } else {
+
+            data.forEach(av => {
+
+                soma += av.nota;
+
+                html += `
+                    <div class="card" style="margin-top:10px;">
+                        <h3>⭐ ${av.nota}/5</h3>
+                        <p>${av.comentario || ""}</p>
+                    </div>
+                `;
+
+            });
+
+            let media = soma / data.length;
+
+            document.getElementById("mediaNota").innerHTML =
+                `⭐ Média: ${media.toFixed(1)} / 5`;
+
+        }
 
         document.getElementById("listaAvaliacoes").innerHTML = html;
 
     } catch(err) {
 
-        console.log(err);
+        console.log("Erro ao carregar avaliações:", err);
 
     }
 
