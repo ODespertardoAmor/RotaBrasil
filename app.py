@@ -483,32 +483,38 @@ def admin_avaliacoes():
         })
 #=======≠===Minhas Avaliações ==========     
 @app.route("/minhas_avaliacoes", methods=["GET"])
-@token_required
-def minhas_avaliacoes(usuario_id):
+def minhas_avaliacoes():
+
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return jsonify({"erro":"Token ausente"}), 401
+
+    token = token.replace("Bearer ", "")
+
+    dados = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+
+    usuario_id = dados["id"]
 
     conn = conectar()
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
 
-        SELECT
-            nota,
-            comentario,
-            criado_em
+        SELECT nota, comentario, criado_em
         FROM avaliacoes
-        WHERE avaliado_id = %s
+        WHERE avaliado_id=%s
         ORDER BY id DESC
 
     """, (usuario_id,))
 
     avaliacoes = cursor.fetchall()
 
-    # média
     cursor.execute("""
 
         SELECT AVG(nota) as media
         FROM avaliacoes
-        WHERE avaliado_id = %s
+        WHERE avaliado_id=%s
 
     """, (usuario_id,))
 
@@ -520,7 +526,6 @@ def minhas_avaliacoes(usuario_id):
         "media": media["media"],
         "avaliacoes": avaliacoes
     })
-    return jsonify(lista)   
 if __name__ == "__main__":
 #    with app.app_context():
       #  db.create_all()
