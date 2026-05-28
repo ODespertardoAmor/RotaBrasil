@@ -483,52 +483,36 @@ def admin_avaliacoes():
         })
 #=======≠===Minhas Avaliações ==========     
 @app.route("/minhas_avaliacoes", methods=["GET"])
-def minhas_avaliacoes():
-
-    token = request.headers.get("Authorization")
-
-    if not token:
-        return jsonify({"erro":"Token ausente"}), 401
-
-    token = token.replace("Bearer ", "")
-
-    dados = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-
-    usuario_id = dados["id"]
+@jwt_required()
+def minhas_avaliacoes(current_user):
 
     conn = conectar()
-    cursor = conn.cursor(dictionary=True)
+    c = conn.cursor(dictionary=True)
 
-    cursor.execute("""
+    try:
 
-        SELECT nota, comentario, criado_em
-        FROM avaliacoes
-        WHERE avaliado_id=%s
-        ORDER BY id DESC
+        c.execute("""
+            SELECT nota, comentario, created_at
+            FROM avaliacoes
+            WHERE avaliado_id = %s
+            ORDER BY id DESC
+        """, (current_user["id"],))
 
-    """, (usuario_id,))
+        avaliacoes = c.fetchall()
 
-    avaliacoes = cursor.fetchall()
+        return jsonify(avaliacoes)
 
-    cursor.execute("""
+    except Exception as e:
 
-        SELECT AVG(nota) as media
-        FROM avaliacoes
-        WHERE avaliado_id=%s
+        print("ERRO AVALIACOES:", e)
+        return jsonify([])
 
-    """, (usuario_id,))
+    finally:
 
-    media = cursor.fetchone()
-
-    conn.close()
-
-    return jsonify({
-        "media": media["media"],
-        "avaliacoes": avaliacoes
-    })
+        conn.close()
 if __name__ == "__main__":
-   with app.app_context():
-        db.create_all()
+ #  with app.app_context():
+        #db.create_all()
     
     port = int(os.environ.get("PORT", 5000))
     # 🔧 MODO DEBUG DESLIGADO PARA PRODUÇÃO NO RENDER (MAIS ESTÁVEL)
