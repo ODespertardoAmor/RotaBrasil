@@ -532,13 +532,16 @@ def minhas_avaliacoes():
     conn.close()
 
     return jsonify(avaliacoes)
- conn = conectar()
+conn = conectar()
 c = conn.cursor()
 
 c.execute("""
 ALTER TABLE usuarios
 ADD COLUMN online INT DEFAULT 0
-""")   
+""")
+
+conn.commit()
+conn.close()
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
