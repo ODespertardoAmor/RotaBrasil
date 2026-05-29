@@ -13,7 +13,8 @@
       --sucesso: #00B42A;
       --perigo: #F53F3F;
       --fundo: #0F1419;
-      --card: rgba(29, 33, 41, 0.95);
+      --card: rgba(29, 33, 41, 0.97);
+      --borda: #363E4D;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,22 +26,57 @@
       overflow: hidden;
     }
 
-    /* Mapa Full Screen */
+    /* TELA LOGIN */
+    #loginScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 300;
+      background: var(--fundo);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .logo-login { text-align: center; margin-bottom: 30px; }
+    .logo-login span {
+      font-size: 42px;
+      font-weight: 900;
+      background: linear-gradient(90deg, #165DFF, #7B2CFF);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .card-login {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 30px 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 12px;
+      background: #272E3B;
+      border: 1.5px solid var(--borda);
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+    }
+
+    /* MAPA */
     #mapa {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0; right: 0; bottom: 0;
       z-index: 1;
     }
 
-    /* Header Superior */
+    /* HEADER */
     .header {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       z-index: 100;
       background: linear-gradient(180deg, rgba(15,20,25,0.95), transparent);
       padding: 15px 20px;
@@ -49,42 +85,45 @@
       align-items: center;
     }
 
-    .logo {
-      font-size: 22px;
-      font-weight: 900;
-      background: linear-gradient(90deg, #165DFF, #7B2CFF);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+    .logo { font-size: 22px; font-weight: 900; background: linear-gradient(90deg, #165DFF, #7B2CFF); -webkit-background-clip: text; color: transparent; }
+
+    /* CARD FLUTUANTE */
+    .corrida-flutuante {
+      position: absolute;
+      bottom: 160px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+      border: 2px solid var(--sucesso);
+      z-index: 150;
+      display: none;
+      animation: slideUp 0.4s ease;
     }
 
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 600;
-    }
+    @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 50px); } to { opacity: 1; transform: translateX(-50%); } }
 
-    /* Barra Inferior */
+    .info { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--borda); }
+    .label { color: #86909C; font-size: 14px; }
+    .valor { font-weight: 600; }
+    .valor-grande { font-size: 28px; color: var(--sucesso); font-weight: 900; }
+
+    /* BARRA INFERIOR */
     .bottom-bar {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 0; left: 0; right: 0;
       z-index: 200;
       background: rgba(15, 20, 25, 0.98);
       padding: 15px 20px 25px;
-      border-top: 1px solid #363E4D;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 10px;
+      border-top: 1px solid var(--borda);
     }
 
     button {
-      flex: 1;
+      width: 100%;
       padding: 16px;
       border: none;
       border-radius: 14px;
@@ -95,179 +134,215 @@
       justify-content: center;
       gap: 10px;
       cursor: pointer;
-      transition: all 0.3s;
+      margin-bottom: 10px;
     }
 
-    .btn-online {
-      background: linear-gradient(135deg, #00B42A, #009A29);
-      color: white;
-    }
-
-    .btn-offline {
-      background: linear-gradient(135deg, #F53F3F, #D21C1C);
-      color: white;
-    }
-
-    .btn-sair {
-      background: transparent;
-      border: 2px solid #F53F3F;
-      color: #F53F3F;
-    }
-
-    /* Card de Corrida Flutuante */
-    .corrida-flutuante {
-      position: absolute;
-      bottom: 140px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 92%;
-      max-width: 420px;
-      background: var(--card);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-      border: 2px solid var(--sucesso);
-      z-index: 150;
-      animation: slideUp 0.4s ease;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translate(-50%, 50px); }
-      to { opacity: 1; transform: translateX(-50%); }
-    }
-
-    .corrida-flutuante h2 {
-      color: var(--sucesso);
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .info {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px dashed #363E4D;
-    }
-
-    .info:last-child { border: none; }
-
-    .label { color: #86909C; font-size: 14px; }
-    .valor { font-weight: 600; font-size: 15px; }
-
-    .valor-grande {
-      font-size: 28px;
-      font-weight: 900;
-      color: var(--sucesso);
-    }
-
-    .acoes {
-      margin-top: 20px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+    .btn-online { background: linear-gradient(135deg, var(--sucesso), #009A29); color: white; }
+    .btn-offline { background: linear-gradient(135deg, var(--perigo), #D21C1C); color: white; }
+    .btn-sair { background: transparent; border: 2px solid var(--perigo); color: var(--perigo); }
   </style>
 </head>
 <body>
 
-  <!-- Mapa -->
+  <!-- TELA DE LOGIN -->
+  <div id="loginScreen">
+    <div class="logo-login">
+      <span>ROTA BRASIL</span>
+      <p style="color:#86909C; margin-top:8px;">Painel Motorista</p>
+    </div>
+    <div class="card-login">
+      <h3 style="text-align:center; margin-bottom:20px;"><i class="fas fa-user-circle"></i> Acesso Motorista</h3>
+      
+      <input id="nome" placeholder="👤 Nome Completo">
+      <input id="email" placeholder="📧 E-mail" type="email">
+      <input id="senha" type="password" placeholder="🔒 Senha">
+      <input id="telefone" placeholder="📱 Telefone (WhatsApp)">
+      <input id="carro" placeholder="🚘 Veículo (Modelo / Cor)">
+      <input id="placa" placeholder="🔖 Placa do Veículo">
+
+      <button onclick="registerMotorista()" style="background:var(--primaria); color:white; margin-top:10px;">
+        <i class="fas fa-user-plus"></i> Criar Conta
+      </button>
+      <button onclick="login()" style="background:var(--sucesso); color:white;">
+        <i class="fas fa-sign-in-alt"></i> Entrar na Conta
+      </button>
+
+      <p id="loginStatus" style="text-align:center; margin-top:15px; min-height:24px;"></p>
+    </div>
+  </div>
+
+  <!-- MAPA -->
   <div id="mapa">
-    <!-- Você pode substituir por Leaflet, Google Maps ou Mapbox -->
-    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.123456789!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59c8d9f3b8b7%3A0x8b2a3c4d5e6f7a8b!2sS%C3%A3o%20Paulo%2C%20SP!5e0!3m2!1spt-BR!2sbr!4v123456789" 
+    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.0!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjPCsDMzJzUyLjIiUyA0NsKwMzknMDguMyJX!5e0!3m2!1spt-BR!2sbr!4v123456789" 
             width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
   </div>
 
-  <!-- Header -->
-  <div class="header">
+  <!-- HEADER -->
+  <div class="header" id="headerDashboard" style="display:none;">
     <div class="logo">ROTA BRASIL</div>
-    <div class="status" id="statusMotorista">
-      <i class="fas fa-circle" style="color:#F53F3F;"></i>
-      <span>Offline</span>
-    </div>
+    <div id="statusMotorista"><i class="fas fa-circle" style="color:#F53F3F;"></i> Offline</div>
   </div>
 
-  <!-- Card de Corrida Flutuante -->
-  <div id="corridaCard" class="corrida-flutuante" style="display: none;">
-    <!-- Conteúdo será inserido via JavaScript -->
-  </div>
+  <!-- CARD FLUTUANTE DE CORRIDA -->
+  <div id="corridaCard" class="corrida-flutuante"></div>
 
-  <!-- Barra Inferior -->
-  <div class="bottom-bar">
-    <div class="btn-group">
-      <button id="btnOnline" class="btn-online" onclick="ficarOnline()">
-        <i class="fas fa-check-circle"></i> FICAR ONLINE
-      </button>
-      <button id="btnOffline" class="btn-offline" onclick="ficarOffline()" style="display:none;">
-        <i class="fas fa-times-circle"></i> FICAR OFFLINE
-      </button>
-    </div>
-    <button class="btn-sair" onclick="logoutMotorista()" style="margin-top:12px;">
+  <!-- BARRA INFERIOR -->
+  <div class="bottom-bar" id="bottomBar" style="display:none;">
+    <button id="btnOnline" class="btn-online" onclick="ficarOnline()">
+      <i class="fas fa-check-circle"></i> FICAR ONLINE
+    </button>
+    <button id="btnOffline" class="btn-offline" onclick="ficarOffline()" style="display:none;">
+      <i class="fas fa-times-circle"></i> FICAR OFFLINE
+    </button>
+    <button class="btn-sair" onclick="logoutMotorista()">
       <i class="fas fa-door-open"></i> SAIR DA CONTA
     </button>
   </div>
 
   <script>
-    // ==================== SOCKET E LÓGICA ====================
     const API = "https://rotabrasil-v1cf.onrender.com";
     const socket = io(API);
 
+    let token = null;
+    let motorista = null;
     let corridaAtual = null;
+    let corridaAceita = false;
+    let watchId = null;
 
-    function mostrarCorrida(data) {
+    // ==================== LOGIN / CADASTRO ====================
+    async function registerMotorista() {
+      document.getElementById("loginStatus").innerHTML = "⏳ Processando cadastro...";
+      try {
+        const res = await fetch(`${API}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: document.getElementById("nome").value,
+            email: document.getElementById("email").value,
+            senha: document.getElementById("senha").value,
+            telefone: document.getElementById("telefone").value,
+            tipo: "motorista",
+            carro: document.getElementById("carro").value,
+            placa: document.getElementById("placa").value
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("loginStatus").innerHTML = "✅ Conta criada! Entrando...";
+          setTimeout(login, 1000);
+        } else {
+          alert("❌ " + (data.erro || "Erro ao criar conta"));
+        }
+      } catch (err) {
+        alert("🔌 Erro de conexão");
+      }
+    }
+
+    async function login() {
+      try {
+        const res = await fetch(`${API}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            senha: document.getElementById("senha").value
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          if (data.user.tipo !== "motorista") return alert("⚠️ Esta conta não é de motorista!");
+
+          token = data.token;
+          motorista = data.user;
+          localStorage.setItem("token_motorista", token);
+          localStorage.setItem("user_motorista", JSON.stringify(motorista));
+
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("headerDashboard").style.display = "flex";
+          document.getElementById("bottomBar").style.display = "block";
+        } else {
+          alert("❌ " + (data.erro || "Dados inválidos"));
+        }
+      } catch (err) {
+        alert("🔌 Falha na conexão");
+      }
+    }
+
+    // Auto login
+    const tokenSalvo = localStorage.getItem("token_motorista");
+    if (tokenSalvo) {
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("headerDashboard").style.display = "flex";
+      document.getElementById("bottomBar").style.display = "block";
+    }
+
+    function logoutMotorista() {
+      localStorage.clear();
+      window.location.reload();
+    }
+
+    // ==================== ONLINE / OFFLINE ====================
+    async function ficarOnline() {
+      try {
+        await fetch(`${API}/ficar_online/${motorista.id}`, { method: "POST" });
+        document.getElementById("btnOnline").style.display = "none";
+        document.getElementById("btnOffline").style.display = "block";
+        document.getElementById("statusMotorista").innerHTML = `<i class="fas fa-circle" style="color:#00B42A;"></i> Online`;
+      } catch (err) { alert("Erro ao ficar online"); }
+    }
+
+    async function ficarOffline() {
+      try {
+        await fetch(`${API}/ficar_offline/${motorista.id}`, { method: "POST" });
+        document.getElementById("btnOnline").style.display = "block";
+        document.getElementById("btnOffline").style.display = "none";
+        document.getElementById("statusMotorista").innerHTML = `<i class="fas fa-circle" style="color:#F53F3F;"></i> Offline`;
+      } catch (err) { alert("Erro ao ficar offline"); }
+    }
+
+    // ==================== CORRIDAS ====================
+    socket.on("nova_corrida", (data) => {
+      if (corridaAceita) return;
       corridaAtual = data;
-      
+
       document.getElementById("corridaCard").innerHTML = `
         <h2><i class="fas fa-bell fa-shake"></i> NOVA CORRIDA!</h2>
-        <div class="info">
-          <span class="label">Passageiro</span>
-          <span class="valor">${data.passageiro_nome}</span>
-        </div>
-        <div class="info">
-          <span class="label">Origem</span>
-          <span class="valor">${data.origem}</span>
-        </div>
-        <div class="info">
-          <span class="label">Destino</span>
-          <span class="valor">${data.destino}</span>
-        </div>
-        <div class="info">
-          <span class="label">Distância</span>
-          <span class="valor">${data.distancia || 'Calculando...'}</span>
-        </div>
-        <div class="info">
-          <span class="label">Valor</span>
-          <span class="valor valor-grande">R$ ${parseFloat(data.valor).toFixed(2)}</span>
-        </div>
-        <div class="acoes">
-          <button onclick="aceitarCorrida()" style="background:#00B42A; color:white;">ACEITAR</button>
-          <button onclick="recusarCorrida()" style="background:#F53F3F; color:white;">RECUSAR</button>
+        <div class="info"><span class="label">Passageiro</span><span class="valor">${data.passageiro_nome || 'Não informado'}</span></div>
+        <div class="info"><span class="label">Origem</span><span class="valor">${data.origem}</span></div>
+        <div class="info"><span class="label">Destino</span><span class="valor">${data.destino}</span></div>
+        <div class="info"><span class="label">Valor</span><span class="valor valor-grande">R$ ${parseFloat(data.valor).toFixed(2)}</span></div>
+        
+        <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <button onclick="aceitarCorrida()" style="background:#00B42A; color:white; padding:16px;">ACEITAR</button>
+          <button onclick="recusarCorrida()" style="background:#F53F3F; color:white; padding:16px;">RECUSAR</button>
         </div>
       `;
       document.getElementById("corridaCard").style.display = "block";
-    }
+    });
 
-    function aceitarCorrida() {
-      // Sua lógica de aceitar
-      alert("Corrida aceita!");
-      document.getElementById("corridaCard").style.display = "none";
+    async function aceitarCorrida() {
+      if (!corridaAtual || corridaAceita) return;
+      try {
+        const res = await fetch(`${API}/aceitar_corrida/${corridaAtual.corrida_id}`, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (res.ok) {
+          corridaAceita = true;
+          document.getElementById("corridaCard").style.display = "none";
+          alert("✅ Corrida Aceita! Dirija até o passageiro.");
+        }
+      } catch (err) { alert("Erro ao aceitar corrida"); }
     }
 
     function recusarCorrida() {
       document.getElementById("corridaCard").style.display = "none";
     }
 
-    // Exemplo de teste (remova depois)
-    // setTimeout(() => {
-    //   mostrarCorrida({
-    //     passageiro_nome: "Ana Clara",
-    //     origem: "Av. Paulista, 1000",
-    //     destino: "Shopping Morumbi",
-    //     distancia: "8.4 km",
-    //     valor: "42.50"
-    //   });
-    // }, 3000);
+    // Outros eventos socket (opcional)
+    socket.on("corrida_removida", () => {
+      document.getElementById("corridaCard").style.display = "none";
+    });
   </script>
 </body>
 </html>
