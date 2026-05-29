@@ -280,7 +280,7 @@
     </div>
 
     <!-- ==========================================
-        ⚙️ LÓGICA JAVASCRIPT ATUALIZADA
+        ⚙️ LÓGICA JAVASCRIPT ATUALIZADA (FRONT)
     =========================================== -->
     <script>
         const API = "https://rotabrasil-v1cf.onrender.com";
@@ -310,18 +310,17 @@
         });
 
         /* ========================================================
-            📡 ESCUTA DO SOCKET: MOTORISTA ACEITOU A CORRIDA
+            📡 ESCUTA DO SOCKET COM AS CHAVES REAIS DO FLASK
         ======================================================== */
         socket.on("corrida_aceita", (dadosCorrida) => {
             console.log("🚗 Motorista aceitou a corrida!", dadosCorrida);
             
-            // Une os dados novos com o objeto da corrida atual
             corridaAtual = { ...corridaAtual, ...dadosCorrida }; 
             
             tocarSom('sucesso');
-            falar(`Motorista ${dadosCorrida.nome_motorista || 'parceiro'} aceitou sua corrida e está a caminho!`);
+            falar(`Motorista ${dadosCorrida.motorista_nome || 'parceiro'} aceitou sua corrida e está a caminho!`);
             
-            // Altera a tela para mostrar os detalhes do motorista
+            // Dispara a montagem da tela ajustada ao Flask
             mostrarStatusCorridaAceita(dadosCorrida);
         });
 
@@ -592,7 +591,7 @@
         }
 
         /* ========================================================
-            🖥️ NOVA TELA DINÂMICA: EXIBE INFOS DO MOTORISTA ACEITO
+            🖥️ TELA DINÂMICA MAPEADA COM OS DADOS REAIS DO FLASK
         ======================================================== */
         function mostrarStatusCorridaAceita(dados) {
             document.getElementById('cardValor').style.display = 'none';
@@ -605,11 +604,11 @@
                         <i class="fas fa-check-circle"></i> Motorista a Caminho!
                     </div>
                     
-                    <!-- Dados do Carro e Condutor obtidos pelo Socket -->
+                    <!-- Lendo os dados direto do dicionário Python Flask -->
                     <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: left;">
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-user"></i> Motorista:</strong> ${dados.nome_motorista || 'Confirmado'}</p>
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-car"></i> Veículo:</strong> ${dados.veiculo_motorista || 'Carro Executivo'}</p>
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-id-card"></i> Placa:</strong> ${dados.placa_motorista || '---'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-user"></i> Motorista:</strong> ${dados.motorista_nome || 'Confirmado'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-car"></i> Veículo:</strong> ${dados.carro || 'Carro Executivo'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-id-card"></i> Placa Real:</strong> <span style="background:#2c3e50; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-family:monospace;">${dados.placa || '---'}</span></p>
                         <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-star" style="color:#f1c40f"></i> Avaliação:</strong> ${dados.nota_motorista || '5.0'}</p>
                     </div>
 
