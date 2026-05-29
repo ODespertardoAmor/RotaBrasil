@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🚗 Motorista | Rota Brasil</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  
+  <style>
+    :root {
+      --primaria: #165DFF;
+      --sucesso: #00B42A;
+      --perigo: #F53F3F;
+      --fundo: #0F1419;
+      --card: rgba(29, 33, 41, 0.95);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: var(--fundo);
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Mapa Full Screen */
+    #mapa {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Header Superior */
+    .header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: linear-gradient(180deg, rgba(15,20,25,0.95), transparent);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 900;
+      background: linear-gradient(90deg, #165DFF, #7B2CFF);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Barra Inferior */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      background: rgba(15, 20, 25, 0.98);
+      padding: 15px 20px 25px;
+      border-top: 1px solid #363E4D;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-online {
+      background: linear-gradient(135deg, #00B42A, #009A29);
+      color: white;
+    }
+
+    .btn-offline {
+      background: linear-gradient(135deg, #F53F3F, #D21C1C);
+      color: white;
+    }
+
+    .btn-sair {
+      background: transparent;
+      border: 2px solid #F53F3F;
+      color: #F53F3F;
+    }
+
+    /* Card de Corrida Flutuante */
+    .corrida-flutuante {
+      position: absolute;
+      bottom: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+      border: 2px solid var(--sucesso);
+      z-index: 150;
+      animation: slideUp 0.4s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translate(-50%, 50px); }
+      to { opacity: 1; transform: translateX(-50%); }
+    }
+
+    .corrida-flutuante h2 {
+      color: var(--sucesso);
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .info {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px dashed #363E4D;
+    }
+
+    .info:last-child { border: none; }
+
+    .label { color: #86909C; font-size: 14px; }
+    .valor { font-weight: 600; font-size: 15px; }
+
+    .valor-grande {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--sucesso);
+    }
+
+    .acoes {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mapa -->
+  <div id="mapa">
+    <!-- Você pode substituir por Leaflet, Google Maps ou Mapbox -->
+    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.123456789!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59c8d9f3b8b7%3A0x8b2a3c4d5e6f7a8b!2sS%C3%A3o%20Paulo%2C%20SP!5e0!3m2!1spt-BR!2sbr!4v123456789" 
+            width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">ROTA BRASIL</div>
+    <div class="status" id="statusMotorista">
+      <i class="fas fa-circle" style="color:#F53F3F;"></i>
+      <span>Offline</span>
+    </div>
+  </div>
+
+  <!-- Card de Corrida Flutuante -->
+  <div id="corridaCard" class="corrida-flutuante" style="display: none;">
+    <!-- Conteúdo será inserido via JavaScript -->
+  </div>
+
+  <!-- Barra Inferior -->
+  <div class="bottom-bar">
+    <div class="btn-group">
+      <button id="btnOnline" class="btn-online" onclick="ficarOnline()">
+        <i class="fas fa-check-circle"></i> FICAR ONLINE
+      </button>
+      <button id="btnOffline" class="btn-offline" onclick="ficarOffline()" style="display:none;">
+        <i class="fas fa-times-circle"></i> FICAR OFFLINE
+      </button>
+    </div>
+    <button class="btn-sair" onclick="logoutMotorista()" style="margin-top:12px;">
+      <i class="fas fa-door-open"></i> SAIR DA CONTA
+    </button>
+  </div>
+
+  <script>
+    // ==================== SOCKET E LÓGICA ====================
+    const API = "https://rotabrasil-v1cf.onrender.com";
+    const socket = io(API);
+
+    let corridaAtual = null;
+
+    function mostrarCorrida(data) {
+      corridaAtual = data;
+      
+      document.getElementById("corridaCard").innerHTML = `
+        <h2><i class="fas fa-bell fa-shake"></i> NOVA CORRIDA!</h2>
+        <div class="info">
+          <span class="label">Passageiro</span>
+          <span class="valor">${data.passageiro_nome}</span>
+        </div>
+        <div class="info">
+          <span class="label">Origem</span>
+          <span class="valor">${data.origem}</span>
+        </div>
+        <div class="info">
+          <span class="label">Destino</span>
+          <span class="valor">${data.destino}</span>
+        </div>
+        <div class="info">
+          <span class="label">Distância</span>
+          <span class="valor">${data.distancia || 'Calculando...'}</span>
+        </div>
+        <div class="info">
+          <span class="label">Valor</span>
+          <span class="valor valor-grande">R$ ${parseFloat(data.valor).toFixed(2)}</span>
+        </div>
+        <div class="acoes">
+          <button onclick="aceitarCorrida()" style="background:#00B42A; color:white;">ACEITAR</button>
+          <button onclick="recusarCorrida()" style="background:#F53F3F; color:white;">RECUSAR</button>
+        </div>
+      `;
+      document.getElementById("corridaCard").style.display = "block";
+    }
+
+    function aceitarCorrida() {
+      // Sua lógica de aceitar
+      alert("Corrida aceita!");
+      document.getElementById("corridaCard").style.display = "none";
+    }
+
+    function recusarCorrida() {
+      document.getElementById("corridaCard").style.display = "none";
+    }
+
+    // Exemplo de teste (remova depois)
+    // setTimeout(() => {
+    //   mostrarCorrida({
+    //     passageiro_nome: "Ana Clara",
+    //     origem: "Av. Paulista, 1000",
+    //     destino: "Shopping Morumbi",
+    //     distancia: "8.4 km",
+    //     valor: "42.50"
+    //   });
+    // }, 3000);
+  </script>
+</body>
+</html>
