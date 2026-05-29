@@ -65,10 +65,7 @@
       border-radius: 12px;
       color: white;
       font-size: 16px;
-      outline: none;
-      transition: border 0.2s;
     }
-    input:focus { border-color: var(--primaria); }
 
     /* MAPA */
     #mapa {
@@ -115,7 +112,7 @@
     .label { color: #86909C; font-size: 14px; }
     .valor { font-weight: 600; }
     .valor-grande { font-size: 28px; color: var(--sucesso); font-weight: 900; }
-    .status-etapa { font-size: 13px; color: var(--alerta); font-weight: bold; margin: 8px 0; text-align: center; background: rgba(255,125,0,0.1); padding:6px; border-radius:8px; }
+    .status-etapa { font-size: 13px; color: var(--alerta); font-weight: bold; margin: 8px 0; text-align: center; }
 
     /* BARRA INFERIOR */
     .bottom-bar {
@@ -140,10 +137,10 @@
       gap: 10px;
       cursor: pointer;
       margin-bottom: 10px;
-      transition: transform 0.2s, opacity 0.2s;
+      transition: transform 0.2s;
     }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    button:active:not(:disabled) { transform: scale(0.98); }
+
+    button:active { transform: scale(0.98); }
 
     .btn-online { background: linear-gradient(135deg, var(--sucesso), #009A29); color: white; }
     .btn-offline { background: linear-gradient(135deg, var(--perigo), #D21C1C); color: white; }
@@ -160,37 +157,34 @@
       margin-top: 10px;
     }
     .acao-full { grid-column: 1 / -1; }
-
-    .erro { color: var(--perigo); font-size:14px; margin-top:8px; }
-    .sucesso { color: var(--sucesso); font-size:14px; margin-top:8px; }
   </style>
 </head>
 <body>
 
-  <!-- TELA DE LOGIN / CADASTRO -->
+  <!-- TELA DE LOGIN -->
   <div id="loginScreen">
     <div class="logo-login">
       <span>ROTA BRASIL</span>
-      <p style="color:#86909C; margin-top:8px;">Painel Exclusivo para Motoristas</p>
+      <p style="color:#86909C; margin-top:8px;">Painel Motorista</p>
     </div>
     <div class="card-login">
-      <h3 style="text-align:center; margin-bottom:20px;"><i class="fas fa-user-circle"></i> Acesso Seguro</h3>
+      <h3 style="text-align:center; margin-bottom:20px;"><i class="fas fa-user-circle"></i> Acesso Motorista</h3>
       
       <input id="nome" placeholder="👤 Nome Completo">
       <input id="email" placeholder="📧 E-mail" type="email">
-      <input id="senha" type="password" placeholder="🔒 Senha (mín 6 dígitos)">
-      <input id="telefone" placeholder="📱 Telefone (WhatsApp) Ex: 11999998888">
+      <input id="senha" type="password" placeholder="🔒 Senha">
+      <input id="telefone" placeholder="📱 Telefone (WhatsApp)">
       <input id="carro" placeholder="🚘 Veículo (Modelo / Cor)">
       <input id="placa" placeholder="🔖 Placa do Veículo">
 
       <button onclick="registerMotorista()" style="background:var(--primaria); color:white; margin-top:10px;">
-        <i class="fas fa-user-plus"></i> Criar Nova Conta
+        <i class="fas fa-user-plus"></i> Criar Conta
       </button>
       <button onclick="login()" style="background:var(--sucesso); color:white;">
-        <i class="fas fa-sign-in-alt"></i> Entrar na Minha Conta
+        <i class="fas fa-sign-in-alt"></i> Entrar na Conta
       </button>
 
-      <p id="loginStatus" style="text-align:center; min-height:24px;"></p>
+      <p id="loginStatus" style="text-align:center; margin-top:15px; min-height:24px;"></p>
     </div>
   </div>
 
@@ -218,291 +212,200 @@
       <i class="fas fa-times-circle"></i> FICAR OFFLINE
     </button>
     
-    <!-- AÇÕES DA CORRIDA - ORDEM PERFEITA -->
+    <!-- AÇÕES DA CORRIDA - ATUALIZADO COM TODOS OS BOTÕES -->
     <div class="acoes-corrida" id="acoesCorrida">
-      <div class="status-etapa" id="etapaStatus">Aguardando corrida...</div>
+      <div class="status-etapa" id="etapaStatus">Aguardando passageiro...</div>
       
-      <button class="btn-rota acao-full" id="btnIrPassageiro" onclick="irAtePassageiro()" style="display:none;">
-        <i class="fas fa-map-marker-alt"></i> 📍 IR ATÉ PASSAGEIRO
+      <button class="btn-rota acao-full" id="btnIrPassageiro" onclick="irAtePassageiro()">
+        <i class="fas fa-map-marker-alt"></i> IR ATÉ PASSAGEIRO
       </button>
 
+      <!-- 🟢 NOVO BOTÃO: INICIAR VIAGEM PARA DESTINO -->
       <button class="btn-iniciar acao-full" id="btnIniciarViagem" onclick="iniciarViagemDestino()" style="display:none;">
-        <i class="fas fa-route"></i> 🟢 INICIAR VIAGEM AO DESTINO
+        <i class="fas fa-route"></i> INICIAR VIAGEM AO DESTINO
       </button>
 
       <button class="btn-chamar" id="btnLigar" onclick="falarComPassageiro()">
-        <i class="fas fa-phone-alt"></i> 📞 LIGAR / WPP
+        <i class="fas fa-phone-alt"></i> LIGAR / WPP
       </button>
 
-      <button class="btn-finalizar acao-full" id="btnFinalizar" onclick="finalizarCorrida()" style="display:none;">
-        <i class="fas fa-check-double"></i> ✅ FINALIZAR CORRIDA
+      <button class="btn-finalizar" id="btnFinalizar" onclick="finalizarCorrida()" style="display:none;">
+        <i class="fas fa-check-double"></i> FINALIZAR CORRIDA
       </button>
     </div>
 
     <button class="btn-sair" onclick="logoutMotorista()">
-      <i class="fas fa-door-open"></i> 🚪 SAIR DA CONTA
+      <i class="fas fa-door-open"></i> SAIR DA CONTA
     </button>
   </div>
 
-  <!-- SOM DE CHAMADA ALTO E CLARO -->
+  <!-- SOM DE CHAMADA -->
   <audio id="somChamada" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3" type="audio/mpeg">
     <source src="https://assets.mixkit.co/sfx/preview/mixkit-urgent-sms-notification-902.mp3" type="audio/mpeg">
   
 
   <script>
     const API = "https://rotabrasil-v1cf.onrender.com";
-    const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true });
+    const socket = io(API);
 
     let token = null;
     let motorista = null;
     let corridaAtual = null;
     let corridaAceita = false;
-    let viagemIniciada = false;
+    let viagemIniciada = false; // Nova variável
+    let watchId = null;
 
-    // ==================== FUNÇÕES DE LOGIN / CADASTRO - 100% CORRIGIDO ====================
+    // ==================== LOGIN / CADASTRO ====================
     async function registerMotorista() {
-      const statusEl = document.getElementById("loginStatus");
-      
-      // ✅ VALIDAÇÃO ANTES DE ENVIAR (faltava isso!)
-      const nome = document.getElementById("nome").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const senha = document.getElementById("senha").value.trim();
-      const telefone = document.getElementById("telefone").value.trim();
-      const carro = document.getElementById("carro").value.trim();
-      const placa = document.getElementById("placa").value.trim();
-
-      if(!nome || !email || !senha || !telefone || !carro || !placa) {
-        statusEl.className = "erro";
-        statusEl.innerHTML = "❌ Preencha TODOS os campos!";
-        return;
-      }
-      if(senha.length < 6) {
-        statusEl.className = "erro";
-        statusEl.innerHTML = "❌ Senha precisa ter pelo menos 6 dígitos!";
-        return;
-      }
-
-      statusEl.className = "";
-      statusEl.innerHTML = "⏳ Criando conta, aguarde...";
-
+      document.getElementById("loginStatus").innerHTML = "⏳ Processando cadastro...";
       try {
         const res = await fetch(`${API}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            nome: nome,
-            email: email,
-            senha: senha,
-            telefone: telefone,
+            nome: document.getElementById("nome").value,
+            email: document.getElementById("email").value,
+            senha: document.getElementById("senha").value,
+            telefone: document.getElementById("telefone").value,
             tipo: "motorista",
-            carro: carro,
-            placa: placa.toUpperCase()
+            carro: document.getElementById("carro").value,
+            placa: document.getElementById("placa").value
           })
         });
-
         const data = await res.json();
-
-        if(res.ok) {
-          statusEl.className = "sucesso";
-          statusEl.innerHTML = "✅ Conta criada com SUCESSO! Entrando...";
-          setTimeout(() => { login(email, senha); }, 1200);
+        if (res.ok) {
+          document.getElementById("loginStatus").innerHTML = "✅ Conta criada! Entrando...";
+          setTimeout(login, 1000);
         } else {
-          statusEl.className = "erro";
-          statusEl.innerHTML = `❌ ${data.erro || "Erro ao cadastrar"}`;
+          alert("❌ " + (data.erro || "Erro ao criar conta"));
         }
       } catch (err) {
-        statusEl.className = "erro";
-        statusEl.innerHTML = "🔌 Sem conexão com o servidor! Verifique sua internet.";
+        alert("🔌 Erro de conexão");
       }
     }
 
-    async function login(emailDigitado = null, senhaDigitada = null) {
-      const statusEl = document.getElementById("loginStatus");
-      
-      // Se vier do cadastro, usa os dados, senão pega do input
-      const email = emailDigitado || document.getElementById("email").value.trim();
-      const senha = senhaDigitada || document.getElementById("senha").value.trim();
-
-      if(!email || !senha) {
-        statusEl.className = "erro";
-        statusEl.innerHTML = "❌ Digite E-mail e Senha!";
-        return;
-      }
-
-      statusEl.className = "";
-      statusEl.innerHTML = "⏳ Entrando...";
-
+    async function login() {
       try {
         const res = await fetch(`${API}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email, senha: senha })
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            senha: document.getElementById("senha").value
+          })
         });
-
         const data = await res.json();
+        if (res.ok && data.token) {
+          if (data.user.tipo !== "motorista") return alert("⚠️ Esta conta não é de motorista!");
 
-        if(res.ok && data.token) {
-          if(data.user.tipo !== "motorista") {
-            statusEl.className = "erro";
-            statusEl.innerHTML = "⚠️ Essa conta não é de MOTORISTA!";
-            return;
-          }
-
-          // SALVAR TUDO DIREITO NO LOCALSTORAGE
           token = data.token;
           motorista = data.user;
           localStorage.setItem("token_motorista", token);
-          localStorage.setItem("dados_motorista", JSON.stringify(motorista));
+          localStorage.setItem("user_motorista", JSON.stringify(motorista));
 
-          // ENTRAR NO SISTEMA
-          entrarDashboard();
-
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("headerDashboard").style.display = "flex";
+          document.getElementById("bottomBar").style.display = "block";
         } else {
-          statusEl.className = "erro";
-          statusEl.innerHTML = `❌ ${data.erro || "Dados inválidos"}`;
+          alert("❌ " + (data.erro || "Dados inválidos"));
         }
       } catch (err) {
-        statusEl.className = "erro";
-        statusEl.innerHTML = "🔌 Erro de conexão!";
+        alert("🔌 Falha na conexão");
       }
     }
 
-    // FUNÇÃO PARA ENTRAR NA TELA PRINCIPAL
-    function entrarDashboard() {
-      document.getElementById("loginScreen").style.display = "none";
-      document.getElementById("headerDashboard").style.display = "flex";
-      document.getElementById("bottomBar").style.display = "block";
+    // Auto login
+    const tokenSalvo = localStorage.getItem("token_motorista");
+    if (tokenSalvo) {
+      try {
+        const userSalvo = JSON.parse(localStorage.getItem("user_motorista"));
+        motorista = userSalvo;
+        token = tokenSalvo;
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("headerDashboard").style.display = "flex";
+        document.getElementById("bottomBar").style.display = "block";
+      } catch(e) {
+        localStorage.clear();
+      }
     }
 
-    // LOGOUT
     function logoutMotorista() {
-      localStorage.removeItem("token_motorista");
-      localStorage.removeItem("dados_motorista");
-      token = null;
-      motorista = null;
-      corridaAtual = null;
-      corridaAceita = false;
-      viagemIniciada = false;
+      localStorage.clear();
       window.location.reload();
     }
 
-    // ✅ AUTO-LOGIN CORRIGIDO (era o principal erro!)
-    window.onload = () => {
-      const tokenSalvo = localStorage.getItem("token_motorista");
-      const dadosSalvos = localStorage.getItem("dados_motorista");
-
-      if(tokenSalvo && dadosSalvos) {
-        try {
-          motorista = JSON.parse(dadosSalvos);
-          token = tokenSalvo;
-          entrarDashboard();
-        } catch(e) {
-          localStorage.clear();
-        }
-      }
-    };
-
     // ==================== ONLINE / OFFLINE ====================
     async function ficarOnline() {
-      if(!motorista || !token) { alert("Faça login novamente!"); return; }
-
       try {
-        await fetch(`${API}/ficar_online/${motorista.id}`, { 
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        
+        if(!motorista) return alert("Faça login novamente!");
+        await fetch(`${API}/ficar_online/${motorista.id}`, { method: "POST" });
         document.getElementById("btnOnline").style.display = "none";
         document.getElementById("btnOffline").style.display = "block";
-        document.getElementById("statusMotorista").innerHTML = `<i class="fas fa-circle" style="color:#00B42A;"></i> ONLINE`;
-        
-        socket.emit('motorista_online', { id: motorista.id, nome: motorista.nome });
-      } catch (err) { alert("Erro ao ficar online: " + err.message); }
+        document.getElementById("statusMotorista").innerHTML = `<i class="fas fa-circle" style="color:#00B42A;"></i> Online`;
+      } catch (err) { alert("Erro ao ficar online"); }
     }
 
     async function ficarOffline() {
-      if(!motorista || !token) return;
-
       try {
-        await fetch(`${API}/ficar_offline/${motorista.id}`, { 
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        
+        if(!motorista) return;
+        await fetch(`${API}/ficar_offline/${motorista.id}`, { method: "POST" });
         document.getElementById("btnOnline").style.display = "block";
         document.getElementById("btnOffline").style.display = "none";
         document.getElementById("statusMotorista").innerHTML = `<i class="fas fa-circle" style="color:#F53F3F;"></i> Offline`;
-        
-        socket.emit('motorista_offline', { id: motorista.id });
       } catch (err) { alert("Erro ao ficar offline"); }
     }
 
-    // ==================== RECEBER CORRIDAS ====================
+    // ==================== CORRIDAS ====================
     socket.on("nova_corrida", (data) => {
-      if(corridaAceita || !motorista) return;
-
+      if (corridaAceita) return;
       corridaAtual = data;
       viagemIniciada = false;
 
-      // 🔊 SOM ALTO E REPETIDO
-      const som = document.getElementById("somChamada");
-      som.currentTime = 0;
-      som.volume = 1.0;
-      som.play();
+      // 🔊 Tocar som de chamada
+      document.getElementById("somChamada").currentTime = 0;
+      document.getElementById("somChamada").play();
 
-      // CARD DE CORRIDA
       document.getElementById("corridaCard").innerHTML = `
-        <h2 style="text-align:center; margin-bottom:15px;"><i class="fas fa-bell fa-shake" style="color:${var(--alerta)};"></i> NOVA CORRIDA!</h2>
-        <div class="info"><span class="label">👤 Passageiro</span><span class="valor">${data.passageiro_nome || 'Não informado'}</span></div>
-        <div class="info"><span class="label">📞 Telefone</span><span class="valor">${data.passageiro_telefone || 'Não informado'}</span></div>
-        <div class="info"><span class="label">📍 Origem</span><span class="valor">${data.origem}</span></div>
-        <div class="info"><span class="label">🏁 Destino</span><span class="valor">${data.destino}</span></div>
-        <div class="info"><span class="label">💰 Valor</span><span class="valor valor-grande">R$ ${parseFloat(data.valor || 0).toFixed(2)}</span></div>
-        <div class="info"><span class="label">📏 Distância</span><span class="valor">${data.distancia || '?'} km</span></div>
+        <h2><i class="fas fa-bell fa-shake"></i> NOVA CORRIDA!</h2>
+        <div class="info"><span class="label">Passageiro</span><span class="valor">${data.passageiro_nome || 'Não informado'}</span></div>
+        <div class="info"><span class="label">Telefone</span><span class="valor">${data.passageiro_telefone || 'Não informado'}</span></div>
+        <div class="info"><span class="label">Origem</span><span class="valor">${data.origem}</span></div>
+        <div class="info"><span class="label">Destino</span><span class="valor">${data.destino}</span></div>
+        <div class="info"><span class="label">Valor</span><span class="valor valor-grande">R$ ${parseFloat(data.valor || 0).toFixed(2)}</span></div>
         
         <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <button onclick="aceitarCorrida()" style="background:#00B42A; color:white; padding:16px; border-radius:12px; font-weight:bold;">✅ ACEITAR</button>
-          <button onclick="recusarCorrida()" style="background:#F53F3F; color:white; padding:16px; border-radius:12px; font-weight:bold;">❌ RECUSAR</button>
+          <button onclick="aceitarCorrida()" style="background:#00B42A; color:white; padding:16px; border-radius:12px;">ACEITAR</button>
+          <button onclick="recusarCorrida()" style="background:#F53F3F; color:white; padding:16px; border-radius:12px;">RECUSAR</button>
         </div>
       `;
-      
       document.getElementById("corridaCard").style.display = "block";
     });
 
     async function aceitarCorrida() {
-      if (!corridaAtual || corridaAceita || !token) return;
-
+      if (!corridaAtual || corridaAceita) return;
       try {
         const res = await fetch(`${API}/aceitar_corrida/${corridaAtual.corrida_id}`, {
           method: "POST",
-          headers: { 
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ motorista_id: motorista.id })
+          headers: { "Authorization": "Bearer " + (token || "") )
         });
-
-        if(res.ok) {
+        if (res.ok) {
           corridaAceita = true;
           document.getElementById("corridaCard").style.display = "none";
           
-          // 🟢 MOSTRAR BOTÕES NA ORDEM CERTA
+          // 🟢 MOSTRAR TODOS OS BOTÕES NA ORDEM CERTA
           document.getElementById("acoesCorrida").style.display = "grid";
-          document.getElementById("etapaStatus").innerHTML = "📦 CORRIDA ACEITA! <br> Vá ao encontro do passageiro";
+          document.getElementById("etapaStatus").textContent = "📍 Vá ao encontro do passageiro";
           document.getElementById("btnIrPassageiro").style.display = "flex";
           document.getElementById("btnIniciarViagem").style.display = "none";
           document.getElementById("btnFinalizar").style.display = "none";
 
-          socket.emit("corrida_aceita", { 
-            corrida_id: corridaAtual.corrida_id, 
-            motorista: motorista 
-          });
-
-          alert("✅ Corrida Aceita! Boa viagem!");
+          alert("✅ Corrida Aceita! Dirija até o passageiro.");
+        } else {
+          alert("❌ Erro ao aceitar corrida");
         }
-
-      } catch (err) { alert("Erro ao aceitar corrida"); }
+      } catch (err) { 
+        alert("🔌 Erro ao aceitar: " + err.message); 
+      }
     }
 
     function recusarCorrida() {
@@ -510,152 +413,161 @@
       corridaAtual = null;
     }
 
-    // ==================== BOTÕES DE AÇÃO - TODOS FUNCIONANDO ====================
     // 📍 IR ATÉ PASSAGEIRO
     function irAtePassageiro() {
-      if (!corridaAtual) return;
+      if (!corridaAtual) { alert("Nenhuma corrida ativa!"); return; }
 
-      let destinoMapa;
-      if(corridaAtual.origem_lat && corridaAtual.origem_lng) {
-        destinoMapa = `${corridaAtual.origem_lat},${corridaAtual.origem_lng}`;
+      let endereco = corridaAtual.origem;
+      let lat = corridaAtual.origem_lat;
+      let lng = corridaAtual.origem_lng;
+
+      if(lat && lng) {
+        const urlMapa = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${lat},${lng}&zoom=16`;
+        document.getElementById("iframeMapa").src = urlMapa;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
       } else {
-        destinoMapa = corridaAtual.origem;
+        const urlMapa = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(endereco)}&zoom=16`;
+        document.getElementById("iframeMapa").src = urlMapa;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(endereco)}&travelmode=driving`, '_blank');
       }
 
-      // ABRIR NO MAPA INTERNO
-      const urlEmbed = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(destinoMapa)}&zoom=15`;
-      document.getElementById("iframeMapa").src = urlEmbed;
-
-      // ABRIR ROTA NO GOOGLE MAPS DO CELULAR
-      const urlRota = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destinoMapa)}&travelmode=driving`;
-      window.open(urlRota, '_blank');
-
-      // LIBERAR PROXIMO BOTÃO
+      // ✅ LIBERAR BOTÃO DE INICIAR VIAGEM
       document.getElementById("etapaStatus").innerHTML = "✅ Passageiro a bordo! <br> Clique em INICIAR VIAGEM";
-      document.getElementById("btnIrPassageiro").style.display = "none";
       document.getElementById("btnIniciarViagem").style.display = "flex";
+      alert("🗺️ Rota até passageiro aberta!");
     }
 
-    // 🟢 INICIAR VIAGEM PARA DESTINO (NOVO E CORRIGIDO)
+    // 🟡 🆕 FUNÇÃO: INICIAR VIAGEM PARA O DESTINO
     function iniciarViagemDestino() {
-      if (!corridaAtual || !corridaAceita) return;
+      if (!corridaAtual || !corridaAceita) { alert("❌ Corrida não iniciada!"); return; }
       
       viagemIniciada = true;
 
-      let destinoMapa;
-      if(corridaAtual.destino_lat && corridaAtual.destino_lng) {
-        destinoMapa = `${corridaAtual.destino_lat},${corridaAtual.destino_lng}`;
+      let enderecoDestino = corridaAtual.destino;
+      let latDest = corridaAtual.destino_lat;
+      let lngDest = corridaAtual.destino_lng;
+
+      // Abrir rota para o DESTINO
+      if(latDest && lngDest) {
+        const urlMapa = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${latDest},${lngDest}&zoom=16`;
+        document.getElementById("iframeMapa").src = urlMapa;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${latDest},${lngDest}&travelmode=driving`, '_blank');
       } else {
-        destinoMapa = corridaAtual.destino;
+        const urlMapa = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(enderecoDestino)}&zoom=16`;
+        document.getElementById("iframeMapa").src = urlMapa;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(enderecoDestino)}&travelmode=driving`, '_blank');
       }
 
-      // ABRIR MAPA COM DESTINO
-      const urlEmbed = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(destinoMapa)}&zoom=15`;
-      document.getElementById("iframeMapa").src = urlEmbed;
-
-      // ABRIR ROTA
-      const urlRota = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destinoMapa)}&travelmode=driving`;
-      window.open(urlRota, '_blank');
-
-      // ATUALIZAR TELA
-      document.getElementById("etapaStatus").innerHTML = "🚗 VIAGEM EM ANDAMENTO! <br> A caminho do destino!";
+      // ATUALIZAR STATUS E LIBERAR FINALIZAR
+      document.getElementById("etapaStatus").innerHTML = "🚗 VIAGEM EM ANDAMENTO <br> A caminho do destino!";
       document.getElementById("btnIniciarViagem").style.display = "none";
+      document.getElementById("btnIrPassageiro").style.display = "none";
       document.getElementById("btnFinalizar").style.display = "flex";
 
-      // AVISAR PASSAGEIRO
+      // AVISAR PASSAGEIRO VIA SOCKET
       socket.emit("viagem_iniciada", { 
-        corrida_id: corridaAtual.corrida_id,
-        motorista_nome: motorista.nome
+        corrida_id: corridaAtual.corrida_id, 
+        motorista_id: motorista.id 
       });
 
-      alert("🟢 Viagem Iniciada! Boa viagem!");
+      alert("🟢 Viagem iniciada! Rota para o destino aberta.");
     }
 
-    // 📞 LIGAR / WHATSAPP
+    // 📞 FALAR COM PASSAGEIRO
     function falarComPassageiro() {
-      if(!corridaAtual || !corridaAtual.passageiro_telefone) {
-        alert("Telefone indisponível");
+      if (!corridaAtual || !corridaAtual.passageiro_telefone) {
+        alert("❌ Telefone do passageiro não disponível");
         return;
       }
-
-      const tel = corridaAtual.passageiro_telefone.replace(/\D/g, '');
-      const opcao = confirm(`📞 ${corridaAtual.passageiro_nome}\n${corridaAtual.passageiro_telefone}\n\nOK = LIGAR | Cancelar = WHATSAPP`);
-
-      if(opcao) {
-        window.location.href = `tel:${tel}`;
+      const telefone = corridaAtual.passageiro_telefone.replace(/\D/g, '');
+      const opcao = confirm(`Ligar para ${corridaAtual.passageiro_nome}\n📞 ${corridaAtual.passageiro_telefone}\n\nOK = LIGAR | Cancelar = WHATSAPP`);
+      
+      if (opcao) {
+        window.location.href = `tel:${telefone}`;
       } else {
-        const msg = encodeURIComponent("Olá! Sou seu motorista da Rota Brasil 🚗");
-        window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
+        const msg = encodeURIComponent("Olá! Sou seu motorista da Rota Brasil 🚗 Estou a caminho ou já estou com você!");
+        window.open(`https://wa.me/${telefone}?text=${msg}`, '_blank');
       }
     }
 
-    // ✅ FINALIZAR CORRIDA - 100% CORRIGIDO (NÃO DA MAIS ERRO)
+    // 🔴 ✅ CORRIGIDO: FINALIZAR CORRIDA (SEM ERRO)
     async function finalizarCorrida() {
       if (!corridaAtual || !corridaAceita || !viagemIniciada) {
-        alert("❌ Inicie a viagem primeiro!");
+        alert("❌ Você precisa iniciar a viagem primeiro!");
         return;
       }
 
-      const valor = parseFloat(corridaAtual.valor || 0).toFixed(2);
-      const confirma = confirm(`🏁 FINALIZAR CORRIDA?\n\nPassageiro: ${corridaAtual.passageiro_nome}\nValor Total: R$ ${valor}\n\nConfirma chegada ao destino?`);
-      
-      if(!confirma) return;
+      const valorCorrida = parseFloat(corridaAtual.valor || 0).toFixed(2);
+      const confirmar = confirm(`🏁 FINALIZAR CORRIDA?\n\nPassageiro: ${corridaAtual.passageiro_nome}\nValor Total: R$ ${valorCorrida}\n\nConfirma que chegou ao destino?`);
+      if (!confirmar) return;
 
       try {
+        // 🔥 CORREÇÃO AQUI: Tratamento completo para evitar erros
         const res = await fetch(`${API}/finalizar_corrida/${corridaAtual.corrida_id}`, {
           method: "POST",
           headers: { 
-            "Authorization": `Bearer ${token}`,
+            "Authorization": `Bearer ${token || ''}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            status: "finalizada",
-            valor_final: corridaAtual.valor,
-            distancia_total: corridaAtual.distancia
+            valor_final: parseFloat(corridaAtual.valor || 0),
+            distancia: parseFloat(corridaAtual.distancia || 0),
+            status: "finalizada"
           })
         });
 
-        if(res.ok) {
-          alert(`✅ CORRIDA FINALIZADA!\n💵 Recebido: R$ ${valor}\nObrigado por dirigir conosco!`);
+        let dadosResposta = {};
+        try { dadosResposta = await res.json(); } catch(e) {}
 
-          // 🧹 LIMPAR TUDO E VOLTAR AO NORMAL
+        if (res.ok || res.status === 200) {
+          alert(`✅ CORRIDA FINALIZADA!\n💵 Valor recebido: R$ ${valorCorrida}\nObrigado por dirigir com a Rota Brasil!`);
+          
+          // 🧹 RESET TOTAL DO SISTEMA
+          limparSistema();
+
+          // AVISAR PASSAGEIRO
           socket.emit("corrida_finalizada", { 
             corrida_id: corridaAtual.corrida_id, 
-            valor: corridaAtual.valor 
+            motorista_id: motorista.id,
+            valor: corridaAtual.valor
           });
 
-          resetarSistema();
+        } else {
+          alert(`❌ Erro: ${dadosResposta.erro || 'Não foi possível finalizar'}`);
         }
-
       } catch (err) {
-        alert("❌ Erro ao finalizar: " + err.message);
+        alert(`🔌 Erro de conexão: Verifique sua internet\n(${err.message})`);
       }
     }
 
-    // 🧹 RESETAR TUDO
-    function resetarSistema() {
+    // 🧹 Função para limpar tudo (reutilizável)
+    function limparSistema() {
       corridaAtual = null;
       corridaAceita = false;
       viagemIniciada = false;
-
+      
       document.getElementById("acoesCorrida").style.display = "none";
+      document.getElementById("btnIrPassageiro").style.display = "flex";
+      document.getElementById("btnIniciarViagem").style.display = "none";
+      document.getElementById("btnFinalizar").style.display = "none";
+      
+      // Voltar mapa padrão
       document.getElementById("iframeMapa").src = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.0!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjPCsDMzJzUyLjIiUyA0NsKwMzknMDguMyJX!5e0!3m2!1spt-BR!2sbr!4v123456789";
     }
 
-    // ==================== EVENTOS SOCKET ====================
-    socket.on("corrida_cancelada", (dados) => {
-      if(corridaAtual && dados.corrida_id === corridaAtual.corrida_id) {
-        alert("⚠️ Passageiro cancelou a corrida!");
-        resetarSistema();
-        document.getElementById("corridaCard").style.display = "none";
+    // Outros eventos socket
+    socket.on("corrida_removida", () => {
+      if(corridaAceita) {
+        alert("⚠️ Oops! Passageiro cancelou a corrida 😕");
+        limparSistema();
       }
+      document.getElementById("corridaCard").style.display = "none";
     });
-
-    socket.on("cliente_desconectado", (dados) => {
-      if(corridaAtual && dados.corrida_id === corridaAtual.corrida_id) {
-        alert("⚠️ Cliente saiu da sessão!");
-        resetarSistema();
-        document.getElementById("corridaCard").style.display = "none";
+    
+    socket.on("corrida_finalizada", (dados) => {
+      if (corridaAtual && dados.corrida_id === corridaAtual.corrida_id) {
+        alert("🏁 Corrida finalizada pelo passageiro!");
+        limparSistema();
       }
     });
 
