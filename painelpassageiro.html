@@ -1,598 +1,272 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 👇 FORÇA NAVEGADOR A USAR VERSÃO NOVA 👇 -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rota Brasil - Passageiro (Com Simulação)</title>
     
-    <title>🛣️ Passageiro | Rota Brasil</title>
-    <!-- ✅ LINK DO FONT-AWESOME -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css?v=2">
-    <!-- ✅ SCRIPTS EXTERNOS -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js?v=2"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB7s8dR0v8W6lK-7HkRzD9xQyFgJcVbNtM&libraries=places&v=2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API_AQUI&libraries=places"></script>
 
     <style>
         :root {
-            --cor-primaria: #165DFF;        /* Azul Principal */
-            --cor-secundaria: #7B2CFF;      /* Roxo Degradê */
-            --cor-sucesso: #00B42A;         /* Verde */
-            --cor-perigo: #F53F3F;          /* Vermelho */
-            --cor-aviso: #FF7D00;           /* Laranja */
-            --cor-fundo: #0F1419;           /* Fundo Escuro */
-            --cor-card: #1D2129;            /* Card Principal */
-            --cor-input: #272E3B;           /* Input */
-            --cor-borda: #363E4D;           /* Bordas */
-            --cor-texto: #F2F3F5;           /* Texto Branco/Cinza Claro */
-            --cor-texto-secundario: #86909C;/* Texto Cinza Médio */
-            --sombra: 0 8px 24px rgba(0,0,0,0.3);
-            --sombra-forte: 0 12px 32px rgba(0,0,0,0.4);
-            --borda-radius: 18px;
-            --borda-radius-pq: 12px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            --cor-primaria: #2ecc71;
+            --cor-segunda: #27ae60;
+            --cor-fundo: #f5f6fa;
+            --cor-card: #ffffff;
+            --cor-texto: #2c3e50;
+            --cor-texto-secundario: #7f8c8d;
         }
 
         body {
-            background-color: var(--cor-fundo) !important;
-            color: var(--cor-texto) !important;
-            line-height: 1.6;
-            padding-bottom: 40px;
-        }
-
-        .header-logo {
-            background: linear-gradient(180deg, #1A202C 0%, #0F1419 100%);
-            padding: 20px 15px;
-            text-align: center;
-            box-shadow: var(--sombra);
-            position: sticky;
-            top: 0;
-            z-index: 9999;
-            border-bottom: 1px solid var(--cor-borda);
-        }
-
-        .logo-container {
-            max-width: 180px;
-            height: 80px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            margin: 0;
+            padding: 20px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            transition: transform 0.3s ease;
-        }
-
-        .logo-container:hover {
-            transform: scale(1.05);
-        }
-
-        .logo-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 8px;
-        }
-
-        .logo-texto {
-            font-size: 28px;
-            font-weight: 900;
-            background: linear-gradient(90deg, var(--cor-primaria), var(--cor-secundaria));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            letter-spacing: 1.5px;
-        }
-
-        .sub-header {
-            text-align: center;
-            color: var(--cor-texto-secundario);
-            font-size: 13px;
-            margin-top: 5px;
-            font-weight: 500;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         .container {
-            max-width: 480px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        .card {
-            background-color: var(--cor-card) !important;
-            border-radius: var(--borda-radius);
-            padding: 24px;
-            margin-bottom: 18px;
-            box-shadow: var(--sombra);
-            border: 1px solid var(--cor-borda) !important;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--cor-primaria), var(--cor-secundaria));
-            opacity: 0;
-            transition: opacity 0.3s;
+            max-width: 500px;
+            background: var(--cor-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 25px;
+            box-sizing: border-box;
         }
 
-        .card:hover::before {
-            opacity: 1;
+        h2, h3 {
+            text-align: center;
+            margin-top: 0;
         }
 
-        .card h3 {
-            color: var(--cor-texto);
-            margin-bottom: 18px;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-
-        .card h3 i {
-            color: var(--cor-primaria);
-            font-size: 20px;
-        }
-
-        .input-group {
+        .form-group {
             position: relative;
-            margin-bottom: 14px;
+            margin-bottom: 15px;
+        }
+
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--cor-texto-secundario);
         }
 
         input {
             width: 100%;
-            padding: 16px 18px 16px 48px;
-            border: 1.5px solid var(--cor-borda) !important;
-            border-radius: var(--borda-radius-pq);
-            background-color: var(--cor-input) !important;
-            color: var(--cor-texto) !important;
-            font-size: 15px;
+            padding: 12px 12px 12px 40px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
             outline: none;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            transition: 0.3s;
         }
 
         input:focus {
-            border-color: var(--cor-primaria) !important;
-            box-shadow: 0 0 0 4px rgba(22, 93, 255, 0.15);
-            background-color: #2E3642 !important;
-        }
-
-        input::placeholder {
-            color: var(--cor-texto-secundario);
-            font-weight: 400;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--cor-texto-secundario);
-            font-size: 18px;
-            z-index: 2;
-        }
-
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background-color: var(--cor-card);
-            border: 1px solid var(--cor-borda);
-            border-top: none;
-            border-radius: 0 0 var(--borda-radius-pq) var(--borda-radius-pq);
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 100;
-            box-shadow: var(--sombra-forte);
-        }
-
-        .suggestion-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--cor-borda);
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .suggestion-item i {
-            color: var(--cor-sucesso);
-            font-size: 16px;
-        }
-
-        .suggestion-item:hover {
-            background-color: var(--cor-input);
+            border-color: var(--cor-primaria);
         }
 
         button {
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             border: none;
-            border-radius: var(--borda-radius-pq);
-            font-weight: 600;
+            border-radius: 8px;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-            position: relative;
-            overflow: hidden;
+            transition: 0.3s;
+            margin-top: 10px;
         }
 
-        button:active {
-            transform: scale(0.97);
+        .btn-success { background-color: var(--cor-primaria); color: white; }
+        .btn-success:hover { background-color: var(--cor-segunda); }
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-secondary { background-color: #95a5a6; color: white; }
+        .btn-blocked { background-color: #bdc3c7; color: #7f8c8d; cursor: not-allowed; }
+
+        /* Sugestões do Autocomplete */
+        .suggestions {
+            border: 1px solid #ddd;
+            border-top: none;
+            background: white;
+            position: absolute;
+            width: 100%;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 0 0 8px 8px;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--cor-primaria), #0052E0) !important;
-            color: white !important;
-            box-shadow: 0 4px 16px rgba(22, 93, 255, 0.35);
-        }
-        .btn-primary:hover {
-            filter: brightness(1.12);
-            transform: translateY(-1px);
+        .suggestion-item {
+            padding: 12px;
+            cursor: pointer;
+            font-size: 14px;
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, var(--cor-sucesso), #009A29) !important;
-            color: white !important;
-            box-shadow: 0 4px 16px rgba(0, 180, 42, 0.35);
-        }
+        .suggestion-item:hover { background-color: #f1f2f6; }
 
-        .btn-danger {
-            background: linear-gradient(135deg, var(--cor-perigo), #D21C1C) !important;
-            color: white !important;
-            box-shadow: 0 4px 16px rgba(245, 63, 63, 0.35);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, var(--cor-aviso), #D65E00) !important;
-            color: white !important;
-            box-shadow: 0 4px 16px rgba(255, 125, 0, 0.35);
-        }
-
-        .btn-secondary {
-            background-color: var(--cor-input);
-            color: var(--cor-texto);
-            border: 1px solid var(--cor-borda);
-        }
-
-        .btn-blocked {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .valor-card {
-            background: linear-gradient(145deg, #1E293B, #1A202C) !important;
-            border: 2px solid var(--cor-primaria) !important;
+        /* Status Container */
+        .status-container {
             text-align: center;
             padding: 20px;
         }
 
-        .valor-grande {
-            font-size: 36px;
-            font-weight: 900;
-            background: linear-gradient(90deg, var(--cor-sucesso), #36CFC9);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1.2;
-        }
-
-        .valor-legenda {
-            font-size: 14px;
-            color: var(--cor-texto-secundario);
-            margin-top: 4px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px dashed var(--cor-borda);
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--cor-texto-secundario);
-            font-size: 15px;
-        }
-
-        .info-value {
-            font-weight: 600;
-            color: var(--cor-texto);
-            font-size: 15px;
-            text-align: right;
-            max-width: 55%;
-        }
-
-        .status-container {
-            text-align: center;
-            padding: 25px 15px;
-        }
-
         .status-icon {
-            font-size: 55px;
+            font-size: 50px;
             margin-bottom: 15px;
-            animation: flutuar 2s ease-in-out infinite;
         }
 
-        /* ⭐ DESIGN DAS AVALIAÇÕES */
-        .media-container {
+        .status-buscando {
+            color: #f1c40f;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
+
+        .status-texto { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        .status-subtexto { color: var(--cor-texto-secundario); font-size: 14px; }
+
+        /* Card de Avaliações */
+        .avaliacoes-container {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .media-nota {
             text-align: center;
-            padding: 10px;
             margin-bottom: 15px;
         }
-        .nota-num {
-            font-size: 32px;
-            font-weight: 800;
-            color: #FFC107;
-        }
-        .estrelas i {
-            color: #FFC107;
-            font-size: 18px;
-            margin: 0 2px;
-        }
+
+        .nota-num { font-size: 32px; font-weight: bold; color: #f1c40f; }
+        .estrelas { color: #f1c40f; margin-left: 5px; }
+        
         .avaliacao-item {
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-            padding: 12px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
             margin-bottom: 8px;
-            border-left: 4px solid var(--cor-primaria);
         }
+
         .item-topo {
             display: flex;
             justify-content: space-between;
-            font-size: 13px;
-            color: var(--cor-texto-secundario);
-            margin-bottom: 5px;
-        }
-
-        @keyframes flutuar {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-            100% { transform: translateY(0px); }
-        }
-
-        @keyframes piscar {
-            0%,100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .status-buscando { color: var(--cor-aviso); animation: piscar 1.5s infinite; }
-        .status-aceito { color: var(--cor-sucesso); }
-        .status-cancelado { color: var(--cor-perigo); }
-
-        .status-texto {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .status-subtexto {
-            color: var(--cor-texto-secundario);
-            font-size: 15px;
-        }
-
-        .motorista-info {
-            background: rgba(0, 180, 42, 0.1);
-            border: 1px solid rgba(0, 180, 42, 0.3);
-            border-radius: var(--borda-radius-pq);
-            padding: 15px;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .motorista-foto {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--cor-sucesso), #36CFC9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
             font-weight: bold;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .motorista-dados {
-            flex-grow: 1;
-            text-align: left;
-        }
-
-        .motorista-nome {
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .motorista-carro {
             font-size: 13px;
-            color: var(--cor-texto-secundario);
+            margin-bottom: 4px;
         }
 
         #mapa {
             width: 100%;
-            height: 320px;
-            border-radius: var(--borda-radius);
-            border: 2px solid var(--cor-borda);
+            height: 250px;
+            border-radius: 8px;
             margin-top: 15px;
-            overflow: hidden;
-            box-shadow: var(--sombra);
-        }
-
-        @media (max-width: 480px) {
-            .container { margin: 10px auto; }
-            .card { padding: 20px 18px; }
-            .valor-grande { font-size: 32px; }
-            .status-icon { font-size: 45px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="header-logo">
-        <div class="logo-container">
-            <img src="https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/refs/heads/main/assets/logo.jpg?v=2" alt="Sua Marca">
-            <span class="logo-texto">🛣️ ROTA BRASIL</span> 
-        </div>
-        <div class="sub-header">Painel do Passageiro • Sua viagem, nossa prioridade</div>
-    </div>
-
     <div class="container">
-
-        <!-- 🔑 TELA DE LOGIN / CADASTRO -->
-        <div class="card" id="loginCard">
-            <h3><i class="fas fa-user-circle"></i> Acesso Passageiro</h3>
-            
-            <div class="input-group">
-                <i class="fas fa-user input-icon"></i>
-                <input id="nome" placeholder="Nome Completo (Cadastro)">
-            </div>
-
-            <div class="input-group">
-                <i class="fas fa-envelope input-icon"></i>
-                <input id="email" type="email" placeholder="Seu Melhor E-mail">
-            </div>
-
-            <div class="input-group">
-                <i class="fas fa-lock input-icon"></i>
-                <input id="senha" type="password" placeholder="Senha Segura">
-            </div>
-
-            <div class="input-group">
-                <i class="fas fa-phone input-icon"></i>
-                <input id="telefone" placeholder="WhatsApp (com DDD)">
-            </div>
-            
-            <button class="btn-primary" onclick="registerPassageiro()">
-                <i class="fas fa-user-plus"></i> Criar Minha Conta
-            </button>
-            <button class="btn-success" onclick="login()">
-                <i class="fas fa-sign-in-alt"></i> Entrar na Conta
-            </button>
-            
-            <p id="loginStatus" style="text-align:center; margin-top:15px; font-weight:500;"></p>
-        </div>
         
-
-        <!-- 🖥️ PAINEL PRINCIPAL DO PASSAGEIRO -->
-        <div id="dashboard" style="display:none">
+        <div id="loginCard">
+            <h2>🚗 Rota Brasil Passageiro</h2>
+            <div class="form-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="nome" placeholder="Nome Completo (Apenas p/ Cadastro)">
+            </div>
+            <div class="form-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" placeholder="Seu E-mail">
+            </div>
+            <div class="form-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="senha" placeholder="Sua Senha">
+            </div>
+            <div class="form-group">
+                <i class="fas fa-phone"></i>
+                <input type="text" id="telefone" placeholder="Telefone (Apenas p/ Cadastro)">
+            </div>
             
-            <!-- ⭐ CARD DE AVALIAÇÕES CORRIGIDO -->
-            <div class="card">
-                <h3><i class="fas fa-star"></i> Minha Avaliação</h3>
-                <div id="mediaNota" class="media-container">
-                    <div class="nota-num">--</div>
-                    <div class="estrelas"></div>
+            <button class="btn-success" onclick="login()">🔑 Entrar</button>
+            <button class="btn-secondary" onclick="registerPassageiro()">📝 Cadastrar Nova Conta</button>
+            <div id="loginStatus" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">Para onde vamos?</h3>
+                <button class="btn-danger" onclick="logoutPassageiro()" style="width:auto; padding:5px 10px; margin:0; font-size:12px;">Sair</button>
+            </div>
+
+            <div class="form-group">
+                <i class="fas fa-location-dot" style="color:#e74c3c;"></i>
+                <input type="text" id="origem" placeholder="Local de Origem (Aguardando GPS...)" oninput="buscarEndereco(this.value, 'origem')">
+                <div id="sugestoes_origem" class="suggestions"></div>
+            </div>
+
+            <div class="form-group">
+                <i class="fas fa-flag-checkered" style="color:#2ecc71;"></i>
+                <input type="text" id="destino" placeholder="Digite o endereço de destino..." oninput="buscarEndereco(this.value, 'destino')">
+                <div id="sugestoes_destino" class="suggestions"></div>
+            </div>
+
+            <button id="btnLocalizacao" class="btn-secondary" onclick="gerenciarBotaoLocalizacao()">
+                <span id="txtBtnLocalizacao">📍 Capturar Minha Localização Atual</span>
+            </button>
+
+            <div id="cardValor" style="display: none; background:#f9f9f9; padding:15px; border-radius:8px; margin-top:15px; border-left:5px solid var(--cor-primaria);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span>Distância estimada:</span> <strong id="txtDistancia">0.0 km</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span>Tempo estimado:</span> <strong id="txtTempo">0 min</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:18px; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                    <span>Preço da Corrida:</span> <strong id="txtValor" style="color:var(--cor-segunda)">R$ 0,00</strong>
+                </div>
+                <button id="btnChamar" class="btn-success" style="margin-top:15px;" onclick="gerenciarBotaoLocalizacao()">🚀 CHAMAR ROTA BRASIL</button>
+            </div>
+
+            <div id="cardStatus" style="display: none; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-top:15px;">
+                <div id="conteudoStatus"></div>
+            </div>
+
+            <div id="cardMapa" style="display: none;">
+                <div id="mapa"></div>
+            </div>
+
+            <div class="avaliacoes-container">
+                <h4>Minhas Avaliações como Passageiro</h4>
+                <div id="mediaNota" class="media-nota">
+                    <span class="nota-num">--</span>
+                    <span class="estrelas"></span>
                 </div>
                 <div id="listaAvaliacoes"></div>
             </div>
 
-            <!-- 📍 ENDEREÇOS E BUSCA -->
-            <div class="card">
-                <h3><i class="fas fa-search-location"></i> Para onde vamos?</h3>
-                
-                <div class="input-group">
-                    <i class="fas fa-map-marker-alt input-icon" style="color: var(--cor-sucesso);"></i>
-                    <input id="origem" placeholder="Seu local atual / Origem" oninput="buscarEndereco(this.value, 'origem')" autocomplete="off">
-                    <div id="sugestoes_origem" class="suggestions" style="display:none;"></div>
-                </div>
-
-                <div class="input-group">
-                    <i class="fas fa-map-marker-alt input-icon" style="color: var(--cor-perigo);"></i>
-                    <input id="destino" placeholder="Digite seu Destino" oninput="buscarEndereco(this.value, 'destino')" autocomplete="off">
-                    <div id="sugestoes_destino" class="suggestions" style="display:none;"></div>
-                </div>
-
-                <!-- 🔄 BOTÃO COM SISTEMA ALTERNADO INTELIGENTE -->
-                <button class="btn-warning" id="btnLocalizacao" onclick="gerenciarBotaoLocalizacao()">
-                    <i class="fas fa-location-arrow"></i> <span id="txtBtnLocalizacao">Usar Minha Localização Atual</span>
-                </button>
-            </div>
-
-            <!-- 💰 RESUMO E VALOR DA CORRIDA -->
-            <div class="card valor-card" id="cardValor" style="display:none;">
-                <h3 style="justify-content:center;">💸 Resumo da Viagem</h3>
-                
-                <div class="info-row">
-                    <span class="info-label"><i class="fas fa-route"></i> Distância</span>
-                    <span class="info-value" id="txtDistancia">-- km</span>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label"><i class="fas fa-clock"></i> Tempo Estimado</span>
-                    <span class="info-value" id="txtTempo">-- min</span>
-                </div>
-
-                <div style="margin:15px 0;">
-                    <div class="valor-grande" id="txtValor">R$ 0,00</div>
-                    <div class="valor-legenda">Valor Total • Em Dinheiro/Pix</div>
-                </div>
-
-                <button class="btn-success" id="btnChamar" onclick="chamarCorrida()">
-                    <i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL
-                </button>
-            </div>
-
-            <!-- 🚗 STATUS DA CORRIDA -->
-            <div class="card" id="cardStatus" style="display:none;">
-                <div id="conteudoStatus">
-                    <!-- Conteúdo dinâmico via JS -->
-                </div>
-            </div>
-
-            <!-- 🗺️ MAPA DE ACOMPANHAMENTO -->
-            <div class="card" id="cardMapa" style="display:none;">
-                <h3><i class="fas fa-map-marked-alt"></i> Acompanhamento em Tempo Real</h3>
-                <div id="mapa"></div>
-            </div>
-
-            <!-- 🚪 BOTÃO SAIR -->
-            <div class="card">
-                <button class="btn-danger" onclick="logoutPassageiro()">
-                    <i class="fas fa-door-open"></i> Sair da Conta
-                </button>
-            </div>
-
         </div>
+
     </div>
 
     <script>
-        
-const API = "https://rotabrasil-v1cf.onrender.com";
+        const API = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API, {
             transports: ['websocket', 'polling'],
             upgrade: true,
@@ -746,6 +420,9 @@ const API = "https://rotabrasil-v1cf.onrender.com";
             });
         }
 
+        /* ========================================================
+            🎲 SIMULAÇÃO DE VALORES ALEATÓRIOS (REATIVADA)
+        ======================================================== */
         function calcularValor() {
             const origen = document.getElementById('origem').value;
             const destino = document.getElementById('destino').value;
@@ -755,6 +432,7 @@ const API = "https://rotabrasil-v1cf.onrender.com";
                 return;
             }
 
+            // Simulação de cálculo de distância randômica
             let randomDist = (Math.random() * 12 + 1).toFixed(1); 
             distancia = parseFloat(randomDist);
             let precoBase = 4.50;
@@ -838,10 +516,10 @@ const API = "https://rotabrasil-v1cf.onrender.com";
         }
 
         async function chamarCorrida() {
-            const origem = document.getElementById('origem').value;
+            const origen = document.getElementById('origem').value;
             const destino = document.getElementById('destino').value;
 
-            if(!origem || !destino) { alert("⚠️ Preencha Origem e Destino!"); return; }
+            if(!origen || !destino) { alert("⚠️ Preencha Origem e Destino!"); return; }
 
             const btn = document.getElementById('btnChamar');
             if(btn) {
@@ -859,7 +537,7 @@ const API = "https://rotabrasil-v1cf.onrender.com";
                         "Authorization": `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        origem: origem,
+                        origem: origen,
                         destino: destino,
                         valor: valorFinal,
                         distancia: `${distancia.toFixed(1)} km`
@@ -869,7 +547,7 @@ const API = "https://rotabrasil-v1cf.onrender.com";
                 const data = await res.json();
                 if(!res.ok) throw data;
 
-                corridaAtual = { id: data.corrida_id, origem, destino, valor: valorFinal };
+                corridaAtual = { id: data.corrida_id, origem: origen, destino, valor: valorFinal };
                 mostrarStatusBuscando();
 
             } catch(err) {
@@ -897,15 +575,15 @@ const API = "https://rotabrasil-v1cf.onrender.com";
         }
 
         /* ========================================================
-            ❌ NOVA FUNÇÃO ADICIONADA: CANCELAR CORRIDA (DASHBOARD)
+            ❌ BOTÃO CANCELAR TOTALMENTE FUNCIONAL
         ======================================================== */
         async function cancelarCorrida() {
+            falar("Cancelando sua viagem.");
+
             if(!corridaAtual || !corridaAtual.id) {
                 resetarInterfaceAposCancelamento();
                 return;
             }
-
-            falar("Cancelando sua viagem.");
 
             try {
                 const res = await fetch(`${API}/cancelar_corrida`, {
@@ -920,10 +598,10 @@ const API = "https://rotabrasil-v1cf.onrender.com";
                 if(res.ok) {
                     alert("🚫 Viagem cancelada com sucesso!");
                 } else {
-                    console.log("Aviso: Corrida já cancelada ou finalizada no servidor.");
+                    console.log("Aviso: Corrida já alterada no servidor.");
                 }
             } catch(e) {
-                console.error("Erro na requisição de cancelamento", e);
+                console.error("Erro na rota de cancelamento", e);
             } finally {
                 resetarInterfaceAposCancelamento();
             }
@@ -932,14 +610,14 @@ const API = "https://rotabrasil-v1cf.onrender.com";
         function resetarInterfaceAposCancelamento() {
             corridaAtual = null;
             
-            // Esconde os cards de status e mapa
+            // Remove a tela de busca e exibe o bloco original
             document.getElementById('cardStatus').style.display = 'none';
             document.getElementById('cardMapa').style.display = 'none';
             
-            // Força o recálculo/atualização do valor do card principal para que ele reapareça normalizado
+            // Força a re-exibição da simulação de valores calculados
             calcularValor();
 
-            // Restaura o botão de chamar corrida original
+            // Desbloqueia o botão para novas tentativas
             const btn = document.getElementById('btnChamar');
             if(btn) {
                 btn.disabled = false;
@@ -947,11 +625,6 @@ const API = "https://rotabrasil-v1cf.onrender.com";
                 btn.innerHTML = `🚀 CHAMAR ROTA BRASIL`;
             }
         }
-
-
-        
-        
-
     </script>
 </body>
 </html>
