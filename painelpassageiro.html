@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rota Brasil - Passageiro (Com Simulação)</title>
+    <title>Rota Brasil - Passageiro</title>
     
+    <!-- Ícones e Fontes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Socket.io e Google Maps API -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API_AQUI&libraries=places"></script>
 
@@ -185,6 +187,9 @@
 
     <div class="container">
         
+        <!-- ==========================================
+            🔐 TELA DE LOGIN / CADASTRO
+        =========================================== -->
         <div id="loginCard">
             <h2>🚗 Rota Brasil Passageiro</h2>
             <div class="form-group">
@@ -209,12 +214,16 @@
             <div id="loginStatus" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
         </div>
 
+        <!-- ==========================================
+            🏠 DASHBOARD PRINCIPAL
+        =========================================== -->
         <div id="dashboard" style="display: none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h3 style="margin:0;">Para onde vamos?</h3>
                 <button class="btn-danger" onclick="logoutPassageiro()" style="width:auto; padding:5px 10px; margin:0; font-size:12px;">Sair</button>
             </div>
 
+            <!-- Endereços -->
             <div class="form-group">
                 <i class="fas fa-location-dot" style="color:#e74c3c;"></i>
                 <input type="text" id="origem" placeholder="Local de Origem (Aguardando GPS...)" oninput="buscarEndereco(this.value, 'origem')">
@@ -227,10 +236,12 @@
                 <div id="sugestoes_destino" class="suggestions"></div>
             </div>
 
+            <!-- Botão Multifunção (GPS / Busca) -->
             <button id="btnLocalizacao" class="btn-secondary" onclick="gerenciarBotaoLocalizacao()">
                 <span id="txtBtnLocalizacao">📍 Capturar Minha Localização Atual</span>
             </button>
 
+            <!-- Card de Preço / Detalhes -->
             <div id="cardValor" style="display: none; background:#f9f9f9; padding:15px; border-radius:8px; margin-top:15px; border-left:5px solid var(--cor-primaria);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                     <span>Distância estimada:</span> <strong id="txtDistancia">0.0 km</strong>
@@ -244,14 +255,17 @@
                 <button id="btnChamar" class="btn-success" style="margin-top:15px;" onclick="gerenciarBotaoLocalizacao()">🚀 CHAMAR ROTA BRASIL</button>
             </div>
 
+            <!-- Card dinâmico de Monitoramento / Buscando / Aceito -->
             <div id="cardStatus" style="display: none; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-top:15px;">
                 <div id="conteudoStatus"></div>
             </div>
 
+            <!-- Área do Google Maps -->
             <div id="cardMapa" style="display: none;">
                 <div id="mapa"></div>
             </div>
 
+            <!-- Seção de Avaliações Recebidas -->
             <div class="avaliacoes-container">
                 <h4>Minhas Avaliações como Passageiro</h4>
                 <div id="mediaNota" class="media-nota">
@@ -265,6 +279,9 @@
 
     </div>
 
+    <!-- ==========================================
+        ⚙️ LÓGICA JAVASCRIPT ATUALIZADA
+    =========================================== -->
     <script>
         const API = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API, {
@@ -277,10 +294,6 @@
             timeout: 20000
         });
 
-        socket.on("connect", () => {
-            console.log("✅ Passageiro Conectado ao Sistema!");
-        });
-
         let token = null;
         let passageiro = null;
         let corridaAtual = null;
@@ -289,9 +302,28 @@
         let autocompleteService = new google.maps.places.AutocompleteService();
         let distancia = 0;
         let valorFinal = 0;
-        
-        // Controla se o GPS já foi capturado (0 = Não capturado, 1 = Pronto para chamar)
         let estadoLocalizacao = 0; 
+
+        // Conexão Inicial
+        socket.on("connect", () => {
+            console.log("✅ Passageiro Conectado ao Sistema!");
+        });
+
+        /* ========================================================
+            📡 ESCUTA DO SOCKET: MOTORISTA ACEITOU A CORRIDA
+        ======================================================== */
+        socket.on("corrida_aceita", (dadosCorrida) => {
+            console.log("🚗 Motorista aceitou a corrida!", dadosCorrida);
+            
+            // Une os dados novos com o objeto da corrida atual
+            corridaAtual = { ...corridaAtual, ...dadosCorrida }; 
+            
+            tocarSom('sucesso');
+            falar(`Motorista ${dadosCorrida.nome_motorista || 'parceiro'} aceitou sua corrida e está a caminho!`);
+            
+            // Altera a tela para mostrar os detalhes do motorista
+            mostrarStatusCorridaAceita(dadosCorrida);
+        });
 
         function falar(texto) {
             const msg = new SpeechSynthesisUtterance(texto);
@@ -306,9 +338,6 @@
             new Audio(url).play().catch(e=>{});
         }
 
-        /* ========================================================
-            🔄 LÓGICA DO BOTÃO ALTERNADO (1º CLIQUE GPS / 2º CLIQUE BUSCA)
-        ======================================================== */
         function gerenciarBotaoLocalizacao() {
             if (estadoLocalizacao === 0) {
                 usarLocalizacaoAtual();
@@ -334,7 +363,6 @@
                 document.getElementById('origem').value = `${lat},${lng}`;
                 falar("Localização definida!");
                 
-                // Muda o estado do botão para o segundo clique buscar o motorista
                 estadoLocalizacao = 1;
                 document.getElementById('btnLocalizacao').className = "btn-success";
                 document.getElementById('txtBtnLocalizacao').innerText = "🚗 Entrar Buscando Motorista";
@@ -345,9 +373,6 @@
             }, {enableHighAccuracy: true});
         }
 
-        /* ========================================================
-            ⭐ CARREGAR AVALIAÇÕES (REAL DO BACKEND)
-        ======================================================== */
         async function carregarAvaliacoes() {
             if (!passageiro) return;
             try {
@@ -390,9 +415,7 @@
                     divMedia.querySelector(".estrelas").innerHTML = `<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>`;
                     divLista.innerHTML = `<p style="text-align:center; font-size:14px; color:var(--cor-texto-secundario)">Nenhuma avaliação recebida ainda.</p>`;
                 }
-            } catch(e) {
-                console.log("Erro ao carregar avaliações", e);
-            }
+            } catch(e) { console.log("Erro ao carregar avaliações", e); }
         }
 
         function buscarEndereco(texto, tipo) {
@@ -414,15 +437,10 @@
                         divSug.appendChild(item);
                     });
                     divSug.style.display = 'block';
-                } else {
-                    divSug.style.display = 'none';
-                }
+                } else { divSug.style.display = 'none'; }
             });
         }
 
-        /* ========================================================
-            🎲 SIMULAÇÃO DE VALORES ALEATÓRIOS (REATIVADA)
-        ======================================================== */
         function calcularValor() {
             const origen = document.getElementById('origem').value;
             const destino = document.getElementById('destino').value;
@@ -432,7 +450,6 @@
                 return;
             }
 
-            // Simulação de cálculo de distância randômica
             let randomDist = (Math.random() * 12 + 1).toFixed(1); 
             distancia = parseFloat(randomDist);
             let precoBase = 4.50;
@@ -575,8 +592,34 @@
         }
 
         /* ========================================================
-            ❌ BOTÃO CANCELAR TOTALMENTE FUNCIONAL
+            🖥️ NOVA TELA DINÂMICA: EXIBE INFOS DO MOTORISTA ACEITO
         ======================================================== */
+        function mostrarStatusCorridaAceita(dados) {
+            document.getElementById('cardValor').style.display = 'none';
+            document.getElementById('cardStatus').style.display = 'block';
+            document.getElementById('cardMapa').style.display = 'none';
+
+            document.getElementById('conteudoStatus').innerHTML = `
+                <div style="text-align: center; padding: 10px;">
+                    <div style="font-size: 24px; color: var(--cor-segunda); font-weight: bold; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle"></i> Motorista a Caminho!
+                    </div>
+                    
+                    <!-- Dados do Carro e Condutor obtidos pelo Socket -->
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: left;">
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-user"></i> Motorista:</strong> ${dados.nome_motorista || 'Confirmado'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-car"></i> Veículo:</strong> ${dados.veiculo_motorista || 'Carro Executivo'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-id-card"></i> Placa:</strong> ${dados.placa_motorista || '---'}</p>
+                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-star" style="color:#f1c40f"></i> Avaliação:</strong> ${dados.nota_motorista || '5.0'}</p>
+                    </div>
+
+                    <div class="status-subtexto">Por favor, aguarde no local de origem indicado.</div>
+                    <br>
+                    <button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar Viagem</button>
+                </div>
+            `;
+        }
+
         async function cancelarCorrida() {
             falar("Cancelando sua viagem.");
 
@@ -609,15 +652,11 @@
 
         function resetarInterfaceAposCancelamento() {
             corridaAtual = null;
-            
-            // Remove a tela de busca e exibe o bloco original
             document.getElementById('cardStatus').style.display = 'none';
             document.getElementById('cardMapa').style.display = 'none';
             
-            // Força a re-exibição da simulação de valores calculados
             calcularValor();
 
-            // Desbloqueia o botão para novas tentativas
             const btn = document.getElementById('btnChamar');
             if(btn) {
                 btn.disabled = false;
