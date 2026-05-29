@@ -591,7 +591,8 @@
     </div>
 
     <script>
-        const API = "https://rotabrasil-v1cf.onrender.com";
+        
+const API = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API, {
             transports: ['websocket', 'polling'],
             upgrade: true,
@@ -894,6 +895,63 @@
                 </div>
             `;
         }
+
+        /* ========================================================
+            ❌ NOVA FUNÇÃO ADICIONADA: CANCELAR CORRIDA (DASHBOARD)
+        ======================================================== */
+        async function cancelarCorrida() {
+            if(!corridaAtual || !corridaAtual.id) {
+                resetarInterfaceAposCancelamento();
+                return;
+            }
+
+            falar("Cancelando sua viagem.");
+
+            try {
+                const res = await fetch(`${API}/cancelar_corrida`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ corrida_id: corridaAtual.id })
+                });
+
+                if(res.ok) {
+                    alert("🚫 Viagem cancelada com sucesso!");
+                } else {
+                    console.log("Aviso: Corrida já cancelada ou finalizada no servidor.");
+                }
+            } catch(e) {
+                console.error("Erro na requisição de cancelamento", e);
+            } finally {
+                resetarInterfaceAposCancelamento();
+            }
+        }
+
+        function resetarInterfaceAposCancelamento() {
+            corridaAtual = null;
+            
+            // Esconde os cards de status e mapa
+            document.getElementById('cardStatus').style.display = 'none';
+            document.getElementById('cardMapa').style.display = 'none';
+            
+            // Força o recálculo/atualização do valor do card principal para que ele reapareça normalizado
+            calcularValor();
+
+            // Restaura o botão de chamar corrida original
+            const btn = document.getElementById('btnChamar');
+            if(btn) {
+                btn.disabled = false;
+                btn.classList.remove('btn-blocked');
+                btn.innerHTML = `🚀 CHAMAR ROTA BRASIL`;
+            }
+        }
+
+
+        
+        
+
     </script>
 </body>
 </html>
