@@ -796,7 +796,7 @@
         ========================================== */
         async function carregarAvaliacoes() {
             try {
-                const res = await fetch(API + "/minhas_avaliacoes", {
+                const res = await fetch(API + "/admin/passageiros", {
                     method: "GET",
                     headers: {
                         "Authorization": "Bearer " + token
