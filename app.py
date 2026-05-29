@@ -30,16 +30,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'pol
 # MODELOS DO BANCO DE DADOS (CORRIGIDO ✅)
 # REMOVI O CAMPO DISTANCIA DAQUI DE BAIXO!
 # ==========================================
-conn = conectar()
-c = conn.cursor()
 
-c.execute("""
-ALTER TABLE usuarios
-ADD COLUMN online INT DEFAULT 0
-""")
-
-conn.commit()
-conn.close()
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
@@ -541,6 +532,13 @@ def minhas_avaliacoes():
     conn.close()
 
     return jsonify(avaliacoes)
+ conn = conectar()
+c = conn.cursor()
+
+c.execute("""
+ALTER TABLE usuarios
+ADD COLUMN online INT DEFAULT 0
+""")   
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
