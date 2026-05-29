@@ -123,28 +123,17 @@ def login():
 # =========================
 # 🔴 MOTORISTA OFFLINE
 # =========================
+@app.route("/ficar_offline/<int:id>", methods=["POST"])
+def ficar_offline(id):
 
-@app.route("/ficar_offline/<int:motorista_id>", methods=["POST"])
-def ficar_offline(motorista_id):
+    motorista = Usuario.query.get(id)
 
-    conn = conectar()
-    c = conn.cursor()
+    if motorista:
+        motorista.online = False
+        db.session.commit()
 
-    c.execute("""
-        UPDATE usuarios
-        SET online = 0
-        WHERE id = %s
-        AND tipo = 'motorista'
-    """, (motorista_id,))
+    return jsonify({"status": "Motorista offline"}), 200
 
-    conn.commit()
-
-    conn.close()
-
-    return jsonify({
-        "success": True,
-        "mensagem": "Motorista offline"
-    })
 # ==========================================
 # ROTAS DO MOTORISTA
 # ==========================================
