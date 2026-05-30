@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🚗 Motorista | Rota Brasil</title>
+    <title>🚗 Motorista | Rota Brasil - PERMISSÃO FIXA 🩷</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -17,12 +17,11 @@
             --card: #1D2129;
             --borda: #363E4D;
             --texto: #F5F7FA;
-            --voz-cor: #7B2CFF; /* Cor exclusiva para funções de voz 🎤💜 */
+            --voz-cor: #7B2CFF;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background: var(--fundo); color: var(--texto); height: 100vh; overflow: hidden; }
 
-        /* === TELA LOGIN === */
         #loginScreen {
             position: absolute; inset: 0; background: var(--fundo);
             display: flex; flex-direction: column; justify-content: center; padding: 20px;
@@ -49,16 +48,14 @@
         .btn-danger { background: var(--perigo); color: white; }
         .btn-warning { background: var(--alerta); color: white; }
         .btn-purple { background: #7B2CFF; color: white; }
-        .btn-voz { background: linear-gradient(45deg, #7B2CFF, #B14AED); color:white; } /* Botão Voz */
         .status-text { font-size: 14px; text-align: center; margin-top: 8px; min-height: 20px; }
         .erro { color: var(--perigo); font-weight: 600; }
         .ok { color: var(--sucesso); font-weight: 600; }
+        .aviso { color: var(--alerta); font-weight: 600; }
 
-        /* === MAPA === */
         #mapa { position: absolute; inset: 0; z-index: 1; }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* === HEADER === */
         .header {
             position: absolute; top: 0; left: 0; right: 0; padding: 15px 20px;
             background: linear-gradient(180deg, var(--fundo), transparent);
@@ -68,10 +65,9 @@
         .status-bolinha { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
         .online { color: var(--sucesso); }
         .offline { color: var(--perigo); }
-        .ouvindo { color: var(--voz-cor); animation: pulsaVoz 1s infinite alternate; } /* Status Ouvindo 🎤 */
+        .ouvindo { color: var(--voz-cor); animation: pulsaVoz 1s infinite alternate; }
         @keyframes pulsaVoz { from { text-shadow: 0 0 5px var(--voz-cor); } to { text-shadow: 0 0 15px var(--voz-cor); } }
 
-        /* === CARD CORRIDA === */
         .card-corrida {
             position: absolute; bottom: 140px; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 400px; background: var(--card);
@@ -87,25 +83,16 @@
         .selo-pago { background: var(--sucesso); color:white; box-shadow: 0 0 8px var(--sucesso); }
         .selo-pendente { background: var(--alerta); color:white; }
         
-        /* 🎤 INDICADOR DE ESCUTA DE VOZ NO CARD 🗣️ */
         .indicador-voz {
             background: linear-gradient(45deg, #7B2CFF, #B14AED);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-            margin: 10px 0;
-            display: none;
-            animation: pulsaVoz 0.8s infinite alternate;
-            border: 1px solid #D6B8FF;
+            color: white; padding: 8px 12px; border-radius: 8px; text-align: center;
+            font-weight: bold; font-size: 14px; margin: 10px 0; display: none;
+            animation: pulsaVoz 0.8s infinite alternate; border: 1px solid #D6B8FF;
         }
         .contador-segundos { font-size: 18px; font-weight:900; }
 
         .grupo-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
 
-        /* === BARRA INFERIOR === */
         .barra-inferior {
             position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px 25px;
             background: var(--card); border-top: 1px solid var(--borda);
@@ -121,7 +108,6 @@
         .etapa2 { background: #E8F3FF; color: #0050B3; border-color: #91D2FF; }
         .etapa3 { background: #E8FFEA; color: #007828; border-color: #97F0AE; }
 
-        /* === ALERTA DE CANCELAMENTO === */
         .alerta-cancelamento {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: var(--perigo); color: white; padding: 25px; border-radius: 16px;
@@ -131,22 +117,22 @@
         }
         @keyframes tremer { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.03); } }
         .alerta-cancelamento h2 { margin-bottom: 10px; font-size: 22px; }
+        .erro-conexao { background: var(--perigo); color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin: 8px 0; display: none; }
+        .permissao-aviso { background: var(--alerta); color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin: 8px 0; display: none; }
     </style>
 </head>
 <body>
 
-    <!-- 🔴 ALERTA DE CANCELAMENTO -->
     <div id="alertaCancel" class="alerta-cancelamento">
         <h2><i class="fas fa-times-circle"></i> CORRIDA CANCELADA!</h2>
         <p>O passageiro cancelou ou desconectou.</p>
         <button onclick="fecharAlertaCancel()" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border:none; font-weight:bold;">OK, ENTENDI</button>
     </div>
 
-    <!-- TELA LOGIN / CADASTRO -->
     <div id="loginScreen">
         <div class="logo">
             <h1>ROTA BRASIL</h1>
-            <p style="color:#86909C; margin-top:5px;">Painel do Motorista</p>
+            <p style="color:#86909C; margin-top:5px;">Painel do Motorista 🎤 PERMISSÃO 100% 🩷</p>
         </div>
         <div class="card">
             <input type="text" id="nome" placeholder="👤 Nome Completo">
@@ -160,7 +146,11 @@
             <button class="btn-success" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
             <div id="statusLogin" class="status-text"></div>
 
-            <!-- 🎤 OPÇÃO PARA ATIVAR/DESATIVAR COMANDO DE VOZ (VOCÊ CONTROLA AMOR ❤️) -->
+            <!-- ✅ BOTÃO DE PERMISSÃO CLARO PRA VOCÊ CLICAR 🖱️🎤 -->
+            <button id="btnPermitirMicrofone" class="btn-purple" onclick="pedirPermissaoMicrofone()" style="margin:12px 0;">
+                <i class="fas fa-microphone-alt"></i> 🎤 PERMITIR MICROFONE (CLIQUE AQUI!)
+            </button>
+
             <div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--borda);">
                 <label style="color:#86909C; font-size:14px; display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" id="ativarVoz" checked style="width:auto; margin:0;"> 
@@ -170,26 +160,22 @@
         </div>
     </div>
 
-    <!-- MAPA -->
     <div id="mapa">
         <iframe id="mapaFrame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.0!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjPCsDMzJzUyLjIiUyA0NsKwMzknMDguMyJX!5e0!3m2!1spt-BR!2sbr!4v123456789"></iframe>
     </div>
 
-    <!-- HEADER -->
     <div class="header" id="header" style="display:none;">
         <div style="font-weight:800; font-size:18px;">ROTA BRASIL</div>
         <div id="statusMotorista" class="status-bolinha offline">
             <i class="fas fa-circle"></i> <span>Offline</span>
         </div>
-        <!-- 🎤 STATUS MICROFONE NO CANTO SUPERIOR -->
         <div id="statusMicrofone" style="font-size:20px; display:none; color:var(--voz-cor);"><i class="fas fa-microphone-alt"></i></div>
     </div>
 
-    <!-- 🚨 CARD DE CORRIDA (AGORA COM ÁREA DE VOZ 🗣️) -->
     <div id="cardCorrida" class="card-corrida">
         <h3 style="text-align:center; margin-bottom:10px;">
             <i class="fas fa-bell fa-shake" style="color:var(--alerta);"></i> NOVA CORRIDA 
-            <span id="seloPagamento" class="selo-status selo-pago">✅ PAGO</span> <!-- SEMPRE PAGO ✅ -->
+            <span id="seloPagamento" class="selo-status selo-pago">✅ TESTE</span>
         </h3>
         
         <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
@@ -198,24 +184,23 @@
         <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
         <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
 
-        <!-- 🎤 INDICADOR DE ESCUTA E CONTADOR (AQUI É A MÁGICA 🪄) -->
+        <div id="avisoPermissao" class="permissao-aviso">⚠️ CLIQUE EM PERMITIR MICROFONE!</div>
+        <div id="erroConexao" class="erro-conexao">❌ ERRO DE CONEXÃO! TENTE NOVAMENTE</div>
         <div id="indicadorVoz" class="indicador-voz">
             <i class="fas fa-microphone-alt"></i> OUVINDO... <br>
             <span id="contadorTempo" class="contador-segundos">10</span>s
         </div>
 
         <div class="grupo-botoes">
-            <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
-            <button class="btn-danger" onclick="recusarCorrida()">❌ RECUSAR</button>
+            <button id="btnAceitar" class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
+            <button id="btnRecusar" class="btn-danger" onclick="recusarCorrida()">❌ RECUSAR</button>
         </div>
     </div>
 
-    <!-- BARRA DE CONTROLES -->
     <div class="barra-inferior" id="barra" style="display:none;">
         <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
         <button id="btnOffline" class="btn-danger" onclick="ficarOffline()" style="display:none;"><i class="fas fa-power-off"></i> FICAR OFFLINE</button>
 
-        <!-- 🟡 ÁREA DE AÇÕES (TUDO IGUAL - FINALIZA QUANDO QUISER 🚗🏁) -->
         <div id="areaAcoes" class="acoes">
             <div id="etapaTexto" class="etapa etapa1">📦 PASSO 1: Corrida Aceita! Vá até o passageiro</div>
 
@@ -241,174 +226,243 @@
         </button>
     </div>
 
-    <!-- 🔊 SONS (SOM ALERTA E SOM CONFIRMAÇÃO VOZ) -->
     <audio id="somAlerta" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3">
     <audio id="somSucesso" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3">
     <audio id="somErro" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-hard-error-tone-2873.mp3">
 
     <script>
-        // ==============================================
-        // ⚙️ CONFIGURAÇÕES GERAIS E VOZ 🗣️🎙️
-        // ==============================================
         const API_URL = "https://rotabrasil-v1cf.onrender.com";
-        const socket = io(API_URL, { transports: ['websocket', 'polling'], reconnection: true, timeout: 10000 });
+        const socket = io(API_URL, { 
+            transports: ['websocket', 'polling'], 
+            reconnection: true, 
+            timeout: 10000,
+            forceNew: true
+        });
 
         let usuario = null;
         let token = null;
         let corrida = null;
         let estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
         
-        // 🎙️ VARIAVEIS DA FUNÇÃO DE VOZ (EXCLUSIVA PARA VOCÊ MEU AMOR 💜)
-        const ATIVAR_COMANDO_VOZ = true; // Deixa TRUE para ligado, FALSE desliga
         let reconhecimentoVoz;
         let tempoContador;
-        let tempoRestante = 100; // ⏱️ 10 Segundos como você pediu
+        let tempoRestante = 10;
         let corridaAtualVoz = null;
+        let requisicaoAtiva = false;
+        let permissioneMicrofoneOK = false; // ✅ SABE SE JÁ TEM PERMISSÃO 🎤✅
 
-        // 🗣️ CONFIGURAÇÃO DA VOZ FALADA (PT-BR, Voz Clara e Alta)
         const sintetizador = window.speechSynthesis;
         function falar(texto) {
             if(!sintetizador) return;
-            sintetizador.cancel(); // Para fala anterior
+            sintetizador.cancel();
             const mensagem = new SpeechSynthesisUtterance(texto);
-            mensagem.lang = 'pt-BR';
-            mensagem.volume = 1.0; // 🔊 VOLUME MÁXIMO
-            mensagem.rate = 1.0; // Velocidade normal
-            mensagem.pitch = 1.2; // Tom de voz agradável (1.0 = normal, 2 = agudo)
+            mensagem.lang = 'pt-BR'; mensagem.volume = 1.0; mensagem.rate = 1.1; mensagem.pitch = 1.2;
             sintetizador.speak(mensagem);
         }
 
-        // 🎤 INICIALIZAR RECONHECIMENTO DE VOZ (OUVE O MOTORISTA)
+        // ✅ FUNÇÃO NOVA: PEDE PERMISSÃO DO JEITO CERTO (FAZ O POP-UP APARECER!!!) 🟡📢🎤
+        async function pedirPermissaoMicrofone() {
+            try {
+                // 🔑 ESSA LINHA É O SEGREDO: OBRIGA O NAVEGADOR A MOSTRAR O POP-UP 🛑➡️🟡
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true, 
+                    video: false 
+                });
+                
+                // ✅ SE CHEGOU AQUI = PERMITIU TUDO 🎉✅🟢
+                permissioneMicrofoneOK = true;
+                document.getElementById('btnPermitirMicrofone').style.background = 'var(--sucesso)';
+                document.getElementById('btnPermitirMicrofone').innerHTML = '<i class="fas fa-check"></i> ✅ MICROFONE PERMITIDO!';
+                document.getElementById('statusLogin').textContent = "🎤 Microfone LIBERADO com sucesso!";
+                document.getElementById('statusLogin').className = "status-text ok";
+                
+                // 🔒 PARA O SOM DO MICROFONE (NÃO DEIXA GRAVAR, SÓ OUVIR COMANDOS) 🔇✅
+                stream.getTracks().forEach(track => track.stop());
+
+                // 🎤 AGORA SIM, PODE INICIAR RECONHECIMENTO DE VOZ COM SEGURANÇA 🛡️🗣️
+                iniciarReconhecimento();
+                falar("Microfone permitido! Agora você pode aceitar e recusar corridas por voz.");
+
+            } catch (erro) {
+                // ❌ SE NEGOU OU BLOQUEOU ❌🚫
+                permissioneMicrofoneOK = false;
+                document.getElementById('btnPermitirMicrofone').style.background = 'var(--perigo)';
+                document.getElementById('btnPermitirMicrofone').innerHTML = '<i class="fas fa-times"></i> ❌ BLOQUEADO! CLIQUE NOVAMENTE';
+                document.getElementById('statusLogin').textContent = "❌ Você NEGOU ou BLOQUEOU o microfone! Permita nas configurações.";
+                document.getElementById('statusLogin').className = "status-text erro";
+                falar("Você bloqueou o microfone. Clique no botão novamente e permita.");
+                console.error("ERRO PERMISSÃO MICROFONE:", erro.name, erro.message);
+            }
+        }
+
+        // ✅ FETCH COM TIMEOUT CORRIGIDO 🛡️⚡
+        async function fetchComTimeout(url, opcoes, tempoLimite = 8000) {
+            const controlador = new AbortController();
+            const idTimeout = setTimeout(() => controlador.abort(), tempoLimite);
+            
+            try {
+                const resposta = await fetch(url, {
+                    ...opcoes,
+                    signal: controlador.signal,
+                    credentials: 'omit'
+                });
+                clearTimeout(idTimeout);
+                
+                if(!resposta.ok) {
+                    throw new Error(`Erro ${resposta.status}: ${resposta.statusText}`);
+                }
+                
+                const dados = await resposta.json();
+                return { sucesso: true, dados };
+                
+            } catch (erro) {
+                clearTimeout(idTimeout);
+                console.error("ERRO REQUISIÇÃO:", erro);
+                
+                if(erro.name === 'AbortError') {
+                    return { sucesso: false, erro: "Tempo esgotado - Servidor lento" };
+                } else if(erro.message.includes('Failed to fetch') || erro.message.includes('NetworkError')) {
+                    return { sucesso: false, erro: "Sem conexão com servidor 📶❌" };
+                } else {
+                    return { sucesso: false, erro: erro.message || "Erro desconhecido" };
+                }
+            }
+        }
+
+        // 🎤 RECONHECIMENTO DE VOZ - 100% SEGURO SÓ DEPOIS DA PERMISSÃO 🩷✅
         function iniciarReconhecimento() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.log("Navegador não suporta voz");
+                alert("❌ SEU NAVEGADOR NÃO SUPORTA COMANDO DE VOZ! Use Chrome ou Edge.");
+                return;
+            }
+            if(!permissioneMicrofoneOK) {
+                document.getElementById('avisoPermissao').style.display = 'block';
+                setTimeout(()=> document.getElementById('avisoPermissao').style.display='none',4000);
                 return;
             }
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             reconhecimentoVoz = new SpeechRecognition();
             reconhecimentoVoz.lang = 'pt-BR';
-            reconhecimentoVoz.continuous = false; // Para depois de falar
-            reconhecimentoVoz.interimResults = false; // Só resultado final
+            reconhecimentoVoz.continuous = false;
+            reconhecimentoVoz.interimResults = false;
+            reconhecimentoVoz.maxAlternatives = 1;
 
-            // 🟢 QUANDO OUVIR ALGO 🎧👂
             reconhecimentoVoz.onresult = (evento) => {
                 const frase = evento.results[0][0].transcript.toLowerCase().trim();
-                console.log("Ouvi: " + frase); // Mostra no log para teste
+                console.log("✅ VOZ DETECTADA: ", frase);
+                
+                const palavrasSim = ['sim', 'aceito', 'quero', 'pode', 'claro', 'vou', 'aceitar', 'ok', 'tá', 'blz', 'aceita', 'isso', 'certo', 'vamos', 'confirma', 'confirmo'];
+                const palavrasNao = ['não', 'nao', 'nao quero', 'recusar', 'rejeito', 'nao aceito', 'nem', 'recusa', 'nao aceita', 'nao vou', 'de jeito nenhum', 'cancela'];
+                
+                let aceitou = false, recusou = false;
 
-                // ✅ REGRAS DE ACEITE (TUDO QUE SIGNIFICA "SIM")
-                const palavrasSim = ['sim', 'aceito', 'quero', 'pode', 'claro', 'vou', 'aceitar', 'isso mesmo', 'ok', 'tá', 'blz'];
-                // ❌ REGRAS DE RECUSA (TUDO QUE SIGNIFICA "NÃO")
-                const palavrasNao = ['não', 'nao', 'nao quero', 'recusar', 'rejeito', 'nao aceito', 'não aceito', 'nem', 'nunca'];
+                for(let palavra of palavrasSim) if(frase.includes(palavra)) { aceitou = true; break; }
+                if(!aceitou) for(let palavra of palavrasNao) if(frase.includes(palavra)) { recusou = true; break; }
 
-                let aceitou = false;
-                let recusou = false;
-
-                // Verifica SIM
-                for(let palavra of palavrasSim) {
-                    if(frase.includes(palavra)) { aceitou = true; break; }
+                if(aceitou) { 
+                    pararContador(); 
+                    document.getElementById('somSucesso').play(); 
+                    falar("✅ Corrida ACEITA por voz!"); 
+                    aceitarCorrida(); 
                 }
-                // Verifica NÃO
-                if(!aceitou) {
-                    for(let palavra of palavrasNao) {
-                        if(frase.includes(palavra)) { recusou = true; break; }
-                    }
-                }
-
-                // ⚡ EXECUTA A AÇÃO
-                if(aceitou) {
-                    pararContador();
-                    document.getElementById('somSucesso').play();
-                    falar("Corrida aceita, boa viagem!");
-                    aceitarCorrida(); // ✅ CHAMA FUNÇÃO DE ACEITAR
-                } else if(recusou) {
-                    pararContador();
-                    document.getElementById('somErro').play();
-                    falar("Corrida recusada. Aguardando próxima.");
-                    recusarCorrida(); // ❌ CHAMA FUNÇÃO DE RECUSAR
-                } 
-                // Se não entendeu, deixa o contador rodar até acabar
-            };
-
-            // 🛑 SE PARAR DE OUVIR ANTES DO TEMPO, REINICIA PARA CONTINUAR OUVINDO
-            reconhecimentoVoz.onend = () => {
-                if(corridaAtualVoz) { // Se ainda tem corrida ativa
-                    reconhecimentoVoz.start(); // Reinicia escuta
+                else if(recusou) { 
+                    pararContador(); 
+                    document.getElementById('somErro').play(); 
+                    falar("❌ Corrida RECUSADA por voz!"); 
+                    recusarCorrida(); 
                 }
             };
 
-            reconhecimentoVoz.onerror = (erro) => {
-                console.log("Erro Voz: " + erro.error);
-                // Se der erro de microfone, recusa automaticamente por segurança
-                if(erro.error === 'not-allowed') {
-                    pararContador();
-                    recusarCorrida();
+            reconhecimentoVoz.onend = () => { 
+                if(corridaAtualVoz && permissioneMicrofoneOK && document.getElementById('ativarVoz').checked) {
+                    try { reconhecimentoVoz.start(); } catch(e) { console.log("Reiniciando mic..."); }
+                }
+            };
+
+            reconhecimentoVoz.onerror = (erro) => { 
+                console.log("ERRO MICROFONE:", erro.error);
+                if(erro.error === 'not-allowed' || erro.error === 'service-not-available') { 
+                    permissioneMicrofoneOK = false;
+                    falar("⚠️ Permita o microfone clicando no botão roxo!");
                 }
             };
         }
 
-        // ⏱️ CONTADOR DE 10 SEGUNDOS (REGRA DE OURO)
+        // ⏱️ CONTADOR - SÓ LIGA MICRO SE TIVER PERMISSÃO ✅🎤
         function iniciarContador() {
-            tempoRestante = 100;
+            if(!document.getElementById('ativarVoz').checked) return;
+
+            tempoRestante = 10;
             document.getElementById('contadorTempo').textContent = tempoRestante;
             document.getElementById('indicadorVoz').style.display = 'block';
             document.getElementById('statusMicrofone').style.display = 'block';
-            document.getElementById('statusMotorista').className = 'status-bolinha ouvindo'; // Muda cor para roxo
+            document.getElementById('statusMotorista').className = 'status-bolinha ouvindo';
+            document.getElementById('erroConexao').style.display = 'none';
+
+            // ✅ SÓ TENTA LIGAR SE JÁ TEM PERMISSÃO CONFIRMADA 🛡️🩷
+            if(permissioneMicrofoneOK && reconhecimentoVoz) {
+                try {
+                    reconhecimentoVoz.stop();
+                    reconhecimentoVoz.start();
+                    console.log("✅ MICROFONE LIGADO E OUVINDO!");
+                } catch(e) {
+                    console.log("⚠️ Erro ao iniciar voz:", e);
+                }
+            } else {
+                // ⚠️ SE NÃO TEM PERMISSÃO, AVISA NA TELA 🚨📢
+                document.getElementById('avisoPermissao').style.display = 'block';
+                setTimeout(()=> document.getElementById('avisoPermissao').style.display='none', 3500);
+            }
 
             tempoContador = setInterval(() => {
                 tempoRestante--;
                 document.getElementById('contadorTempo').textContent = tempoRestante;
-
-                if(tempoRestante <= 0) {
-                    pararContador();
-                    // ⌛ SE NÃO FALOU NADA EM 10s -> RECUSA AUTOMÁTICA
-                    falar("Tempo esgotado. Corrida recusada automaticamente.");
-                    document.getElementById('somErro').play();
+                if(tempoRestante <= 0) { 
+                    pararContador(); 
+                    falar("⏰ TEMPO ESGOTADO! Recusando automaticamente"); 
+                    document.getElementById('somErro').play(); 
                     recusarCorrida(); 
                 }
             }, 1000);
         }
 
         function pararContador() {
-            clearInterval(tempoContador);
+            clearInterval(tempoContador); 
             corridaAtualVoz = null;
-            if(reconhecimentoVoz) reconhecimentoVoz.stop();
+            requisicaoAtiva = false;
+            
+            if(reconhecimentoVoz && permissioneMicrofoneOK) {
+                try { reconhecimentoVoz.stop(); } catch(e) {}
+            }
+            
             document.getElementById('indicadorVoz').style.display = 'none';
             document.getElementById('statusMicrofone').style.display = 'none';
-            // Volta status para Online normal
             if(document.getElementById('statusMotorista').classList.contains('ouvindo')) {
                 document.getElementById('statusMotorista').className = 'status-bolinha online';
             }
         }
 
-        // ==============================================
-        // 🔐 LOGIN / CADASTRO (NORMAL)
-        // ==============================================
-        function statusLogin(texto, tipo) {
-            const el = document.getElementById('statusLogin'); el.textContent = texto; el.className = `status-text ${tipo}`;
-        }
+        function statusLogin(texto, tipo) { const el = document.getElementById('statusLogin'); el.textContent = texto; el.className = `status-text ${tipo}`; }
 
         async function cadastrar() {
-            const dados = {
-                nome: document.getElementById('nome').value.trim(),
-                email: document.getElementById('email').value.trim().toLowerCase(),
-                senha: document.getElementById('senha').value.trim(),
-                telefone: document.getElementById('telefone').value.trim(),
-                carro: document.getElementById('carro').value.trim(),
-                placa: document.getElementById('placa').value.trim().toUpperCase(),
-                tipo: "motorista"
-            };
+            const dados = { nome: document.getElementById('nome').value.trim(), email: document.getElementById('email').value.trim().toLowerCase(), senha: document.getElementById('senha').value.trim(), telefone: document.getElementById('telefone').value.trim(), carro: document.getElementById('carro').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), tipo: "motorista" };
             if(Object.values(dados).some(v => !v)) return statusLogin("❌ Preencha tudo!", "erro");
             if(dados.senha.length <6) return statusLogin("❌ Senha > 6 dígitos", "erro");
-
             statusLogin("⏳ Cadastrando...", "");
-            try {
-                const res = await fetch(`${API_URL}/register`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
-                const retorno = await res.json();
-                if(!res.ok) throw new Error(retorno.erro || "Falha");
+            
+            const res = await fetchComTimeout(`${API_URL}/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dados)
+            });
+            
+            if(res.sucesso) {
                 statusLogin("✅ Conta criada! Entrando...", "ok");
                 setTimeout(()=> entrar(dados.email, dados.senha), 1000);
-            } catch(e) { statusLogin(`❌ ${e.message}`, "erro"); }
+            } else {
+                statusLogin(`❌ ${res.erro}`, "erro");
+            }
         }
 
         async function entrar(emailTxt = null, senhaTxt = null) {
@@ -416,143 +470,172 @@
             const senha = senhaTxt || document.getElementById('senha').value.trim();
             if(!email || !senha) return statusLogin("❌ Digite e-mail e senha", "erro");
             statusLogin("⏳ Entrando...", "");
-            try {
-                const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, senha}) });
-                const retorno = await res.json();
-                if(!res.ok) throw new Error(retorno.erro || "Falha login");
-                if(retorno.user.tipo !== "motorista") throw new Error("Não é conta motorista");
+            
+            const res = await fetchComTimeout(`${API_URL}/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, senha})
+            });
+            
+            if(res.sucesso) {
+                const retorno = res.dados;
+                if(retorno.user.tipo !== "motorista") return statusLogin("❌ Não é conta motorista", "erro");
                 token = retorno.token; usuario = retorno.user;
                 localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario));
-                
-                // 🎤 INICIA O SISTEMA DE VOZ AO LOGAR (SE ESTIVER ATIVADO)
-                if(document.getElementById('ativarVoz').checked) {
-                    iniciarReconhecimento();
-                }
-                
                 telaPrincipal();
-            } catch(e) { statusLogin(`❌ ${e.message}`, "erro"); }
+                statusLogin("✅ Entrou com sucesso! Clique no botão ROXO acima para PERMITIR MICROFONE 🎤🟣", "aviso");
+            } else {
+                statusLogin(`❌ ${res.erro}`, "erro");
+            }
         }
 
-        function telaPrincipal() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('header').style.display = 'flex';
-            document.getElementById('barra').style.display = 'block';
-        }
-
-        function sair() { 
-            pararContador(); // Para microfone ao sair
-            localStorage.clear(); limparTudo(); window.location.reload(); 
-        }
-
-        window.onload = () => {
-            const t = localStorage.getItem("token_motorista"); const d = localStorage.getItem("dados_motorista");
-            if(t && d) try { usuario = JSON.parse(d); token = t; telaPrincipal(); } catch { localStorage.clear(); }
+        function telaPrincipal() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('header').style.display = 'flex'; document.getElementById('barra').style.display = 'block'; }
+        function sair() { pararContador(); localStorage.clear(); limparTudo(); window.location.reload(); }
+        window.onload = () => { 
+            const t = localStorage.getItem("token_motorista"); 
+            const d = localStorage.getItem("dados_motorista"); 
+            if(t && d) { 
+                try { 
+                    usuario = JSON.parse(d); token = t; 
+                    telaPrincipal(); 
+                } catch { localStorage.clear(); } 
+            }
         };
 
-        // ==============================================
-        // 🟢 ONLINE / OFFLINE
-        // ==============================================
         async function ficarOnline() {
             if(!usuario || !token) return alert("Faça login!");
-            try {
-                await fetch(`${API_URL}/ficar_online/${usuario.id}`, { method:'POST', headers: {'Authorization': `Bearer ${token}`} });
+            const res = await fetchComTimeout(`${API_URL}/ficar_online/${usuario.id}`, { 
+                method:'POST', 
+                headers: {'Authorization': `Bearer ${token}`} 
+            });
+            
+            if(res.sucesso) {
                 document.getElementById('btnOnline').style.display = 'none'; document.getElementById('btnOffline').style.display = 'block';
                 document.getElementById('statusMotorista').className = 'status-bolinha online';
                 document.getElementById('statusMotorista').innerHTML = `<i class="fas fa-circle"></i> <span>Online</span>`;
                 socket.emit('motorista_online', {id: usuario.id, nome: usuario.nome});
-                falar("Você está online. Aguardando corridas."); // 🗣️ AVISA POR VOZ
-            } catch(e) { alert("Erro conexão"); }
+                falar("✅ Você está ONLINE. Aguardando corridas.");
+            } else {
+                alert("❌ " + res.erro);
+            }
         }
 
         async function ficarOffline() {
-            try {
-                await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method:'POST', headers: {'Authorization': `Bearer ${token}`} });
+            const res = await fetchComTimeout(`${API_URL}/ficar_offline/${usuario.id}`, { 
+                method:'POST', 
+                headers: {'Authorization': `Bearer ${token}`} 
+            });
+            
+            if(res.sucesso) {
                 document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none';
                 document.getElementById('statusMotorista').className = 'status-bolinha offline';
                 document.getElementById('statusMotorista').innerHTML = `<i class="fas fa-circle"></i> <span>Offline</span>`;
                 socket.emit('motorista_offline', {id: usuario.id});
-                pararContador(); // Para microfone
-                falar("Você está offline."); // 🗣️ AVISA POR VOZ
-            } catch(e) {}
+                pararContador();
+                falar("🔌 Você está OFFLINE.");
+            }
         }
 
-        // ==============================================
-        // 🚨 RECEBER NOVA CORRIDA (AQUI É ONDE TUDO ACONTECE 🎧🚨)
-        // ==============================================
+        // 🚨 NOVA CORRIDA: AVISA SE NÃO TEM PERMISSÃO 🎤⚠️
         socket.on('nova_corrida', (dados) => {
-            // 🛑 REGRA DE OURO: SÓ ACEITA CORRIDAS PAGAS! 🟢💰
-          //  if(!dados.pago || dados.status_pagamento !== 'aprovado') {
-               // console.log("Corrida não paga ignorada!");
-               // return; // NEM APARECE SE NÃO FOR PAGA (SEGURANÇA TOTAL MEU AMOR 🛡️❤️)
-            }
-
-            // 🎧 SALVA CORRIDA ATUAL PARA O SISTEMA DE VOZ
-            corrida = dados;
+            corrida = dados; 
             corridaAtualVoz = dados.id;
-
-            // 🔊 TOCA SOM ALTO
-            document.getElementById('somAlerta').currentTime = 0;
+            requisicaoAtiva = false;
+            
+            document.getElementById('somAlerta').currentTime = 0; 
             document.getElementById('somAlerta').play();
-
-            // 📝 PREENCHE DADOS NO CARD
+            
             document.getElementById('cPassageiro').textContent = dados.passageiro_nome;
             document.getElementById('cTelefone').textContent = dados.passageiro_telefone;
             document.getElementById('cOrigem').textContent = dados.origem;
             document.getElementById('cDestino').textContent = dados.destino;
             document.getElementById('cValor').textContent = `R$ ${dados.valor.toFixed(2)}`;
-            
-            // 👁️ MOSTRA O CARD
             document.getElementById('cardCorrida').style.display = 'block';
 
-            // 🗣️ 🎤 FALA A MENSAGEM PARA O MOTORISTA (EXATAMENTE COMO VOCÊ QUER, MEU AMOR 🥹🫶)
-            const mensagemVoz = `Atenção! Você recebeu uma corrida PAGA. Passageiro ${dados.passageiro_nome}. Origem ${dados.origem}. Valor ${dados.valor.toFixed(2)} reais. Deseja aceitar?`;
+            const mensagemVoz = `🔔 NOVA CORRIDA! Passageiro: ${dados.passageiro_nome}. Valor: R$ ${dados.valor.toFixed(2)}.`;
             falar(mensagemVoz);
 
-            // ⏱️ INICIA CONTADOR E ESCUTA DE VOZ (SE ESTIVER ATIVADO)
-            if(document.getElementById('ativarVoz').checked) {
-                iniciarContador();
-                if(reconhecimentoVoz) reconhecimentoVoz.start();
+            if(document.getElementById('ativarVoz').checked) { 
+                iniciarContador(); 
             }
         });
 
-        // ==============================================
-        // ✅ ACEITAR E ❌ RECUSAR (FUNÇÕES PRINCIPAIS)
-        // ==============================================
-        function aceitarCorrida() {
-            if(!corrida) return;
-            pararContador(); // Para de ouvir quando aceita
-            fetch(`${API_URL}/aceitar_corrida`, {
+        // ✅ ACEITAR 100% FUNCIONAL SEM ERRO 🟢🚫📶
+        async function aceitarCorrida() {
+            if(!corrida || requisicaoAtiva) return; 
+            requisicaoAtiva = true;
+            pararContador();
+            document.getElementById('btnAceitar').disabled = true;
+            document.getElementById('btnAceitar').textContent = "⏳ ACEITANDO...";
+
+            const resultado = await fetchComTimeout(`${API_URL}/aceitar_corrida`, {
                 method: 'POST',
-                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id, motorista_nome: usuario.nome, carro: usuario.carro, placa: usuario.placa})
-            }).then(res => res.json()).then(data => {
-                if(data.sucesso) {
-                    estado.aceito = true;
-                    document.getElementById('cardCorrida').style.display = 'none';
-                    document.getElementById('areaAcoes').style.display = 'grid';
-                    document.getElementById('etapaTexto').className = 'etapa etapa1';
-                    document.getElementById('etapaTexto').textContent = "📦 PASSO 1: Corrida Aceita! Vá até o passageiro";
-                    document.getElementById('btnIrPassageiro').style.display = 'block';
-                    falar("Corrida aceita! Vá ao encontro do passageiro."); // 🗣️ CONFIRMA
-                }
+                headers: { 
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    corrida_id: corrida.id,
+                    motorista_id: usuario.id,
+                    motorista_nome: usuario.nome,
+                    carro: usuario.carro,
+                    placa: usuario.placa
+                })
             });
+
+            if(resultado.sucesso && resultado.dados.sucesso) {
+                estado.aceito = true;
+                document.getElementById('cardCorrida').style.display = 'none';
+                document.getElementById('areaAcoes').style.display = 'grid';
+                document.getElementById('etapaTexto').className = 'etapa etapa1';
+                document.getElementById('etapaTexto').textContent = "📦 PASSO 1: Corrida Aceita! Vá até o passageiro";
+                document.getElementById('btnIrPassageiro').style.display = 'block';
+                falar("✅ CORRIDA ACEITA! Vá ao encontro do passageiro.");
+                document.getElementById('somSucesso').play();
+            } else {
+                document.getElementById('erroConexao').textContent = `❌ ${resultado.erro || "Servidor recusou"}`;
+                document.getElementById('erroConexao').style.display = 'block';
+                falar("❌ ERRO AO ACEITAR: " + (resultado.erro || "Tente novamente"));
+                document.getElementById('somErro').play();
+                setTimeout(() => {
+                    document.getElementById('erroConexao').style.display = 'none';
+                    requisicaoAtiva = false;
+                }, 3000);
+            }
+
+            document.getElementById('btnAceitar').disabled = false;
+            document.getElementById('btnAceitar').textContent = "✅ ACEITAR";
         }
 
-        function recusarCorrida() {
-            if(!corrida) return;
-            pararContador(); // Para de ouvir
-            fetch(`${API_URL}/recusar_corrida`, {
-                method: 'POST',
-                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id})
+        // ❌ RECUSAR CORRIGIDO ✅
+        async function recusarCorrida() {
+            if(!corrida || requisicaoAtiva) return;
+            requisicaoAtiva = true;
+            pararContador();
+            document.getElementById('btnRecusar').disabled = true;
+            document.getElementById('btnRecusar').textContent = "⏳ RECUSANDO...";
+
+            const resultado = await fetchComTimeout(`${API_URL}/recusar_corrida`, { 
+                method: 'POST', 
+                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, 
+                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id}) 
             });
-            limparTudo();
-            falar("Corrida recusada."); // 🗣️ CONFIRMA
+
+            if(resultado.sucesso) {
+                limparTudo(); 
+                falar("❌ Corrida RECUSADA.");
+                document.getElementById('somErro').play();
+            } else {
+                document.getElementById('erroConexao').textContent = `❌ ${resultado.erro}`;
+                document.getElementById('erroConexao').style.display = 'block';
+                setTimeout(() => document.getElementById('erroConexao').style.display = 'none', 3000);
+            }
+
+            document.getElementById('btnRecusar').disabled = false;
+            document.getElementById('btnRecusar').textContent = "❌ RECUSAR";
+            requisicaoAtiva = false;
         }
 
-        // ==============================================
-        // 🚗 FLUXO DA CORRIDA (FINALIZA QUANDO QUISER - SUA REGRA 🩷🏁)
-        // ==============================================
         function irAoPassageiro() {
             estado.pegouPassageiro = true;
             document.getElementById('etapaTexto').className = 'etapa etapa2';
@@ -560,45 +643,45 @@
             document.getElementById('btnIrPassageiro').style.display = 'none';
             document.getElementById('btnIniciarViagem').style.display = 'block';
             document.getElementById('btnLigar').style.display = 'block';
-            falar("Você chegou ao passageiro. Inicie a viagem quando estiver pronto."); // 🗣️
+            falar("📍 Você chegou ao passageiro. Inicie a viagem.");
         }
 
         function iniciarViagem() {
-            estado.viagemIniciada = true; // 🔑 ESSA VARIÁVEL LIBERA O BOTÃO FINALIZAR PARA SEMPRE!
+            estado.viagemIniciada = true;
             document.getElementById('etapaTexto').className = 'etapa etapa3';
             document.getElementById('etapaTexto').textContent = "🟢 VIAGEM INICIADA! Você pode FINALIZAR a qualquer momento 🟢✅";
             document.getElementById('btnIniciarViagem').style.display = 'none';
-            document.getElementById('btnFinalizar').style.display = 'block'; // 🔓 LIBERADO PARA SEMPRE AGORA
-            falar("Viagem iniciada. Botão finalizar liberado."); // 🗣️
+            document.getElementById('btnFinalizar').style.display = 'block';
+            falar("🟢 Viagem iniciada. Finalize quando quiser.");
         }
 
-        function finalizarAgora() {
-            if(!estado.viagemIniciada) {
-                alert("❌ Você precisa INICIAR A VIAGEM primeiro! (Regra de segurança)");
-                falar("Erro. Inicie a viagem primeiro."); // 🗣️
-                return;
+        async function finalizarAgora() {
+            if(!estado.viagemIniciada) { 
+                alert("❌ Inicie a viagem primeiro!"); 
+                falar("❌ Erro, inicie a viagem primeiro."); 
+                return; 
             }
-            if(confirm("🏁 CONFIRMAR FINALIZAÇÃO DA CORRIDA?\nValor Total: R$ " + corrida.valor.toFixed(2))) {
-                fetch(`${API_URL}/finalizar_corrida`, {
-                    method: 'POST',
-                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                    body: JSON.stringify({corrida_id: corrida.id, valor: corrida.valor})
-                }).then(() => {
-                    falar("Corrida finalizada. Dinheiro creditado. Aguardando próxima."); // 🗣️ 🤑🟢
-                    limparTudo();
+            if(confirm("🏁 CONFIRMAR FINALIZAÇÃO?\nValor: R$ " + corrida.valor.toFixed(2))) {
+                const res = await fetchComTimeout(`${API_URL}/finalizar_corrida`, { 
+                    method: 'POST', 
+                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({corrida_id: corrida.id, valor: corrida.valor}) 
                 });
+                
+                if(res.sucesso) {
+                    falar("✅ Corrida FINALIZADA! Aguardando próxima."); 
+                    limparTudo();
+                } else {
+                    alert("❌ " + res.erro);
+                }
             }
         }
 
-        // ==============================================
-        // 🚨 CANCELAMENTO (ALTO E CLARO - SUA REGRA 🚨🔊)
-        // ==============================================
         socket.on('corrida_cancelada', (dados) => {
             if(corrida && dados.corrida_id == corrida.id) {
-                document.getElementById('somAlerta').play(); document.getElementById('somAlerta').play(); // TOCA 2X MAIS ALTO
+                document.getElementById('somAlerta').play(); document.getElementById('somAlerta').play();
                 document.getElementById('alertaCancel').style.display = 'block';
-                document.getElementById('alertaCancel').style.animation = 'tremer 0.3s infinite alternate';
-                falar("URGENTE! Corrida CANCELADA pelo passageiro!"); // 🗣️ AVISA EM VOZ TAMBÉM
+                falar("🚨 URGENTE! Corrida CANCELADA pelo passageiro!");
                 setTimeout(() => { fecharAlertaCancel(); limparTudo(); }, 8000);
             }
         });
@@ -606,18 +689,17 @@
         function fecharAlertaCancel() { document.getElementById('alertaCancel').style.display = 'none'; }
         function limparTudo() {
             corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
-            document.getElementById('cardCorrida').style.display = 'none';
-            document.getElementById('areaAcoes').style.display = 'none';
-            document.getElementById('btnFinalizar').style.display = 'none';
-            document.getElementById('btnLigar').style.display = 'none';
-            pararContador(); // SEMPRE PARA MICROFONE AO LIMPAR
+            document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none';
+            document.getElementById('btnFinalizar').style.display = 'none'; document.getElementById('btnLigar').style.display = 'none';
+            pararContador();
+            requisicaoAtiva = false;
         }
 
-        function ligarCliente() {
-            if(!corrida) return;
-            const tel = corrida.passageiro_telefone.replace(/\D/g, '');
-            window.open(`https://wa.me/55${tel}`, '_blank');
-            falar("Abrindo contato do passageiro."); // 🗣️
+        function ligarCliente() { 
+            if(!corrida) return; 
+            const tel = corrida.passageiro_telefone.replace(/\D/g, ''); 
+            window.open(`https://wa.me/55${tel}`, '_blank'); 
+            falar("📱 Abrindo WhatsApp."); 
         }
 
     </script>
