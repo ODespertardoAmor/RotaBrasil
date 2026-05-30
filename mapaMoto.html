@@ -557,55 +557,39 @@
         });
 
         async function aceitarCorrida() {
-            if(!corrida || requisicaoAtiva) return; 
-            requisicaoAtiva = true;
-            pararContador();
-            document.getElementById('btnAceitar').disabled = true;
-            document.getElementById('btnAceitar').textContent = "⏳ ACEITANDO...";
+            if(!corrida || !token || !usuario) return alert("Erro: Dados incompletos");
 
-            const resultado = await fetchComTimeout(`${API_URL}/aceitar_corrida`, {
-                method: 'POST',
-                headers: { 
-                    'Authorization': `Bearer ${token}`, 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    corrida_id: corrida.id,
-                    motorista_id: usuario.id,
-                    motorista_nome: usuario.nome,
-                    carro: usuario.carro,
-                    placa: usuario.placa
-                })
-            });
+            try {
+                const res = await fetch(`${API_URL}/aceitar_corrida/${corrida.corrida_id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ motorista_id: Number(usuario.id) }) // GARANTINDO QUE É NUMERO
+                });
 
-            if(resultado.sucesso && resultado.dados.sucesso) {
+                const retorno = await res.json();
+                if(!res.ok) throw new Error(retorno.erro || "Servidor negou");
+
+                // ✅ SUCESSO - MUDAR ESTADO
                 estado.aceito = true;
                 document.getElementById('cardCorrida').style.display = 'none';
                 document.getElementById('areaAcoes').style.display = 'grid';
-                document.getElementById('etapaTexto').className = 'etapa etapa1';
-                document.getElementById('etapaTexto').textContent = "📦 PASSO 1: Corrida Aceita! Vá até o passageiro";
-                document.getElementById('btnIrPassageiro').style.display = 'block';
-                falar("✅ CORRIDA ACEITA! Vá ao encontro do passageiro.");
-                document.getElementById('somSucesso').play();
-            } else {
-                document.getElementById('erroConexao').textContent = `❌ ${resultado.erro || "Servidor recusou"}`;
-                document.getElementById('erroConexao').style.display = 'block';
-                falar("❌ ERRO AO ACEITAR: " + (resultado.erro || "Tente novamente"));
-                document.getElementById('somErro').play();
-                setTimeout(() => {
-                    document.getElementById('erroConexao').style.display = 'none';
-                    requisicaoAtiva = false;
-                }, 3000);
+                document.getElementById('btnLigar').style.display = 'flex';
+                pararContaror();
+                // 🟡 PASSO 1
+                atualizarEtapa(1);
+                document.getElementById('btnIrPassageiro').style.display = 'flex';
+                document.getElementById('btnIniciarViagem').style.display = 'none';
+                document.getElementById('btnFinalizar').style.display = 'none';
+
+                socket.emit('corrida_aceita', {corrida_id: corrida.corrida_id, motorista: usuario});
+                console.log("Corrida aceita com sucesso!");
+
+            } catch(e) { 
+                alert("❌ Erro ao aceitar: " + e.message); 
             }
-
-            document.getElementById('btnAceitar').disabled = false;
-            document.getElementById('btnAceitar').textContent = "✅ ACEITAR";
-        }
-
-        async function recusarCorrida() {
-            pararContador();
-            document.getElementById('cardCorrida').style.display = 'none';
-            falar("Corrida recusada.");
         }
         
         function fecharAlertaCancel() {
