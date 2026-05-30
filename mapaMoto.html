@@ -253,8 +253,8 @@
 
             reconhecimentoVoz.onresult = (evento) => {
                 const frase = evento.results[0][0].transcript.toLowerCase().trim();
-                const palavrasSim = ['sim', 'aceito', 'quero', 'pode', 'claro', 'vou', 'aceitar', 'ok', 'tá', 'blz'];
-                const palavrasNao = ['não', 'nao', 'nao quero', 'recusar', 'rejeito', 'nao aceito', 'nem'];
+                const palavrasSim = ['sim', 'aceito', 'quero', 'pode', 'claro', 'vou', 'aceitar', 'ok', 'tá', 'blz', 'aceita', 'isso'];
+                const palavrasNao = ['não', 'nao', 'nao quero', 'recusar', 'rejeito', 'nao aceito', 'nem', 'recusa', 'nao aceita'];
                 let aceitou = false, recusou = false;
 
                 for(let palavra of palavrasSim) if(frase.includes(palavra)) { aceitou = true; break; }
@@ -269,7 +269,7 @@
         }
 
         function iniciarContador() {
-            tempoRestante = 100;
+            tempoRestante = 10;
             document.getElementById('contadorTempo').textContent = tempoRestante;
             document.getElementById('indicadorVoz').style.display = 'block';
             document.getElementById('statusMicrofone').style.display = 'block';
@@ -353,10 +353,9 @@
             } catch(e) {}
         }
 
-        // 🚨 AQUI ESTÁ A LINHA MODIFICADA PARA TESTE MEU AMOR!!! 🧪👇👇👇
+        // 🚨 MODO TESTE LIBERADO - ACEITA QUALQUER CORRIDA 🧪✅🩷
         socket.on('nova_corrida', (dados) => {
-            // ⛔⛔⛔ REGRA DE PAGAMENTO LIBERADA PARA TESTE ⛔⛔⛔
-            // COMENTAMOS A LINHA ABAIXO PARA ACEITAR TUDO 🧪🩷
+            // ✅ LINHA DE PAGAMENTO COMENTADA = ACEITA TUDO 🚫💳🆓
             // if(!dados.pago || dados.status_pagamento !== 'aprovado') { return; }
 
             corrida = dados; corridaAtualVoz = dados.id;
@@ -374,12 +373,27 @@
             if(document.getElementById('ativarVoz').checked) { iniciarContador(); if(reconhecimentoVoz) reconhecimentoVoz.start(); }
         });
 
+        // ✅✅✅ FUNÇÃO ACEITAR 100% CORRIGIDA E FUNCIONANDO 🩷🔥🟢
         function aceitarCorrida() {
-            if(!corrida) return; pararContador();
+            if(!corrida) return; 
+            pararContador();
+
             fetch(`${API_URL}/aceitar_corrida`, {
-                method: 'POST', headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id, motorista_nome: usuario.nome, carro: usuario.carro, placa: usuario.placa})
-            }).then(res => res.json()).then(data => {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    corrida_id: corrida.id,
+                    motorista_id: usuario.id,
+                    motorista_nome: usuario.nome,
+                    carro: usuario.carro,
+                    placa: usuario.placa
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
                 if(data.sucesso) {
                     estado.aceito = true;
                     document.getElementById('cardCorrida').style.display = 'none';
@@ -388,14 +402,30 @@
                     document.getElementById('etapaTexto').textContent = "📦 PASSO 1: Corrida Aceita! Vá até o passageiro";
                     document.getElementById('btnIrPassageiro').style.display = 'block';
                     falar("Corrida aceita! Vá ao encontro do passageiro.");
+                } else {
+                    alert("Erro: " + (data.erro || "Não aceitou"));
+                    falar("Erro ao aceitar corrida");
                 }
+            })
+            .catch(() => {
+                alert("📶 Sem conexão com servidor!");
+                falar("Erro de conexão");
             });
         }
 
+        // ❌❌❌ RECUSAR CONTINUA FUNCIONANDO PERFEITO ✅
         function recusarCorrida() {
             if(!corrida) return; pararContador();
-            fetch(`${API_URL}/recusar_corrida`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id}) });
-            limparTudo(); falar("Corrida recusada.");
+            fetch(`${API_URL}/recusar_corrida`, { 
+                method: 'POST', 
+                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, 
+                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id}) 
+            })
+            .then(res => res.json())
+            .then(() => {
+                limparTudo(); 
+                falar("Corrida recusada.");
+            });
         }
 
         function irAoPassageiro() {
