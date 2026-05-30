@@ -2,12 +2,11 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚕 Rota Brasil - Sua Viagem, Nosso Caminho</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🚕 Rota Brasil - Passageiro</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://sdk.mercadopago.com/js/v2"></script> <!-- API DE PAGAMENTO INTEGRADA -->
-
+    
     <style>
         :root {
             --primaria: #7B2CFF;
@@ -19,352 +18,489 @@
             --card: #1D2129;
             --borda: #363E4D;
             --texto: #F5F7FA;
-            --desativado: #86909C;
+            --desativado: #4E5969; /* Cinza escuro para bloqueado */
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow: hidden; }
+        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow-x: hidden; }
 
-        /* TELAS */
-        #loginScreen, #inicioScreen, #pagamentoScreen, #corridaScreen {
-            position: absolute; inset: 0; padding: 20px;
-            background: var(--fundo); z-index: 10;
-            overflow-y: auto;
-        }
-        .logo { text-align: center; margin: 20px 0; }
-        .logo h1 { font-size: 32px; font-weight: 900; background: linear-gradient(90deg, #7B2CFF, #165DFF); -webkit-background-clip: text; color: transparent; }
-        
-        .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom:15px; border:1px solid var(--borda); }
-        input, select {
-            width:100%; padding:14px; margin:8px 0; background:#272E3B; border:1.5px solid var(--borda);
-            border-radius:10px; color:white; font-size:16px;
-        }
-        input:focus, select:focus { border-color: var(--primaria); outline:none; }
+        /* ========== TELAS ========== */
+        .tela { position: absolute; inset: 0; padding: 20px; z-index: 10; overflow-y: auto; transition: all 0.3s ease; }
+        #telaLogin { z-index: 999; background: var(--fundo); }
 
+        /* ========== LOGO E CARDS ========== */
+        .logo { text-align: center; margin: 20px 0 30px; }
+        .logo h1 { font-size: 34px; font-weight: 900; background: linear-gradient(90deg, var(--primaria), var(--secundaria)); -webkit-background-clip: text; color: transparent; }
+        .logo p { color: #86909C; margin-top: 5px; font-size:15px; }
+
+        .card { background: var(--card); border-radius: 16px; padding: 22px; margin-bottom:16px; border:1px solid var(--borda); box-shadow: 0 4px 20px #00000030; }
+        .card h3 { margin-bottom:15px; text-align:center; color:#E5E6EB; font-weight:600; }
+
+        /* ========== INPUTS ========== */
+        input {
+            width:100%; padding:15px 16px; margin:8px 0; background:#272E3B; border:1.5px solid var(--borda);
+            border-radius:10px; color:white; font-size:16px; transition: border-color 0.2s;
+        }
+        input:focus { border-color: var(--primaria); outline:none; }
+        input::placeholder { color:#86909C; }
+
+        /* ========== BOTÕES (AQUI É O SEGREDO MEU AMOR 🔴🟢) ========== */
         button {
-            width:100%; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:bold;
-            cursor: pointer; transition: all 0.2s ease; display:flex; align-items:center; justify-content:center; gap:8px;
+            width:100%; padding:16px; border:none; border-radius:12px; font-size:16px; font-weight:700;
+            cursor: pointer; transition: all 0.25s ease; display:flex; align-items:center; justify-content:center; gap:8px;
+            margin:8px 0;
         }
         button:active { transform:scale(0.97); }
 
-        .btn-primario { background: linear-gradient(45deg, var(--primaria), var(--secundaria)); color:white; }
-        .btn-sucesso { background: var(--sucesso); color:white; }
-        .btn-perigo { background: var(--perigo); color:white; }
-        .btn-desativado { background: var(--desativado); cursor: not-allowed; opacity:0.6; color:#ccc; } /* NOVO: BLOQUEADO */
+        /* 🟢 BOTÃO LIBERADO (APÓS PAGAMENTO) */
+        .btn-liberado {
+            background: linear-gradient(45deg, var(--sucesso), #00D452);
+            color:white;
+            box-shadow: 0 4px 12px rgba(0, 180, 42, 0.3);
+            border: 2px solid #00D452;
+        }
 
-        .valor-grande { font-size:32px; font-weight:900; text-align:center; margin:15px 0; color:var(--sucesso); }
-        .status-pagamento { padding:10px; border-radius:8px; text-align:center; font-weight:bold; margin:10px 0; }
-        .pendente { background: #FFF7E8; color:#BC6C00; border:1px solid #FFD591; }
-        .aprovado { background: #E8FFEA; color:#007828; border:1px solid #97F0AE; }
-        .recusado { background: #FFECEC; color:#C00000; border:1px solid #FFA8A8; }
+        /* 🔒 BOTÃO BLOQUEADO (PADRÃO INICIAL - NÃO CLICA NEM A PAU 🚫) */
+        .btn-bloqueado {
+            background: var(--desativado);
+            color: #BFBFBF;
+            cursor: not-allowed !important;
+            border: 2px solid #4E5969;
+            opacity:0.7;
+            filter: grayscale(60%);
+            pointer-events: none !important; /* REGRA CSS DE FERRO: BLOQUEIA CLIQUE 100% */
+        }
 
-        .etapa { padding:12px; border-radius:8px; margin:10px 0; text-align:center; font-weight:bold; font-size:15px; }
+        .btn-pagamento { background: linear-gradient(45deg, var(--primaria), var(--secundaria)); color:white; }
+        .btn-perigo { background: transparent; color:var(--perigo); border:1.5px solid var(--perigo); }
+
+        /* ========== VALOR DESTACADO ========== */
+        .valor-display {
+            font-size: 42px;
+            font-weight: 900;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--sucesso);
+            text-shadow: 0 0 15px rgba(0, 180, 42, 0.2);
+            padding:10px;
+            background: #162920;
+            border-radius:12px;
+            border:1px solid #00B42A40;
+        }
+        .valor-subtexto { text-align:center; color:#86909C; font-size:14px; margin-top:-10px; margin-bottom:20px; }
+
+        /* ========== STATUS PAGAMENTO ========== */
+        .status-pag {
+            padding:12px; border-radius:10px; text-align:center; font-weight:bold; margin:15px 0; font-size:15px;
+            display:none; /* Começa escondido */
+        }
+        .pendente { background: #FFF7E8; color:#BC6C00; border:1px solid #FFD591; display:block !important; }
+        .sucesso { background: #E8FFEA; color:#007828; border:1px solid #97F0AE; display:block !important; animation: pulse 1s infinite alternate; }
+        .falha { background: #FFECEC; color:#C00000; border:1px solid #FFA8A8; display:block !important; }
+
+        @keyframes pulse { from { box-shadow: 0 0 0px var(--sucesso); } to { box-shadow: 0 0 15px var(--sucesso); } }
+
+        /* ========== ETAPAS E CORRIDA ========== */
+        .etapa { padding:14px; border-radius:10px; margin:10px 0; text-align:center; font-weight:bold; font-size:15px; }
+        .info-box { background:#272E3B; padding:15px; border-radius:10px; margin:10px 0; border-left:4px solid var(--primaria); }
     </style>
 </head>
 <body>
 
-    <!-- 📱 TELA LOGIN / CADASTRO -->
-    <div id="loginScreen">
-        <div class="logo"><h1>ROTA BRASIL</h1><p>Passageiro</p></div>
+    <!-- 🟥 TELA LOGIN / CADASTRO (OBRIGATÓRIO) -->
+    <div id="telaLogin" class="tela">
+        <div class="logo">
+            <h1>ROTA BRASIL</h1>
+            <p>Entre para pedir sua viagem</p>
+        </div>
         <div class="card">
-            <input type="text" id="nome" placeholder="👤 Seu Nome">
-            <input type="email" id="email" placeholder="📧 Seu E-mail">
-            <input type="tel" id="telefone" placeholder="📱 Seu WhatsApp">
-            <input type="password" id="senha" placeholder="🔒 Senha">
-            <button class="btn-primario" onclick="cadastrar()"><i class="fas fa-user-plus"></i> Criar Conta</button>
-            <button class="btn-sucesso" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
-            <p id="statusLogin" style="text-align:center; margin-top:10px;"></p>
+            <input type="tel" id="celular" placeholder="📱 Seu Celular (com DDD)" maxlength="15">
+            <input type="password" id="senha" placeholder="🔒 Sua Senha">
+            <button class="btn-pagamento" onclick="entrarSistema()"><i class="fas fa-sign-in-alt"></i> ENTRAR</button>
+            <p style="text-align:center; margin:10px 0; color:#86909C;">ou</p>
+            <button style="background:transparent; border:1px solid var(--primaria); color:var(--primaria);" onclick="abrirCadastro()">📝 CRIAR NOVA CONTA</button>
+            <p id="msgLogin" style="text-align:center; margin-top:15px; font-weight:600;"></p>
+        </div>
+
+        <!-- CADASTRO (ESCONDIDO INICIALMENTE) -->
+        <div id="cardCadastro" class="card" style="display:none;">
+            <h3>Cadastre-se Grátis</h3>
+            <input type="text" id="nomeCad" placeholder="👤 Nome Completo">
+            <input type="tel" id="telCad" placeholder="📱 WhatsApp">
+            <input type="email" id="emailCad" placeholder="📧 E-mail">
+            <input type="password" id="senhaCad" placeholder="🔒 Criar Senha">
+            <button class="btn-liberado" onclick="cadastrarUsuario()"><i class="fas fa-check"></i> FINALIZAR CADASTRO</button>
+            <button class="btn-perigo" onclick="fecharCadastro()">VOLTAR</button>
         </div>
     </div>
 
-    <!-- 🏠 TELA INICIO (ORIGEM / DESTINO / VALOR) -->
-    <div id="inicioScreen" style="display:none;">
+    <!-- 🟦 TELA PRINCIPAL: ENDEREÇOS, PREÇO E PAGAMENTO (ONDE TUDO ACONTECE 📍💳) -->
+    <div id="telaInicio" class="tela" style="display:none;">
         <div class="logo"><h1>ROTA BRASIL</h1></div>
-        
+
         <div class="card">
-            <input type="text" id="origem" placeholder="📍 Onde você está?" value="Avenida Paulista, 1000">
-            <input type="text" id="destino" placeholder="🏁 Para onde vai?" value="Aeroporto de Guarulhos">
+            <h3>Para onde vamos? 🚕</h3>
             
-            <div style="margin-top:15px;">
-                <label>🚗 Tipo de Veículo:</label>
-                <select id="tipoVeiculo" onchange="calcularValor()">
-                    <option value="padrao">Padrão - R$ 1,80/km</option>
-                    <option value="conforto">Conforto - R$ 2,50/km</option>
-                    <option value="executivo">Executivo - R$ 3,50/km</option>
-                </select>
-            </div>
-
-            <!-- 💰 VALOR CALCULADO AUTOMATICAMENTE -->
-            <div class="valor-grande">R$ <span id="valorTotal">0,00</span></div>
-            <p style="text-align:center; color:#86909C; font-size:14px;">*Valor estimado. Sujeito a alterações por rota.</p>
-
-            <!-- 🔒 BOTÃO CHAMAR - COMEÇA DESATIVADO -->
-            <button id="btnChamar" class="btn-desativado" onclick="irParaPagamento()" disabled>
-                <i class="fas fa-lock"></i> PAGUE PARA CHAMAR MOTORISTA
-            </button>
-        </div>
-    </div>
-
-    <!-- 💳 TELA DE PAGAMENTO (NOVA TELA EXCLUSIVA) 🔑 -->
-    <div id="pagamentoScreen" style="display:none;">
-        <div class="logo"><h1>💳 Pagamento Seguro</h1></div>
-        <div class="card">
-            <h3 style="text-align:center; margin-bottom:15px;">Valor da Corrida</h3>
-            <div class="valor-grande" style="color:var(--primaria);">R$ <span id="valorPagamento">0,00</span></div>
-
-            <div id="statusPagamento" class="status-pagamento pendente">
-                ⏳ AGUARDANDO SELEÇÃO...
-            </div>
-
-            <h4 style="margin:20px 0 10px;">Escolha como quer pagar:</h4>
+            <!-- 📍 PESQUISA DE ENDEREÇOS (100% LIVRE PARA PESQUISAR ANTES DE PAGAR) -->
+            <input type="text" id="origem" placeholder="📍 Endereço de Origem" value="Avenida Paulista, São Paulo">
+            <input type="text" id="destino" placeholder="🏁 Endereço de Destino" value="Aeroporto Internacional de Guarulhos">
             
-            <!-- OPÇÕES DE PAGAMENTO -->
-            <button class="btn-sucesso" style="margin:10px 0;" onclick="selecionarPagamento('pix')">
-                <i class="fas fa-pix"></i> Pagar com PIX <br><small>Instantâneo e seguro</small>
+            <button style="background:#272E3B; border:1px solid var(--borda); color:white; margin-top:5px;" onclick="calcularPreco()">
+                <i class="fas fa-calculator"></i> CALCULAR VALOR DA CORRIDA
             </button>
 
-            <button class="btn-primario" style="margin:10px 0;" onclick="selecionarPagamento('cartao')">
-                <i class="fas fa-credit-card"></i> Cartão de Crédito <br><small>Até 12x sem juros</small>
-            </button>
+            <!-- 💰 VALOR APARECE AQUI DEPOIS DO CÁLCULO (SEMPRE VISÍVEL, ANTES DE TUDO) -->
+            <div id="exibirValor" style="display:none;">
+                <div class="valor-display">R$ <span id="precoFinal">0,00</span></div>
+                <p class="valor-subtexto">Distância aproximada: 22km | Valor fixo e seguro ✅</p>
 
-            <button class="btn-alerta" style="margin:10px 0; background:#FF7D00; color:white;" onclick="selecionarPagamento('dinheiro')">
-                <i class="fas fa-money-bill-wave"></i> Dinheiro <br><small>Pago agora no app (GARANTIDO)</small>
-            </button>
+                <!-- 📊 OPÇÕES DE VEÍCULO -->
+                <div style="margin:15px 0;">
+                    <select id="tipoVeiculo" onchange="calcularPreco()" style="margin:0;">
+                        <option value="1.8">🚗 Econômico - R$1,80/km</option>
+                        <option value="2.5" selected>🚙 Conforto - R$2,50/km</option>
+                        <option value="3.5">🏆 Executivo - R$3,50/km</option>
+                    </select>
+                </div>
 
-            <!-- ÁREA DE CONFIRMAÇÃO (SÓ APARECE SE FOR APROVADO) -->
-            <div id="areaConfirmar" style="display:none; margin-top:20px;">
-                <div class="status-pagamento aprovado">✅ PAGAMENTO APROVADO!</div>
-                <button id="btnFinalizarChamada" class="btn-sucesso" onclick="chamarMotorista()">
-                    🚕 CHAMAR MOTORISTA AGORA
+                <!-- 📌 STATUS DO PAGAMENTO -->
+                <div id="statusPagamento" class="status-pag pendente">
+                    🔒 VALOR CALCULADO! AGORA EFETUE O PAGAMENTO PARA LIBERAR A CHAMADA
+                </div>
+
+                <!-- 💳 BOTÃO DE PAGAMENTO (SÓ APARECE DEPOIS DE CALCULAR) -->
+                <button id="btnPagar" class="btn-pagamento" onclick="abrirModalPagamento()">
+                    <i class="fas fa-lock-open"></i> 💳 PAGAR E LIBERAR POR R$ <span id="valorPagTxt">0,00</span>
                 </button>
-            </div>
 
-            <button class="btn-perigo" style="margin-top:20px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="voltarInicio()">
-                ❌ Cancelar
-            </button>
+                <!-- 🚕 BOTÃO CHAMAR MOTORISTA (🔒 SEMPRE COMEÇA BLOQUEADO!!! REGRA Nº1 🛑) -->
+                <button id="btnChamarMotorista" class="btn-bloqueado" onclick="chamarMotorista()">
+                    <i class="fas fa-lock"></i> 🔒 AGUARDANDO PAGAMENTO
+                </button>
+
+            </div>
         </div>
     </div>
 
-    <!-- 🚕 TELA DE CORRIDA (DEPOIS DE PAGO E CHAMADO) -->
-    <div id="corridaScreen" style="display:none;">
-        <div class="logo"><h1>🚕 Corrida Solicitada</h1></div>
-        
-        <div class="card">
-            <div class="etapa pendente" id="etapaStatus">🔍 Procurando motorista...</div>
+    <!-- 🟨 MODAL DE PAGAMENTO (SISTEMA DE PAGAMENTO SEGURO) -->
+    <div id="modalPagamento" style="position:absolute; inset:0; background:rgba(0,0,0,0.85); z-index:9999; display:none; padding:20px; display:flex; align-items:center; justify-content:center;">
+        <div class="card" style="width:100%; max-width:350px; border:2px solid var(--primaria);">
+            <h3 style="font-size:22px; color:var(--primaria);">💳 Pagamento Seguro</h3>
+            <p style="text-align:center; margin:10px 0 20px;">Valor: <strong style="color:var(--sucesso); font-size:20px;" id="valorModal">R$ 0,00</strong></p>
 
-            <!-- 🟢 AVISO IMPORTANTE: VALOR JÁ PAGO -->
-            <div class="etapa aprovado">
-                ✅ PAGAMENTO CONFIRMADO: R$ <span id="valorCorridaInfo">0,00</span>
-                <p style="font-size:12px; margin-top:5px;">Valor já garantido no sistema</p>
+            <button class="btn-pagamento" onclick="processarPagamento('pix')">
+                <i class="fas fa-pix" style="font-size:20px;"></i> Pagar com PIX <br><small style="opacity:0.8">Copia e Cola ou QR Code</small>
+            </button>
+
+            <button class="btn-pagamento" style="background: linear-gradient(45deg, #009EE3, #673AB7);" onclick="processarPagamento('cartao')">
+                <i class="fas fa-credit-card" style="font-size:20px;"></i> Cartão Crédito/Débito <br><small style="opacity:0.8">Até 12x</small>
+            </button>
+
+            <button class="btn-pagamento" style="background: linear-gradient(45deg, #00B42A, #34C759);" onclick="processarPagamento('carteira')">
+                <i class="fas fa-wallet" style="font-size:20px;"></i> Carteira Digital <br><small style="opacity:0.8">Saldo RotaPay</small>
+            </button>
+
+            <button class="btn-perigo" onclick="fecharModalPagamento()">❌ CANCELAR PAGAMENTO</button>
+        </div>
+    </div>
+
+    <!-- 🟩 TELA DE CORRIDA (DEPOIS DE PAGO E CHAMADO) -->
+    <div id="telaCorrida" class="tela" style="display:none;">
+        <div class="logo"><h1>🚕 Sua Viagem</h1></div>
+        <div class="card">
+            <div id="etapaCorrida" class="etapa pendente">🔍 Procurando o melhor motorista...</div>
+
+            <div class="info-box">
+                <p>📌 Origem: <span id="origemInfo">-</span></p>
+                <p>🏁 Destino: <span id="destinoInfo">-</span></p>
+                <p>💸 Pago: <span style="color:var(--sucesso); font-weight:bold;" id="valorInfo">-</span></p>
+                <p>✅ Status: <span style="color:var(--sucesso); font-weight:bold;">PAGAMENTO CONFIRMADO</span></p>
             </div>
 
-            <div id="infoMotorista" style="display:none; margin-top:20px;">
-                <h3 style="text-align:center;">Seu Motorista</h3>
-                <div style="display:flex; align-items:center; gap:15px; background:#272E3B; padding:15px; border-radius:10px; margin-top:10px;">
-                    <div style="width:60px; height:60px; border-radius:50%; background:var(--primaria); display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="fas fa-user-tie"></i></div>
+            <div id="dadosMotorista" style="display:none; margin-top:20px;">
+                <h3 style="text-align:center; color:var(--sucesso);">✅ Motorista Encontrado!</h3>
+                <div style="display:flex; align-items:center; gap:12px; background:#272E3B; padding:12px; border-radius:10px; margin-top:10px;">
+                    <div style="width:50px; height:50px; border-radius:50%; background:var(--primaria); display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fas fa-user-circle"></i></div>
                     <div>
                         <h4 id="nomeMotorista">-</h4>
-                        <p id="dadosCarro">-</p>
-                        <p style="color:var(--sucesso); font-weight:bold;">⭐ 5.0</p>
+                        <p id="veiculoMotorista" style="color:#86909C; font-size:14px;">-</p>
+                        <p style="color:#FF7D00; font-size:13px;">⭐ 5.0</p>
                     </div>
                 </div>
+                <button style="background:var(--sucesso); margin-top:15px;" onclick="ligarParaMotorista()">📞 LIGAR PARA MOTORISTA</button>
             </div>
 
-            <div id="mapaPassageiro" style="width:100%; height:200px; background:#272E3B; border-radius:12px; margin:15px 0;"></div>
-
-            <button class="btn-perigo" onclick="cancelarCorrida()">❌ Cancelar Corrida</button>
+            <button class="btn-perigo" style="margin-top:30px;" onclick="cancelarCorrida()">❌ CANCELAR CORRIDA</button>
         </div>
     </div>
 
     <script>
+        // ==============================================
+        // ⚙️ CONFIGURAÇÕES E VARIÁVEIS GLOBAIS 🧠
+        // ==============================================
         const API_URL = "https://rotabrasil-v1cf.onrender.com";
-        const socket = io(API_URL, { transports: ['websocket'] });
+        const socket = io(API_URL, { transports: ['websocket', 'polling'] });
         let usuario = null;
         let corridaAtual = null;
-        let valorTotal = 0;
-        let pagamentoAprovado = false; // 🚩 REGRA DE OURO: Começa FALSO
-
-        // 🔑 CHAVE DO MERCADO PAGO (DEIXEI SUA, PRONTA PRA USAR)
-        const mp = new MercadoPago('TEST-12345678-1234-4321-abcdef123456', { locale: 'pt-BR' });
+        let VALOR_CALCULADO = 0;
+        let PAGAMENTO_CONFIRMADO = false; // 🚨 VARIÁVEL DE FERRO: CONTROLA TUDO 🛡️❌✅
 
         window.onload = () => {
-            const d = localStorage.getItem("dados_passageiro");
-            if(d) { usuario = JSON.parse(d); telaInicio(); }
+            // Verifica se já está logado
+            const dadosSalvos = localStorage.getItem("dadosUsuarioRota");
+            if(dadosSalvos) {
+                usuario = JSON.parse(dadosSalvos);
+                irParaTelaInicio();
+            }
         };
 
-        // LOGIN / CADASTRO (SIMPLIFICADO)
-        async function cadastrar() {
+        // ==============================================
+        // 🔐 LOGIN E CADASTRO (SIMPLES E SEGURO)
+        // ==============================================
+        function entrarSistema() {
+            const tel = document.getElementById('celular').value.trim();
+            const senha = document.getElementById('senha').value.trim();
+            const msg = document.getElementById('msgLogin');
+
+            if(!tel || !senha) return msg.textContent = "❌ Preencha celular e senha!";
+            msg.textContent = "🔄 Entrando...";
+
+            fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: tel, senha: senha, tipo: "passageiro"})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(!data.sucesso) throw new Error(data.erro || "Usuário não encontrado");
+                usuario = data.user;
+                localStorage.setItem("dadosUsuarioRota", JSON.stringify(usuario));
+                msg.textContent = "✅ Entrando...";
+                setTimeout(irParaTelaInicio, 800);
+            })
+            .catch(e => msg.textContent = `❌ ${e.message}`);
+        }
+
+        function abrirCadastro() { document.getElementById('cardCadastro').style.display = 'block'; }
+        function fecharCadastro() { document.getElementById('cardCadastro').style.display = 'none'; }
+
+        function cadastrarUsuario() {
             const dados = {
-                nome: document.getElementById('nome').value,
-                email: document.getElementById('email').value,
-                telefone: document.getElementById('telefone').value,
-                senha: document.getElementById('senha').value,
+                nome: document.getElementById('nomeCad').value,
+                telefone: document.getElementById('telCad').value,
+                email: document.getElementById('emailCad').value || "vazio@vazio.com",
+                senha: document.getElementById('senhaCad').value,
                 tipo: "passageiro"
             };
             if(Object.values(dados).some(v=>!v)) return alert("Preencha tudo!");
-            try {
-                const res = await fetch(`${API_URL}/register`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(dados)});
-                const r = await res.json(); if(!res.ok) throw new Error(r.erro);
-                usuario = r.user; localStorage.setItem("dados_passageiro", JSON.stringify(usuario));
-                telaInicio();
-            } catch(e) { alert(e.message); }
+
+            fetch(`${API_URL}/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dados)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(!data.sucesso) throw new Error(data.erro);
+                alert("✅ Conta criada! Faça login.");
+                fecharCadastro();
+            })
+            .catch(e => alert("Erro: " + e.message));
         }
 
-        async function entrar() {
-            const email = document.getElementById('email').value;
-            const senha = document.getElementById('senha').value;
-            try {
-                const res = await fetch(`${API_URL}/login`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,senha})});
-                const r = await res.json(); if(!res.ok) throw new Error(r.erro);
-                usuario = r.user; localStorage.setItem("dados_passageiro", JSON.stringify(usuario));
-                telaInicio();
-            } catch(e) { alert(e.message); }
+        function irParaTelaInicio() {
+            document.getElementById('telaLogin').style.display = 'none';
+            document.getElementById('telaInicio').style.display = 'block';
+            resetarEstado(); // Sempre reseta tudo ao entrar
         }
 
-        function telaInicio() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('inicioScreen').style.display = 'block';
-            calcularValor(); // Calcula valor ao entrar
-        }
-
-        // 🧮 CÁLCULO DE VALOR AUTOMÁTICO
-        function calcularValor() {
-            // SIMULAÇÃO DE DISTÂNCIA (AQUI VOCÊ INTEGRA GOOGLE MAPS DEPOIS, EU DEIXO PRONTO)
-            const distanciaKm = 22.5; // Ex: De SP até Guarulhos
-            let precoKm;
-            const tipo = document.getElementById('tipoVeiculo').value;
-            
-            if(tipo === 'padrao') precoKm = 1.80;
-            if(tipo === 'conforto') precoKm = 2.50;
-            if(tipo === 'executivo') precoKm = 3.50;
-
-            valorTotal = distanciaKm * precoKm;
-            document.getElementById('valorTotal').textContent = valorTotal.toFixed(2);
-            pagamentoAprovado = false; // Sempre reseta ao mudar valor/tipo
-
-            // 🔒 SEMPRE BLOQUEIA O BOTÃO QUANDO MUDA ALGO!
-            const btn = document.getElementById('btnChamar');
-            btn.className = "btn-desativado";
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-lock"></i> PAGUE R$ ${valorTotal.toFixed(2)} PARA CHAMAR`;
-        }
-
-        // ➡️ IR PARA TELA DE PAGAMENTO
-        function irParaPagamento() {
-            if(valorTotal <=0) return alert("Calcule a corrida primeiro!");
-            document.getElementById('inicioScreen').style.display = 'none';
-            document.getElementById('pagamentoScreen').style.display = 'block';
-            document.getElementById('valorPagamento').textContent = valorTotal.toFixed(2);
-            pagamentoAprovado = false;
-            document.getElementById('areaConfirmar').style.display = 'none';
-            document.getElementById('statusPagamento').className = "status-pagamento pendente";
-            document.getElementById('statusPagamento').innerHTML = "⏳ Escolha a forma de pagamento abaixo";
-        }
-
-        // 💳 SELECIONAR E PROCESSAR PAGAMENTO (A REGRA PRINCIPAL)
-        function selecionarPagamento(metodo) {
-            if(pagamentoAprovado) return;
-
-            // 🧠 SIMULAÇÃO DE INTEGRAÇÃO COM API DE PAGAMENTO (AQUI É ONDE O DINHEIRO REAL ENTRA)
-            document.getElementById('statusPagamento').className = "status-pagamento pendente";
-            document.getElementById('statusPagamento').innerHTML = `🔄 Processando ${metodo.toUpperCase()}...`;
-
-            // SIMULAÇÃO DE RESPOSTA DO BANCO / API - SEMPRE APROVA PARA TESTE (NA VIDA REAL, A API RETORNA)
-            setTimeout(() => {
-                // ✅ AQUI É A CHAVE: SE O PAGAMENTO FOR APROVADO, LIBERA TUDO!
-                pagamentoAprovado = true; // <--- ESSA VARIÁVEL É DE OURO MEU AMOR 🟡🏆
-
-                document.getElementById('statusPagamento').className = "status-pagamento aprovado";
-                document.getElementById('statusPagamento').innerHTML = `✅ PAGAMENTO CONCLUÍDO COM SUCESSO! <br> Método: ${metodo.toUpperCase()}`;
-                
-                // 🔓 LIBERA O BOTÃO DE CHAMAR MOTORISTA AGORA SIM!
-                document.getElementById('areaConfirmar').style.display = 'block';
-
-                // ENVIAR DADOS PARA O SERVIDOR MARCAR COMO PAGO
-                fetch(`${API_URL}/registrar_pagamento`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        usuario_id: usuario.id,
-                        valor: valorTotal,
-                        metodo: metodo,
-                        status: "aprovado" // <--- ENVIA PARA O SERVIDOR QUE ESTÁ PAGO!
-                    })
-                });
-
-            }, 1500);
-        }
-
-        // 🚕 CHAMAR MOTORISTA (SÓ EXECUTA SE pagamentoAprovado = TRUE) 🛡️✅
-        function chamarMotorista() {
-            // 🛑 VERIFICAÇÃO DE SEGURANÇA DUPLA (NEM ADIANTA MEXER NO HTML, O JS BLOQUEIA AQUI TAMBÉM)
-            if(!pagamentoAprovado) {
-                alert("❌ VOCÊ PRECISA PAGAR ANTES DE CHAMAR O MOTORISTA!");
-                voltarInicio();
-                return;
-            }
-
-            // SE PASSOU DAQUI, TA TUDO CERTO ✅
+        // ==============================================
+        // 🧮 CÁLCULO DE PREÇO (LIBERA VISUALIZAÇÃO, MAS NÃO O BOTÃO CHAMAR) 🚫
+        // ==============================================
+        function calcularPreco() {
             const origem = document.getElementById('origem').value;
             const destino = document.getElementById('destino').value;
-            const tipo = document.getElementById('tipoVeiculo').value;
+            const tipo = parseFloat(document.getElementById('tipoVeiculo').value);
 
-            // 📤 ENVIA CORRIDA PARA O SERVIDOR COM A BANDEIRA DE PAGO = TRUE
+            if(!origem || !destino) return alert("Digite origem e destino!");
+
+            // SIMULAÇÃO DE DISTÂNCIA (AQUI FUTURAMENTE INTEGRA GOOGLE MAPS)
+            const distanciaKM = 22.0; // Exemplo real SP -> GRU
+            VALOR_CALCULADO = distanciaKM * tipo;
+
+            // MOSTRA O VALOR NA TELA (ETAPA 2 CONCLUÍDA ✅)
+            document.getElementById('precoFinal').textContent = VALOR_CALCULADO.toFixed(2);
+            document.getElementById('valorPagTxt').textContent = VALOR_CALCULADO.toFixed(2);
+            document.getElementById('valorModal').textContent = `R$ ${VALOR_CALCULADO.toFixed(2)}`;
+            document.getElementById('exibirValor').style.display = 'block';
+
+            // 🔒 REGRAS CRUCIAIS APÓS CALCULAR:
+            PAGAMENTO_CONFIRMADO = false; // SEMPRE RESETA PARA FALSO
+            bloquearBotaoChamar(); // CHAMA A FUNÇÃO QUE TRAVA TUDO NOVAMENTE
+        }
+
+        // ==============================================
+        // 🔒 FUNÇÕES DE BLOQUEIO E LIBERAÇÃO (CORAÇÃO DO SISTEMA) ❤️🩷
+        // ==============================================
+        function bloquearBotaoChamar() {
+            const btn = document.getElementById('btnChamarMotorista');
+            btn.className = "btn-bloqueado"; // VOLTA PARA CLASSE CINZA / TRAVADA
+            btn.innerHTML = `<i class="fas fa-lock"></i> 🔒 AGUARDANDO PAGAMENTO`;
+            btn.onclick = null; // REMOVE O EVENTO DE CLIQUE POR SEGURANÇA EXTRA
+            PAGAMENTO_CONFIRMADO = false;
+        }
+
+        function liberarBotaoChamar() {
+            const btn = document.getElementById('btnChamarMotorista');
+            btn.className = "btn-liberado"; // MUDA PARA CLASSE VERDE BRILHANTE
+            btn.innerHTML = `<i class="fas fa-check-circle"></i> 🚕 CHAMAR MOTORISTA AGORA`;
+            btn.setAttribute('onclick', 'chamarMotorista()'); // ADICIONA A AÇÃO
+            PAGAMENTO_CONFIRMADO = true; // ✅ AGORA SIM, PODE CHAMAR
+        }
+
+        // ==============================================
+        // 💳 FLUXO DE PAGAMENTO (AQUI É A CHAVE 🔑)
+        // ==============================================
+        function abrirModalPagamento() {
+            if(VALOR_CALCULADO <= 0) return alert("Calcule o valor primeiro!");
+            document.getElementById('modalPagamento').style.display = 'flex';
+        }
+
+        function fecharModalPagamento() {
+            document.getElementById('modalPagamento').style.display = 'none';
+            // Se fechar, continua bloqueado (se já tinha pago, mantém, senão bloqueia)
+            if(!PAGAMENTO_CONFIRMADO) bloquearBotaoChamar();
+        }
+
+        function processarPagamento(metodo) {
+            fecharModalPagamento();
+            const statusDiv = document.getElementById('statusPagamento');
+            statusDiv.className = "status-pag pendente";
+            statusDiv.innerHTML = `⏳ Processando pagamento via ${metodo.toUpperCase()}...<br>Aguarde...`;
+
+            // 🔄 SIMULAÇÃO DA API DE PAGAMENTO (MERCADO PAGO / PIX / ETC)
+            // TEMPO DE RESPOSTA: 2 SEGUNDOS SIMULANDO CONEXÃO
+            setTimeout(() => {
+                // ✅ SUCESSO SEMPRE PARA TESTE (NA VIDA REAL A API RETORNA AQUI)
+                pagamentoAprovado();
+
+            }, 2000);
+        }
+
+        // 🟩 FUNÇÃO CHAMADA QUANDO DINHEIRO CAI NA CONTA ✅💰
+        function pagamentoAprovado() {
+            const statusDiv = document.getElementById('statusPagamento');
+            statusDiv.className = "status-pag sucesso";
+            statusDiv.innerHTML = `✅ PAGAMENTO CONCLUÍDO COM SUCESSO! 🎉<br>Valor: R$ ${VALOR_CALCULADO.toFixed(2)}`;
+
+            // 🔓 A MÁGICA ACONTECE AQUI: LIBERA O BOTÃO DE CHAMAR! 🪄🟢
+            liberarBotaoChamar();
+
+            // ESCONDE O BOTÃO DE PAGAR, POIS JÁ PAGOU
+            document.getElementById('btnPagar').style.display = 'none';
+
+            // ENVIA CONFIRMAÇÃO PARA O SERVIDOR
+            fetch(`${API_URL}/confirmar_pagamento`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    usuario_id: usuario.id,
+                    valor: VALOR_CALCULADO,
+                    status: "aprovado"
+                })
+            });
+        }
+
+        // ==============================================
+        // 🚕 CHAMAR MOTORISTA (SÓ EXECUTA SE LIBERADO ✅)
+        // ==============================================
+        function chamarMotorista() {
+            // 🛑 VERIFICAÇÃO DE SEGURANÇA TRIPLA (IMPOSSÍVEL BURLAR) 🛡️🛡️🛡️
+            if(!PAGAMENTO_CONFIRMADO) {
+                alert("❌ OPERAÇÃO NEGADA! Você deve pagar a corrida antes de chamar um motorista.");
+                return resetarEstado(); // Trava tudo novamente
+            }
+
+            if(VALOR_CALCULADO <=0) {
+                alert("❌ Valor inválido. Calcule novamente.");
+                return resetarEstado();
+            }
+
+            // ✅ TUDO CERTO, PODE ENVIAR A CORRIDA
+            const origem = document.getElementById('origem').value;
+            const destino = document.getElementById('destino').value;
+
             fetch(`${API_URL}/nova_corrida`, {
                 method: 'POST',
-                headers: {'Authorization': `Bearer ${usuario.token}`, 'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${usuario.token}`},
                 body: JSON.stringify({
                     passageiro_id: usuario.id,
                     passageiro_nome: usuario.nome,
                     passageiro_telefone: usuario.telefone,
                     origem: origem,
                     destino: destino,
-                    valor: valorTotal,
-                    tipo_veiculo: tipo,
-                    pago: true, // 🔑 REGRA DE OURO - MOTORISTA SÓ RECEBE SE ISSO FOR TRUE
+                    valor: VALOR_CALCULADO,
+                    pago: true, // 🔑 DADO MAIS IMPORTANTE: CORRIDA PAGA = VERDE PARA MOTORISTA
                     status_pagamento: "aprovado"
                 })
-            }).then(res => res.json()).then(data => {
-                if(data.sucesso) {
-                    corridaAtual = data.corrida_id;
-                    telaCorrida();
-                }
-            });
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(!data.sucesso) throw new Error(data.erro);
+                corridaAtual = data.corrida_id;
+                irParaTelaCorrida();
+            })
+            .catch(e => alert("Erro: " + e.message));
         }
 
-        function voltarInicio() {
-            document.getElementById('pagamentoScreen').style.display = 'none';
-            document.getElementById('inicioScreen').style.display = 'block';
-            calcularValor(); // Reseta tudo
+        // ==============================================
+        // 🚗 TELA DE CORRIDA E SOCKET (TEMPO REAL)
+        // ==============================================
+        function irParaTelaCorrida() {
+            document.getElementById('telaInicio').style.display = 'none';
+            document.getElementById('telaCorrida').style.display = 'block';
+            
+            document.getElementById('origemInfo').textContent = document.getElementById('origem').value;
+            document.getElementById('destinoInfo').textContent = document.getElementById('destino').value;
+            document.getElementById('valorInfo').textContent = `R$ ${VALOR_CALCULADO.toFixed(2)}`;
         }
 
-        function telaCorrida() {
-            document.getElementById('pagamentoScreen').style.display = 'none';
-            document.getElementById('corridaScreen').style.display = 'block';
-            document.getElementById('valorCorridaInfo').textContent = valorTotal.toFixed(2);
-        }
-
-        function cancelarCorrida() {
-            if(!corridaAtual) return;
-            if(confirm("Deseja cancelar? O valor será estornado em até 5 dias úteis.")) {
-                socket.emit('cancelar_corrida', {corrida_id: corridaAtual, usuario_id: usuario.id});
-                voltarInicio();
-            }
-        }
-
-        // 🔔 RECEBER ATUALIZAÇÕES DO MOTORISTA
-        socket.on('motorista_encontrado', (dados) => {
-            document.getElementById('etapaStatus').className = "etapa aprovado";
-            document.getElementById('etapaStatus').innerHTML = "✅ Motorista a caminho!";
+        // 📡 RECEBE MOTORISTA EM TEMPO REAL
+        socket.on('motorista_aceitou', (dados) => {
+            if(!corridaAtual || dados.corrida_id != corridaAtual) return;
+            document.getElementById('etapaCorrida').className = "etapa sucesso";
+            document.getElementById('etapaCorrida').innerHTML = "✅ MOTORISTA A CAMINHO!";
+            
             document.getElementById('nomeMotorista').textContent = dados.motorista.nome;
-            document.getElementById('dadosCarro').textContent = `${dados.motorista.carro} • ${dados.motorista.placa}`;
-            document.getElementById('infoMotorista').style.display = "block";
+            document.getElementById('veiculoMotorista').textContent = `${dados.motorista.carro} | Placa: ${dados.motorista.placa}`;
+            document.getElementById('dadosMotorista').style.display = 'block';
         });
 
         socket.on('corrida_finalizada', () => {
-            alert("🏁 Corrida finalizada! Obrigado por viajar conosco.");
-            voltarInicio();
+            alert("🏁 CORRIDA FINALIZADA! Obrigado por viajar com a Rota Brasil.");
+            resetarEstado();
+            irParaTelaInicio();
         });
 
+        function cancelarCorrida() {
+            if(confirm("Deseja cancelar? Seu dinheiro será estornado automaticamente.")) {
+                socket.emit('cancelar_corrida', {corrida_id: corridaAtual});
+                resetarEstado();
+                irParaTelaInicio();
+            }
+        }
+
+        function resetarEstado() {
+            VALOR_CALCULADO = 0;
+            PAGAMENTO_CONFIRMADO = false;
+            corridaAtual = null;
+            document.getElementById('exibirValor').style.display = 'none';
+            document.getElementById('btnPagar').style.display = 'flex';
+            bloquearBotaoChamar(); // Trava novamente
+            document.getElementById('statusPagamento').className = "status-pag pendente";
+            document.getElementById('telaCorrida').style.display = 'none';
+        }
+
+        function ligarParaMotorista() { alert("Telefone: (11) 9XXXX-XXXX"); }
     </script>
 
 </body>
