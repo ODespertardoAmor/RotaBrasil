@@ -521,42 +521,24 @@ def minhas_avaliacoes():
     conn.close()
 
     return jsonify(avaliacoes)
- async function finalizarCorrida() {
+ 
+@app.route("/finalizar_corrida/<int:corrida_id>", methods=["POST"])
+@jwt_required()
+def finalizar_corrida(corrida_id):
 
-    if(!corridaAtual) return;
+    corrida = Corrida.query.get(corrida_id)
 
-    try{
+    if not corrida:
+        return jsonify({"erro":"Corrida não encontrada"}),404
 
-        await fetch(
-            API + "/finalizar_corrida/" +
-            corridaAtual.corrida_id,
-            {
-                method:"POST",
-                headers:{
-                    "Authorization":"Bearer "+token
-                }
-            }
-        );
+    corrida.status = "finalizada"
 
-        enviarAvaliacao(
-            5,
-            "Passageiro excelente"
-        );
+    db.session.commit()
 
-        falarMensagem(
-            "Corrida finalizada com sucesso!"
-        );
-
-        limparTelaCorrida();
-
-    }catch(err){
-
-        console.log(err);
-
-    }
-
-}   
-
+    return jsonify({
+        "sucesso": True,
+        "mensagem": "Corrida finalizada"
+    })
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
