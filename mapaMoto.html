@@ -225,11 +225,18 @@
             <i class="fas fa-door-open"></i> SAIR
         </button>
     </div>
+ 
+    <audio id="somAlerta" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3">
+</audio>
 
-    <audio id="somAlerta" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3">
-    <audio id="somSucesso" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3">
-    <audio id="somErro" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-hard-error-tone-2873.mp3">
+<audio id="somSucesso" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3">
+</audio>
 
+<audio id="somErro" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-hard-error-tone-2873.mp3">
+</audio>
     <script>
         const API_URL = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API_URL, { 
