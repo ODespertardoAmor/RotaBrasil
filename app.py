@@ -521,6 +521,41 @@ def minhas_avaliacoes():
     conn.close()
 
     return jsonify(avaliacoes)
+ async function finalizarCorrida() {
+
+    if(!corridaAtual) return;
+
+    try{
+
+        await fetch(
+            API + "/finalizar_corrida/" +
+            corridaAtual.corrida_id,
+            {
+                method:"POST",
+                headers:{
+                    "Authorization":"Bearer "+token
+                }
+            }
+        );
+
+        enviarAvaliacao(
+            5,
+            "Passageiro excelente"
+        );
+
+        falarMensagem(
+            "Corrida finalizada com sucesso!"
+        );
+
+        limparTelaCorrida();
+
+    }catch(err){
+
+        console.log(err);
+
+    }
+
+}   
 
 if __name__ == "__main__":
     with app.app_context():
