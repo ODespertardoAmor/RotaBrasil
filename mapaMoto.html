@@ -146,7 +146,6 @@
             <button class="btn-success" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
             <div id="statusLogin" class="status-text"></div>
 
-            <!-- ✅ BOTÃO DE PERMISSÃO CLARO PRA VOCÊ CLICAR 🖱️🎤 -->
             <button id="btnPermitirMicrofone" class="btn-purple" onclick="pedirPermissaoMicrofone()" style="margin:12px 0;">
                 <i class="fas fa-microphone-alt"></i> 🎤 PERMITIR MICROFONE (CLIQUE AQUI!)
             </button>
@@ -161,7 +160,7 @@
     </div>
 
     <div id="mapa">
-        <iframe id="mapaFrame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.0!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjPCsDMzJzUyLjIiUyA0NsKwMzknMDguMyJX!5e0!3m2!1spt-BR!2sbr!4v123456789"></iframe>
+        <iframe id="mapaFrame" src="about:blank"></iframe>
     </div>
 
     <div class="header" id="header" style="display:none;">
@@ -227,16 +226,17 @@
     </div>
  
     <audio id="somAlerta" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3">
-</audio>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3">
+    </audio>
 
-<audio id="somSucesso" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3">
-</audio>
+    <audio id="somSucesso" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3">
+    </audio>
 
-<audio id="somErro" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-hard-error-tone-2873.mp3">
-</audio>
+    <audio id="somErro" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-hard-error-tone-2873.mp3">
+    </audio>
+
     <script>
         const API_URL = "https://rotabrasil-v1cf.onrender.com";
         const socket = io(API_URL, { 
@@ -256,7 +256,7 @@
         let tempoRestante = 10;
         let corridaAtualVoz = null;
         let requisicaoAtiva = false;
-        let permissioneMicrofoneOK = false; // ✅ SABE SE JÁ TEM PERMISSÃO 🎤✅
+        let permissioneMicrofoneOK = false;
 
         const sintetizador = window.speechSynthesis;
         function falar(texto) {
@@ -267,31 +267,25 @@
             sintetizador.speak(mensagem);
         }
 
-        // ✅ FUNÇÃO NOVA: PEDE PERMISSÃO DO JEITO CERTO (FAZ O POP-UP APARECER!!!) 🟡📢🎤
         async function pedirPermissaoMicrofone() {
             try {
-                // 🔑 ESSA LINHA É O SEGREDO: OBRIGA O NAVEGADOR A MOSTRAR O POP-UP 🛑➡️🟡
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: true, 
                     video: false 
                 });
                 
-                // ✅ SE CHEGOU AQUI = PERMITIU TUDO 🎉✅🟢
                 permissioneMicrofoneOK = true;
                 document.getElementById('btnPermitirMicrofone').style.background = 'var(--sucesso)';
                 document.getElementById('btnPermitirMicrofone').innerHTML = '<i class="fas fa-check"></i> ✅ MICROFONE PERMITIDO!';
                 document.getElementById('statusLogin').textContent = "🎤 Microfone LIBERADO com sucesso!";
                 document.getElementById('statusLogin').className = "status-text ok";
                 
-                // 🔒 PARA O SOM DO MICROFONE (NÃO DEIXA GRAVAR, SÓ OUVIR COMANDOS) 🔇✅
                 stream.getTracks().forEach(track => track.stop());
 
-                // 🎤 AGORA SIM, PODE INICIAR RECONHECIMENTO DE VOZ COM SEGURANÇA 🛡️🗣️
                 iniciarReconhecimento();
                 falar("Microfone permitido! Agora você pode aceitar e recusar corridas por voz.");
 
             } catch (erro) {
-                // ❌ SE NEGOU OU BLOQUEOU ❌🚫
                 permissioneMicrofoneOK = false;
                 document.getElementById('btnPermitirMicrofone').style.background = 'var(--perigo)';
                 document.getElementById('btnPermitirMicrofone').innerHTML = '<i class="fas fa-times"></i> ❌ BLOQUEADO! CLIQUE NOVAMENTE';
@@ -302,7 +296,6 @@
             }
         }
 
-        // ✅ FETCH COM TIMEOUT CORRIGIDO 🛡️⚡
         async function fetchComTimeout(url, opcoes, tempoLimite = 8000) {
             const controlador = new AbortController();
             const idTimeout = setTimeout(() => controlador.abort(), tempoLimite);
@@ -336,7 +329,6 @@
             }
         }
 
-        // 🎤 RECONHECIMENTO DE VOZ - 100% SEGURO SÓ DEPOIS DA PERMISSÃO 🩷✅
         function iniciarReconhecimento() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert("❌ SEU NAVEGADOR NÃO SUPORTA COMANDO DE VOZ! Use Chrome ou Edge.");
@@ -396,18 +388,16 @@
             };
         }
 
-        // ⏱️ CONTADOR - SÓ LIGA MICRO SE TIVER PERMISSÃO ✅🎤
         function iniciarContador() {
             if(!document.getElementById('ativarVoz').checked) return;
 
-            tempoRestante = 100;
+            tempoRestante = 10;
             document.getElementById('contadorTempo').textContent = tempoRestante;
             document.getElementById('indicadorVoz').style.display = 'block';
             document.getElementById('statusMicrofone').style.display = 'block';
             document.getElementById('statusMotorista').className = 'status-bolinha ouvindo';
             document.getElementById('erroConexao').style.display = 'none';
 
-            // ✅ SÓ TENTA LIGAR SE JÁ TEM PERMISSÃO CONFIRMADA 🛡️🩷
             if(permissioneMicrofoneOK && reconhecimentoVoz) {
                 try {
                     reconhecimentoVoz.stop();
@@ -417,7 +407,6 @@
                     console.log("⚠️ Erro ao iniciar voz:", e);
                 }
             } else {
-                // ⚠️ SE NÃO TEM PERMISSÃO, AVISA NA TELA 🚨📢
                 document.getElementById('avisoPermissao').style.display = 'block';
                 setTimeout(()=> document.getElementById('avisoPermissao').style.display='none', 3500);
             }
@@ -497,7 +486,8 @@
         }
 
         function telaPrincipal() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('header').style.display = 'flex'; document.getElementById('barra').style.display = 'block'; }
-        function sair() { pararContador(); localStorage.clear(); limparTudo(); window.location.reload(); }
+        function sair() { pararContador(); localStorage.clear(); window.location.reload(); }
+        
         window.onload = () => { 
             const t = localStorage.getItem("token_motorista"); 
             const d = localStorage.getItem("dados_motorista"); 
@@ -543,7 +533,6 @@
             }
         }
 
-        // 🚨 NOVA CORRIDA: AVISA SE NÃO TEM PERMISSÃO 🎤⚠️
         socket.on('nova_corrida', (dados) => {
             corrida = dados; 
             corridaAtualVoz = dados.id;
@@ -567,7 +556,6 @@
             }
         });
 
-        // ✅ ACEITAR 100% FUNCIONAL SEM ERRO 🟢🚫📶
         async function aceitarCorrida() {
             if(!corrida || requisicaoAtiva) return; 
             requisicaoAtiva = true;
@@ -614,102 +602,15 @@
             document.getElementById('btnAceitar').textContent = "✅ ACEITAR";
         }
 
-        // ❌ RECUSAR CORRIGIDO ✅
         async function recusarCorrida() {
-            if(!corrida || requisicaoAtiva) return;
-            requisicaoAtiva = true;
             pararContador();
-            document.getElementById('btnRecusar').disabled = true;
-            document.getElementById('btnRecusar').textContent = "⏳ RECUSANDO...";
-
-            const resultado = await fetchComTimeout(`${API_URL}/recusar_corrida`, { 
-                method: 'POST', 
-                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, 
-                body: JSON.stringify({corrida_id: corrida.id, motorista_id: usuario.id}) 
-            });
-
-            if(resultado.sucesso) {
-                limparTudo(); 
-                falar("❌ Corrida RECUSADA.");
-                document.getElementById('somErro').play();
-            } else {
-                document.getElementById('erroConexao').textContent = `❌ ${resultado.erro}`;
-                document.getElementById('erroConexao').style.display = 'block';
-                setTimeout(() => document.getElementById('erroConexao').style.display = 'none', 3000);
-            }
-
-            document.getElementById('btnRecusar').disabled = false;
-            document.getElementById('btnRecusar').textContent = "❌ RECUSAR";
-            requisicaoAtiva = false;
+            document.getElementById('cardCorrida').style.display = 'none';
+            falar("Corrida recusada.");
         }
-
-        function irAoPassageiro() {
-            estado.pegouPassageiro = true;
-            document.getElementById('etapaTexto').className = 'etapa etapa2';
-            document.getElementById('etapaTexto').textContent = "📍 PASSO 2: Você chegou ao passageiro! Inicie a viagem";
-            document.getElementById('btnIrPassageiro').style.display = 'none';
-            document.getElementById('btnIniciarViagem').style.display = 'block';
-            document.getElementById('btnLigar').style.display = 'block';
-            falar("📍 Você chegou ao passageiro. Inicie a viagem.");
+        
+        function fecharAlertaCancel() {
+            document.getElementById('alertaCancel').style.display = 'none';
         }
-
-        function iniciarViagem() {
-            estado.viagemIniciada = true;
-            document.getElementById('etapaTexto').className = 'etapa etapa3';
-            document.getElementById('etapaTexto').textContent = "🟢 VIAGEM INICIADA! Você pode FINALIZAR a qualquer momento 🟢✅";
-            document.getElementById('btnIniciarViagem').style.display = 'none';
-            document.getElementById('btnFinalizar').style.display = 'block';
-            falar("🟢 Viagem iniciada. Finalize quando quiser.");
-        }
-
-        async function finalizarAgora() {
-            if(!estado.viagemIniciada) { 
-                alert("❌ Inicie a viagem primeiro!"); 
-                falar("❌ Erro, inicie a viagem primeiro."); 
-                return; 
-            }
-            if(confirm("🏁 CONFIRMAR FINALIZAÇÃO?\nValor: R$ " + corrida.valor.toFixed(2))) {
-                const res = await fetchComTimeout(`${API_URL}/finalizar_corrida`, { 
-                    method: 'POST', 
-                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({corrida_id: corrida.id, valor: corrida.valor}) 
-                });
-                
-                if(res.sucesso) {
-                    falar("✅ Corrida FINALIZADA! Aguardando próxima."); 
-                    limparTudo();
-                } else {
-                    alert("❌ " + res.erro);
-                }
-            }
-        }
-
-        socket.on('corrida_cancelada', (dados) => {
-            if(corrida && dados.corrida_id == corrida.id) {
-                document.getElementById('somAlerta').play(); document.getElementById('somAlerta').play();
-                document.getElementById('alertaCancel').style.display = 'block';
-                falar("🚨 URGENTE! Corrida CANCELADA pelo passageiro!");
-                setTimeout(() => { fecharAlertaCancel(); limparTudo(); }, 8000);
-            }
-        });
-
-        function fecharAlertaCancel() { document.getElementById('alertaCancel').style.display = 'none'; }
-        function limparTudo() {
-            corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
-            document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none';
-            document.getElementById('btnFinalizar').style.display = 'none'; document.getElementById('btnLigar').style.display = 'none';
-            pararContador();
-            requisicaoAtiva = false;
-        }
-
-        function ligarCliente() { 
-            if(!corrida) return; 
-            const tel = corrida.passageiro_telefone.replace(/\D/g, ''); 
-            window.open(`https://wa.me/55${tel}`, '_blank'); 
-            falar("📱 Abrindo WhatsApp."); 
-        }
-
     </script>
-
 </body>
 </html>
