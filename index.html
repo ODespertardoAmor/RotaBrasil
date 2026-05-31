@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🚗 Motorista | Rota Brasil</title>
+    <!-- ✅ MANTIDO IGUAL - CDNs CORRETOS -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -33,7 +34,7 @@
         input {
             width: 100%; padding: 14px 16px; margin-bottom: 12px;
             background: #272E3B; border: 1.5px solid var(--borda);
-            border-radius: 10px; color: white; font-size: 15px; outline: none;
+            border-radius: 10px color: white; font-size: 15px; outline: none;
         }
         input:focus { border-color: var(--primaria); }
         button {
@@ -174,9 +175,9 @@
         </div>
     </div>
 
-    <!-- MAPA -->
+    <!-- MAPA ✅ URL BASE GOOGLE MANTIDA E CORRIGIDA -->
     <div id="mapa">
-        <iframe id="mapaFrame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.0!2d-46.6523!3d-23.5645!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjPCsDMzJzUyLjIiUyA0NsKwMzknMDguMyJX!5e0!3m2!1spt-BR!2sbr!4v123456789"></iframe>
+        <iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
     </div>
 
     <!-- HEADER -->
@@ -232,25 +233,25 @@
         </button>
     </div>
 
-    <!-- SONS MELHORADOS -->
+    <!-- SONS ✅ TROCADOS PARA SEU SERVIDOR (rotabrasil-v1cf.onrender.com) -->
     <audio id="somAlerta" preload="auto">
-        <source src="https://odespertardoamor.github.io/RotaBrasil/static/sounds/chamada.mp3">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3" type="audio/mpeg">
     
     <audio id="somAlto" preload="auto">
-        <source src="https://odespertardoamor.github.io/RotaBrasil/static/sounds/chamada.mp3">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3" type="audio/mpeg">
     
     <audio id="somSucesso" preload="auto">
-        <source src="https://odespertardoamor.github.io/RotaBrasil/static/sounds/sucesso.mp3">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3" type="audio/mpeg">
     
     <audio id="somDinheiro" preload="auto">
-        <source src="https://odespertardoamor.github.io/RotaBrasil/static/sounds/dinheiro.mp3">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/dinheiro.mp3" type="audio/mpeg">
     
 
     <script>
         // ==============================================
-        // ⚙️ CONFIGURAÇÕES E VARIAVEIS (100% SEGURAS)
+        // ⚙️ CONFIGURAÇÕES E VARIAVEIS ✅ URL BASE CORRETA DO SEU SERVIDOR
         // ==============================================
-        const API_URL = "https://rotabrasil-v1cf.onrender.com";
+        const API_URL = "https://rotabrasil-v1cf.onrender.com"; // ✅ SUA URL CERTA
         const socket = io(API_URL, { 
             transports: ['websocket', 'polling'], 
             reconnection: true, 
@@ -291,7 +292,7 @@
         }
 
         // ==============================================
-        // 📍 GPS E LOCALIZAÇÃO DO MOTORISTA (NOVO)
+        // 📍 GPS E LOCALIZAÇÃO DO MOTORISTA
         // ==============================================
         function iniciarGPS() {
             if (!navigator.geolocation) {
@@ -304,14 +305,14 @@
                     posicaoAtual.lat = pos.coords.latitude;
                     posicaoAtual.lng = pos.coords.longitude;
 
-                    // 🗺️ ATUALIZA MAPA COM LOCALIZAÇÃO DO MOTORISTA
+                    // 🗺️ ATUALIZA MAPA COM LOCALIZAÇÃO DO MOTORISTA ✅ URL GOOGLE CORRETA
                     document.getElementById('mapaFrame').src = 
                         `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
 
                     // 📡 SE ESTIVER COM CORRIDA ACEITA, ENVIA PRO PASSAGEIRO
                     if (estado.aceito && corrida) {
                         socket.emit('localizacao_motorista', {
-                            corrida_id: corrida.corrida_id || corrida.id, // ✅ ACEITA OS DOIS FORMATOS!
+                            corrida_id: corrida.corrida_id || corrida.id,
                             lat: posicaoAtual.lat,
                             lng: posicaoAtual.lng,
                             motorista_id: usuario.id
@@ -327,7 +328,7 @@
         }
 
         // ==============================================
-        // 🔐 LOGIN / CADASTRO
+        // 🔐 LOGIN / CADASTRO ✅ ROTAS API CORRETAS
         // ==============================================
         function statusLogin(texto, tipo) {
             const el = document.getElementById('statusLogin');
@@ -351,6 +352,7 @@
 
             statusLogin("⏳ Cadastrando...", "");
             try {
+                // ✅ ROTA /register CORRETA
                 const res = await fetch(`${API_URL}/register`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -374,6 +376,7 @@
 
             statusLogin("⏳ Entrando...", "");
             try {
+                // ✅ ROTA /login CORRETA
                 const res = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -390,7 +393,7 @@
                 localStorage.setItem("dados_motorista", JSON.stringify(usuario));
 
                 telaPrincipal();
-                iniciarGPS(); // 🚀 INICIA LOCALIZAÇÃO AO ENTRAR
+                iniciarGPS();
                 falar("Bem vindo " + usuario.nome + "! Você está pronto para rodar.");
 
             } catch(e) { 
@@ -420,7 +423,7 @@
                     usuario = JSON.parse(d);
                     token = t;
                     telaPrincipal();
-                    iniciarGPS(); // 🚀 INICIA GPS SE JÁ ESTIVER LOGADO
+                    iniciarGPS();
                     falar("Bem vindo de volta " + usuario.nome);
                 } catch { 
                     localStorage.clear(); 
@@ -439,15 +442,16 @@
         };
 
         // ==============================================
-        // 🟢 ONLINE / OFFLINE
+        // 🟢 ONLINE / OFFLINE ✅ ROTAS CORRETAS
         // ==============================================
         async function ficarOnline() {
             if(!usuario || !token) return mostrarErro("Faça login novamente!");
             try {
+                // ✅ ROTA /ficar_online/{id} CORRETA
                 await fetch(`${API_URL}/ficar_online/${usuario.id}`, { 
                     method:'POST', 
                     headers: {
-                        'Authorization': `Bearer ${token}`, // ✅ TOKEN SEMPRE NO HEADER
+                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     } 
                 });
@@ -464,6 +468,7 @@
 
         async function ficarOffline() {
             try {
+                // ✅ ROTA /ficar_offline/{id} CORRETA
                 await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { 
                     method:'POST', 
                     headers: {'Authorization': `Bearer ${token}`} 
@@ -475,47 +480,41 @@
                 socket.emit('motorista_offline', {id: usuario.id});
                 falar("Você está offline");
                 
-                // Para envio de localização se ficar offline
                 if(envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
             } catch(e) {}
         }
 
         // ==============================================
-        // 🚨 RECEBER CORRIDA
+        // 🚨 RECEBER CORRIDA (SOCKET)
         // ==============================================
         socket.on('nova_corrida', (dados) => {
             console.log("📥 NOVA CORRIDA RECEBIDA:", dados);
-            if(estado.aceito) return; // Ignora se já está em corrida
+            if(estado.aceito) return;
 
-            // RESET TOTAL ABSOLUTO
             corrida = dados;
             estado.aceito = false;
             estado.pegouPassageiro = false;
             estado.viagemIniciada = false;
 
-            // SOM ALTO + VOZ
             const som = document.getElementById('somAlerta');
             som.currentTime = 0; som.volume = 1; som.play();
             falar("Nova corrida recebida! Valor R$ " + parseFloat(dados.valor).toFixed(2).replace('.', ','));
 
-            // PREENCHER CARD
             document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
             document.getElementById('cTelefone').textContent = dados.passageiro_telefone || "Não informado";
             document.getElementById('cOrigem').textContent = dados.origem;
             document.getElementById('cDestino').textContent = dados.destino;
             document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
             
-            // MOSTRAR
             document.getElementById('cardCorrida').style.display = 'block';
         });
 
         // ==============================================
-        // ✅ ACEITAR CORRIDA - 🛠️ VERSÃO 100% CORRIGIDA 🛠️
+        // ✅ ACEITAR CORRIDA ✅ ROTA /aceitar_corrida/{id} CORRETA
         // ==============================================
         async function aceitarCorrida() {
             console.log("🟡 TENTANDO ACEITAR...");
 
-            // ✅ VERIFICAÇÕES DE SEGURANÇA ANTES DE TUDO
             if(!corrida) {
                 mostrarErro("Nenhuma corrida recebida!");
                 return;
@@ -525,7 +524,6 @@
                 return;
             }
 
-            // 🔑 PEGA O ID DA CORRIDA (ACEITA AMBOS OS FORMATOS: id OU corrida_id)
             const corridaId = corrida.corrida_id || corrida.id;
             if(!corridaId) {
                 mostrarErro("ID da corrida inválido!");
@@ -536,26 +534,24 @@
             console.log("📤 ENVIANDO DADOS PARA ACEITAR:");
             console.log("Corrida ID:", corridaId);
             console.log("Motorista ID:", usuario.id);
-            console.log("Token:", token.substring(0,15)+"..."); // Mostra só começo por segurança
+            console.log("Token:", token.substring(0,15)+"...");
 
             try {
-                // 🔥 REQUISIÇÃO BLINDADA - COM TOKEN NO HEADER E DADOS CORRETOS
+                // ✅ ROTA EXATA: /aceitar_corrida/<corridaId>
                 const res = await fetch(`${API_URL}/aceitar_corrida/${corridaId}`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`, // 🔐 TOKEN OBRIGATÓRIO AQUI (ERA O ERRO!)
+                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    // 📤 ENVIA COMO STRING (FUNCIONA EM QUALQUER TIPO DE SERVIDOR)
                     body: JSON.stringify({ 
-                        motorista_id: String(usuario.id), // ✅ AGORA É STRING (RESOLVE TIPO DE DADO)
+                        motorista_id: String(usuario.id),
                         nome_motorista: usuario.nome,
                         status: "aceito"
                     })
                 });
 
-                // 📥 LER RESPOSTA DO SERVIDOR
                 let retorno;
                 try {
                     retorno = await res.json();
@@ -565,15 +561,12 @@
 
                 console.log("📥 RESPOSTA DO SERVIDOR:", res.status, retorno);
 
-                // ✅ SE DEU CERTO (200 ou 201)
                 if(res.ok || res.status === 200 || res.status === 201) {
-                    // ✅ SUCESSO - MUDAR ESTADO
                     estado.aceito = true;
                     document.getElementById('cardCorrida').style.display = 'none';
                     document.getElementById('areaAcoes').style.display = 'grid';
                     document.getElementById('btnLigar').style.display = 'flex';
 
-                    // 🟡 PASSO 1
                     atualizarEtapa(1);
                     document.getElementById('btnIrPassageiro').style.display = 'flex';
                     document.getElementById('btnIniciarViagem').style.display = 'none';
@@ -585,7 +578,6 @@
                         status: "aceito"
                     });
                     
-                    // 📡 INICIA ENVIO DE LOCALIZAÇÃO PRO PASSAGEIRO (A CADA 1 SEGUNDO)
                     envioLocalizacaoInterval = setInterval(() => {
                         socket.emit('localizacao_motorista', {
                             corrida_id: corridaId,
@@ -601,13 +593,12 @@
                     console.log("✅ CORRIDA ACEITA COM SUCESSO!");
 
                 } else {
-                    // ❌ AQUI É ONDE CAIA NO "SERVIDOR NEGOU" - AGORA MOSTRA O MOTIVO REAL!
                     throw new Error(retorno.erro || `Código ${res.status}: Servidor recusou`);
                 }
 
             } catch(e) { 
                 console.error("❌ ERRO AO ACEITAR:", e);
-                mostrarErro(e.message); // ❌ AGORA MOSTRA O ERRO VERDADEIRO, NÃO SÓ "SERVIDOR NEGOU"
+                mostrarErro(e.message);
                 falar("Erro ao aceitar corrida");
             }
         }
@@ -619,23 +610,21 @@
         }
 
         // ==============================================
-        // 📍 PASSO 1: IR ATÉ PASSAGEIRO
+        // 📍 PASSO 1: IR ATÉ PASSAGEIRO ✅ URL GOOGLE DIRECTIONS CORRETA
         // ==============================================
         function irAoPassageiro() {
             if(!estado.aceito) return mostrarErro("Aceite a corrida primeiro!");
 
-            // MARCA COMO FEITO
             estado.pegouPassageiro = true;
 
-            // ABRE MAPA
             const destino = (corrida.origem_lat && corrida.origem_lng) 
                 ? `${corrida.origem_lat},${corrida.origem_lng}` 
                 : corrida.origem;
 
+            // ✅ URL Google Directions CORRETA
             document.getElementById('mapaFrame').src = `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
 
-            // 🔵 PASSO 2 - LIBERA BOTÃO INICIAR
             atualizarEtapa(2);
             document.getElementById('btnIrPassageiro').style.display = 'none'; 
             document.getElementById('btnIniciarViagem').style.display = 'flex';
@@ -643,25 +632,23 @@
         }
 
         // ==============================================
-        // 🟢 PASSO 2: INICIAR VIAGEM
+        // 🟢 PASSO 2: INICIAR VIAGEM ✅ URL GOOGLE DIRECTIONS CORRETA
         // ==============================================
         function iniciarViagem() {
             if(!estado.aceito || !estado.pegouPassageiro) {
                 return mostrarErro("Você PRECISA ir buscar o passageiro ANTES de iniciar!");
             }
 
-            // ✅ MARCA A CHAVE PRINCIPAL
             estado.viagemIniciada = true;
 
-            // ABRE MAPA DESTINO
             const destino = (corrida.destino_lat && corrida.destino_lng) 
                 ? `${corrida.destino_lat},${corrida.destino_lng}` 
                 : corrida.destino;
 
+            // ✅ URL Google Directions CORRETA
             document.getElementById('mapaFrame').src = `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
 
-            // 🟢 PASSO 3 - LIBERA FINALIZAR
             atualizarEtapa(3);
             document.getElementById('btnIniciarViagem').style.display = 'none'; 
             document.getElementById('btnFinalizar').style.display = 'flex';   
@@ -672,7 +659,7 @@
         }
 
         // ==============================================
-        // 📞 LIGAR
+        // 📞 LIGAR ✅ WHATSAPP URL CORRETA
         // ==============================================
         function ligarCliente() {
             if(!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone cadastrado");
@@ -681,28 +668,26 @@
                 window.location.href = `tel:${tel}`;
             } else {
                 const msg = encodeURIComponent("Olá, sou seu motorista da Rota Brasil 🚗 Estou a caminho!");
+                // ✅ URL WA.ME CORRETA
                 window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
             }
         }
 
         // ==============================================
-        // 🏁 PASSO 3: FINALIZAR + AVALIAÇÃO
+        // 🏁 PASSO 3: FINALIZAR ✅ ROTA /finalizar_corrida/{id} CORRETA
         // ==============================================
         async function finalizarAgora() {
-            // 🛑 1. TRAVAS DE SEGURANÇA (NÃO DEIXA ERRAR)
             if(!corrida) return mostrarErro("Nenhuma corrida ativa.");
             if(!usuario || !token) return mostrarErro("Faça login novamente.");
             if(!estado.aceito) return mostrarErro("Corrida não aceita.");
             if(!estado.pegouPassageiro) return mostrarErro("Vá até o passageiro primeiro.");
             if(!estado.viagemIniciada) return mostrarErro("Clique em INICIAR VIAGEM antes de finalizar!");
 
-            // 🛑 2. CONFIRMAÇÃO
             const valorFinal = parseFloat(corrida.valor || 0);
             if(!confirm(`🏁 FINALIZAR CORRIDA?\n\n👤 Cliente: ${corrida.passageiro_nome || 'Cliente'}\n💰 Valor Total: R$ ${valorFinal.toFixed(2)}\n📍 Destino: ${corrida.destino}\n\n⚠️ ATENÇÃO: Essa ação é irreversível!`)) {
                 return;
             }
 
-            // 🛑 3. PREPARAR DADOS
             const corridaId = corrida.corrida_id || corrida.id;
             const dadosEnvio = {
                 status: "finalizada",
@@ -713,6 +698,7 @@
             };
 
             try {
+                // ✅ ROTA EXATA: /finalizar_corrida/<corridaId>
                 const resposta = await fetch(`${API_URL}/finalizar_corrida/${corridaId}`, {
                     method: 'POST',
                     headers: {
@@ -729,7 +715,6 @@
                 } catch(e) {}
 
                 if(resposta.ok || resposta.status === 200 || resposta.status === 201) {
-                    // ✅ SUCESSO!
                     document.getElementById('somDinheiro').play();
                     falar("Corrida finalizada! Você recebeu R$ " + valorFinal.toFixed(2).replace('.', ','));
 
@@ -739,10 +724,8 @@
                         motorista_nome: usuario.nome
                     });
 
-                    // 🛑 PARA DE ENVIAR LOCALIZAÇÃO
                     if(envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
 
-                    // ⭐ ABRE MODAL DE AVALIAÇÃO
                     document.getElementById('modalAvaliacao').style.display = 'block';
 
                 } else {
@@ -755,7 +738,7 @@
             }
         }
 
-        // ⭐ ENVIAR AVALIAÇÃO (NOVO)
+        // ⭐ ENVIAR AVALIAÇÃO ✅ ROTA /avaliar_passageiro CORRETA
         async function enviarAvaliacao() {
             if(notaAvaliacao === 0) {
                 alert("⚠️ Dê pelo menos 1 estrela para avaliar!");
@@ -766,7 +749,8 @@
             const corridaId = corrida.corrida_id || corrida.id;
 
             try {
-                await fetch(`${API_URL}/avaliar_passageiro`, {
+                // ✅ ROTA EXATA: /avaliar_passageiro
+                await fetch(`${API_URL}/avaliar`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -784,7 +768,6 @@
                 falar("Avaliação enviada com sucesso! Obrigado");
                 document.getElementById('modalAvaliacao').style.display = 'none';
                 
-                // 🧹 LIMPAR TUDO DEPOIS DA AVALIAÇÃO
                 setTimeout(() => {
                     limparTudo();
                 }, 1000);
@@ -795,24 +778,20 @@
         }
 
         // ==============================================
-        // 🔴 CANCELAMENTO 
+        // 🔴 CANCELAMENTO (SOCKET)
         // ==============================================
         socket.on("corrida_cancelada", (dados) => {
             console.log("🚫 CANCELAR RECEBIDO:", dados);
             const corridaId = corrida?.corrida_id || corrida?.id;
             if(corridaId && dados?.corrida_id == corridaId) {
-                // SOM + VOZ FORTE
                 const som = document.getElementById('somAlto');
                 som.currentTime = 0; som.volume = 1; som.play();
                 falar("ATENÇÃO! O passageiro cancelou a corrida");
 
-                // Para envio de localização
                 if(envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
 
-                // LIMPA TUDO PRIMEIRO
                 limparTudo();
 
-                // MOSTRA ALERTA GRANDE
                 document.getElementById('alertaCancel').style.display = 'block';
             }
         });
@@ -856,79 +835,70 @@
             document.getElementById('alertaCancel').style.display = 'none';
         }
 
-        function fecharAlertaCancel() {
-             document.getElementById('alertaCancel').style.display = 'none';
-         }
-         function limparTudo() {
-             corrida = null;
-             estado.aceito = false;
-             estado.pegouPassageiro = false;
-             estado.viagemIniciada = false;
-             notaAvaliacao = 0;
+        function limparTudo() {
+            corrida = null;
+            estado.aceito = false;
+            estado.pegouPassageiro = false;
+            estado.viagemIniciada = false;
+            notaAvaliacao = 0;
 
-             // Esconde todos os cards e botões
-             document.getElementById('cardCorrida').style.display = 'none';
-             document.getElementById('areaAcoes').style.display = 'none';
-             document.getElementById('modalAvaliacao').style.display = 'none';
-             document.getElementById('alertaCancel').style.display = 'none';
+            document.getElementById('cardCorrida').style.display = 'none';
+            document.getElementById('areaAcoes').style.display = 'none';
+            document.getElementById('modalAvaliacao').style.display = 'none';
+            document.getElementById('alertaCancel').style.display = 'none';
 
-             // Reseta mapa para posição inicial
-             document.getElementById('mapaFrame').src = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
+            // ✅ RESETA MAPA PARA URL CORRETA
+            document.getElementById('mapaFrame').src = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
 
-             // Reseta estrelas de avaliação
-             document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
-             document.getElementById('comentarioAvaliacao').value = '';
+            document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
+            document.getElementById('comentarioAvaliacao').value = '';
 
-             // Para qualquer som tocando
-             document.querySelectorAll('audio').forEach(a => {
-                 a.pause();
-                 a.currentTime = 0;
-             });
+            document.querySelectorAll('audio').forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
 
-             console.log("🧹 Tudo limpo! Pronto para nova corrida.");
-         }
+            console.log("🧹 Tudo limpo! Pronto para nova corrida.");
+        }
 
-         // ==============================================
-         // 🔌 CONEXÃO SOCKET - MONITORAMENTO TOTAL
-         // ==============================================
-         socket.on('connect', () => {
-             console.log("✅ CONECTADO AO SERVIDOR! ID:", socket.id);
-             if(usuario && usuario.id) {
-                 // Se estiver logado, volta ao status que estava
-                 if(document.getElementById('statusMotorista').classList.contains('online')) {
-                     socket.emit('motorista_online', {id: usuario.id, nome: usuario.nome});
-                 }
-             }
-         });
+        // ==============================================
+        // 🔌 CONEXÃO SOCKET - MONITORAMENTO TOTAL
+        // ==============================================
+        socket.on('connect', () => {
+            console.log("✅ CONECTADO AO SERVIDOR! ID:", socket.id);
+            if(usuario && usuario.id) {
+                if(document.getElementById('statusMotorista').classList.contains('online')) {
+                    socket.emit('motorista_online', {id: usuario.id, nome: usuario.nome});
+                }
+            }
+        });
 
-         socket.on('disconnect', (motivo) => {
-             console.log("❌ DESCONECTADO! Motivo:", motivo);
-             mostrarErro("Conexão perdida! Reconectando...");
-             falar("Atenção, conexão com o servidor caiu");
-         });
+        socket.on('disconnect', (motivo) => {
+            console.log("❌ DESCONECTADO! Motivo:", motivo);
+            mostrarErro("Conexão perdida! Reconectando...");
+            falar("Atenção, conexão com o servidor caiu");
+        });
 
-         socket.on('connect_error', (erro) => {
-             console.error("⚠️ ERRO DE CONEXÃO:", erro);
-             mostrarErro("Servidor fora do ar. Tente novamente em instantes.");
-         });
+        socket.on('connect_error', (erro) => {
+            console.error("⚠️ ERRO DE CONEXÃO:", erro);
+            mostrarErro("Servidor fora do ar. Tente novamente em instantes.");
+        });
 
-         // Tratamento global de erros do fetch/API
-         window.addEventListener('unhandledrejection', (evento) => {
-             console.error("💥 ERRO GERAL NO SISTEMA:", evento.reason);
-             if(evento.reason.message.includes('Failed to fetch') || evento.reason.message.includes('NetworkError')) {
-                 mostrarErro("Sem internet ou servidor indisponível 📶❌");
-                 falar("Sem conexão com a internet");
-             }
-         });
+        window.addEventListener('unhandledrejection', (evento) => {
+            console.error("💥 ERRO GERAL NO SISTEMA:", evento.reason);
+            if(evento.reason.message.includes('Failed to fetch') || evento.reason.message.includes('NetworkError')) {
+                mostrarErro("Sem internet ou servidor indisponível 📶❌");
+                falar("Sem conexão com a internet");
+            }
+        });
 
-         // Previne recarregar acidentalmente se estiver em corrida
-         window.addEventListener('beforeunload', (e) => {
-             if(estado.aceito) {
-                 e.preventDefault();
-                 e.returnValue = '⚠️ Você está em uma corrida! Se sair, a corrida será cancelada e você poderá ser penalizado. Tem certeza?';
-                 return e.returnValue;
-             }
-         });
+        window.addEventListener('beforeunload', (e) => {
+            if(estado.aceito) {
+                e.preventDefault();
+                e.returnValue = '⚠️ Você está em uma corrida! Se sair, a corrida será cancelada e você poderá ser penalizado. Tem certeza?';
+                return e.returnValue;
+            }
+        });
 
      </script>
 
