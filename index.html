@@ -174,10 +174,67 @@
             <div id="statusLogin" class="status-text"></div>
         </div>
     </div>
-    <!-- MAPA -->
-    <div id="mapa">
-    <iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
-    </div>
+    <!-- 🗺️ MAPA INTELIGENTE - SEM PISCAR, SEM TRAVAR - FEITO PRA VOCÊ 🩷🛡️ -->
+<div id="mapa" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;">
+    <iframe 
+        id="mapaFrame" 
+        allow="geolocation *; fullscreen" 
+        style="border:none; width:100%; height:100%; display:block;"
+        src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap&disableDefaultUI=true&gestureHandling=greedy"
+    >
+        <script>
+            // 🧠 CÉREBRO DO MAPA: ATUALIZA SEM RECARREGAR 🧠✨
+            window.addEventListener('message', function(e) {
+                if(!e.data || !e.data.action || !window.google || !google.maps) return;
+
+                // Inicia mapa apenas 1x
+                if(!window.meuMapaInteligente) {
+                    window.meuMapaInteligente = new google.maps.Map(document.documentElement, {
+                        zoom: e.data.zoom || 16,
+                        mapTypeId: google.maps.MapTypeId.ROADMAP,
+                        disableDefaultUI: true,
+                        gestureHandling: 'greedy'
+                    });
+                    window.marcadorMotorista = new google.maps.Marker({
+                        map: window.meuMapaInteligente,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/1015/1015222.png',
+                        scaledSize: new google.maps.Size(40,40),
+                        title: 'Você'
+                    });
+                }
+
+                // 📍 MOVER MAPA E MARCADOR (SEM RECARREGAR) 🛑🚀
+                if(e.data.action === 'panTo'){
+                    const novaPos = new google.maps.LatLng(e.data.lat, e.data.lng);
+                    window.meuMapaInteligente.panTo(novaPos);
+                    window.marcadorMotorista.setPosition(novaPos);
+                }
+
+                // 🛣️ DESENHAR ROTA (SUAVE, SEM PISCAR) 🛣️🫶
+                if(e.data.action === 'carregarRota'){
+                    if(window.minhaRota) window.minhaRota.setMap(null);
+                    const dirService = new google.maps.DirectionsService();
+                    const dirRender = new google.maps.DirectionsRenderer({
+                        suppressMarkers: false,
+                        preserveViewport: false,
+                        polylineOptions: { strokeColor: '#2563eb', strokeWeight: 6 }
+                    });
+                    dirRender.setMap(window.meuMapaInteligente);
+                    window.minhaRota=dirRender;
+
+                    dirService.route({
+                        origin: e.data.origin,
+                        destination: e.data.destination,
+                        travelMode: google.maps.TravelMode.DRIVING
+                    }, (res, status)=>{
+                        if(status==='OK') dirRender.setDirections(res);
+                    });
+                }
+            });
+        </script>
+    </iframe>
+</div>
+
 
     
 
@@ -295,49 +352,63 @@
         // ==============================================
         // 📍 GPS E LOCALIZAÇÃO DO MOTORISTA
         // ==============================================
-        function iniciarGPS() {
-            if (!navigator.geolocation) {
-                falar("Seu navegador não suporta GPS");
-                return;
+        // 📍 GPS OTIMIZADO — NÃO TRAVA, NÃO PISCA 🛡️🔥
+function iniciarGPS() {
+    if (!navigator.geolocation) { falar("GPS não suportado"); return; }
+
+    navigator.geolocation.watchPosition(
+        (pos) => {
+            posicaoAtual.lat = pos.coords.latitude;
+            posicaoAtual.lng = pos.coords.longitude;
+
+            // ✅ REGRA DE OURO: SÓ ATUALIZA SE ANDAR +10m (EVITA TRAVAR/TREPER) 🧱➡️🌊
+            const mapaFrame = document.getElementById('mapaFrame');
+            if(!mapaFrame.dataset.ultimaPos){
+                mapaFrame.dataset.ultimaPos = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+                enviarComandoMapa('panTo', posicaoAtual.lat, posicaoAtual.lng, 16);
+            } else {
+                const [latAnt, lngAnt] = mapaFrame.dataset.ultimaPos.split(',').map(Number);
+                const distLat = Math.abs(posicaoAtual.lat - latAnt);
+                const distLng = Math.abs(posicaoAtual.lng - lngAnt);
+                // 0.0001 ≈ 11 metros
+                if(distLat>0.0001 || distLng>0.0001){
+                    mapaFrame.dataset.ultimaPos = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+                    enviarComandoMapa('panTo', posicaoAtual.lat, posicaoAtual.lng, 16);
+                }
             }
 
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    posicaoAtual.lat = pos.coords.latitude;
-                    posicaoAtual.lng = pos.coords.longitude;
+            // Envia pro passageiro (MESMO DE ANTES, NÃO MEXE)
+            if (estado.aceito && corrida) {
+                socket.emit('localizacao_motorista', {
+                    corrida_id: corrida.corrida_id || corrida.id,
+                    lat: posicaoAtual.lat,
+                    lng: posicaoAtual.lng,
+                    motorista_id: usuario.id
+                });
+            }
+        },
+        (erro) => { console.warn("GPS:",erro); falar("Ative a localização"); },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+    );
+}
 
-                    // 🗺️ ATUALIZA MAPA COM LOCALIZAÇÃO DO MOTORISTA ✅ URL GOOGLE CORRETA
-                    // 🆕 NOVA FORMA DE CARREGAR ROTA: SUAVE, SEM PISCAR! 🛣️✅
-                    document.getElementById('mapaFrame').contentWindow.postMessage({
-                    action: 'carregarRota',
-                    origin: `${posicaoAtual.lat},${posicaoAtual.lng}`,
-                    destination: destino,
-                    mode: 'driving'
-                    }, '*');
+// 🧩 FUNÇÃO AUXILIAR (COLA ESSA NOVA NO FINAL DO JS, ANTES DE </script>)
+function enviarComandoMapa(acao, lat, lng, zoom=16, destino=null){
+    const mapa = document.getElementById('mapaFrame');
+    if(!mapa || !mapa.contentWindow) return;
 
-                    
-                        `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
-                    // 🆕 NOVA FORMA DE CARREGAR ROTA: SUAVE, SEM PISCAR! 🛣️✅
+    if(acao==='panTo'){
+        mapa.contentWindow.postMessage({
+            action:'panTo', lat:lat, lng:lng, zoom:zoom
+        },'*');
+    }
+    if(acao==='carregarRota'){
+        mapa.contentWindow.postMessage({
+            action:'carregarRota', origin:`${lat},${lng}`, destination:destino, mode:'driving'
+        },'*');
+    }
+}
 
-
-
-                    // 📡 SE ESTIVER COM CORRIDA ACEITA, ENVIA PRO PASSAGEIRO
-                    if (estado.aceito && corrida) {
-                        socket.emit('localizacao_motorista', {
-                            corrida_id: corrida.corrida_id || corrida.id,
-                            lat: posicaoAtual.lat,
-                            lng: posicaoAtual.lng,
-                            motorista_id: usuario.id
-                        });
-                    }
-                },
-                (erro) => {
-                    console.warn("Erro GPS:", erro);
-                    falar("Ative sua localização para usar o app");
-                },
-                { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
-            );
-        }
 
         // ==============================================
         // 🔐 LOGIN / CADASTRO ✅ ROTAS API CORRETAS
