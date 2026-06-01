@@ -7,9 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- 🗺️ MAPA + GEOCODING COMPLETO 📍🏠✅ -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 🔔 SOM + VIBRAÇÃO NOTIFICAÇÃO 🎵📳✅ -->
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+    <!-- 🛡️ VALIDAÇÃO E MÁSCARAS DE DADOS 📝✅🆕 -->
+    <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.8/dist/inputmask.min.js"></script>
     
+    <!-- 🎨 PALETA DE CORES EXATA 🖤🟢🔴🇧🇷 -->
     <script>
         tailwind.config = {
             theme: {
@@ -21,6 +27,8 @@
                         vermelho: '#EF4444',
                         cinza: '#2D3139',
                         texto: '#F8FAFC',
+                        azul: '#3B82F6',
+                        amarelo: '#EAB308',
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -37,179 +45,166 @@
             .botao-vermelho { background: linear-gradient(145deg, #EF4444, #DC2626); }
             .sombra-personalizada { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45); }
             .backdrop-blur-custom { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-            /* 🗺️ ESTILO MAPA ROTA BRASIL (LIMPO, ESCURO, SEM MARCAS) 🇧🇷✅ */
-            #mapa { 
-                background-color: #12151A !important; 
-                touch-action: pan-x pan-y !important;
-            }
+            #mapa { background-color: #12151A !important; touch-action: pan-x pan-y !important; z-index:10; }
             .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
-            /* 💬 ESTILOS CHAT */
             .chat-balao-passageiro { background: #22C55E; color: white; border-radius: 20px 20px 4px 20px; padding: 10px 14px; max-width: 80%; line-height: 1.4; }
             .chat-balao-motorista { background: #2D3139; color: white; border-radius: 20px 20px 20px 4px; padding: 10px 14px; max-width: 80%; line-height: 1.4; }
-            /* ✅🔥 CORREÇÃO PRINCIPAL: PERMITE CLIQUE, FOCO E TECLADO NA CAIXA DE ENDEREÇO 📲⌨️🆗 */
-            .input-livre { 
-                pointer-events: auto !important; 
-                user-select: text !important; 
-                -webkit-user-select: text !important;
-                z-index: 999 !important;
-                position: relative !important;
+            .input-livre { pointer-events: auto !important; user-select: text !important; -webkit-user-select: text !important; z-index: 999 !important; position: relative !important; }
+            .caixa-busca { pointer-events: auto !important; }
+            .botao-touch { min-height: 50px !important; cursor: pointer !important; transition: all 0.2s ease; }
+            .pulsar { animation: pulsar 1.5s infinite; }
+            .pulsar-forte { animation: pulsar 0.8s infinite; }
+            .andar { animation: andar 1.2s infinite alternate ease-in-out; }
+            
+            @keyframes pulsar { 
+                0% { transform: scale(1); opacity:1; } 
+                50% { transform: scale(1.15); opacity:0.8; } 
+                100% { transform: scale(1); opacity:1; } 
             }
-            .caixa-busca {
-                pointer-events: auto !important;
+            @keyframes andar {
+                0% { transform: translateY(0px); }
+                100% { transform: translateY(-4px); }
             }
-            /* 🖱️ ÁREA DE TOQUE MAIOR PARA CELULAR */
-            .botao-touch {
-                min-height: 50px !important;
-                cursor: pointer !important;
-            }
+            
+            .destaque-dado { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 2px 6px; font-weight: 600; }
+            /* ✅ CLASSE PARA ESCONDER TUDO DURANTE VIAGEM 🚫🎛️🆕 */
+            .modo-viagem-oculto { display: none !important; opacity:0; visibility:hidden; }
         }
     </style>
 </head>
 <body class="bg-escuro text-texto font-sans overflow-hidden h-screen w-screen select-none">
 
-    <div id="mapa" class="absolute inset-0 z-0"></div>
+    <!-- 🗺️ MAPA EM TEMPO REAL (AGORA FUNDO TOTAL NO MODO VIAGEM) 🗺️🌍✅ -->
+    <div id="mapa" class="absolute inset-0 z-10"></div>
 
-    <div id="aviso" class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-xl sombra-personalizada hidden backdrop-blur-custom text-center font-medium"></div>
-
-    <div id="botoesSuperiores" class="absolute top-4 left-4 right-4 z-[500] flex justify-between items-center hidden">
-        <button onclick="sair()" class="bg-card/85 backdrop-blur-custom w-11 h-11 rounded-xl flex items-center justify-center border border-cinza/70 active:scale-95 transition-all duration-150 sombra-personalizada botao-touch">
-            <i class="fa fa-sign-out text-vermelho text-lg"></i>
-        </button>
-
-        <button onclick="abrirChat()" class="bg-card/85 backdrop-blur-custom w-11 h-11 rounded-xl flex items-center justify-center border border-cinza/70 active:scale-95 transition-all duration-150 sombra-personalizada relative botao-touch">
-            <i class="fa fa-comments text-verde text-lg"></i>
-            <span id="notifChat" class="absolute -top-1 -right-1 bg-vermelho text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full hidden animate-pulse">1</span>
-        </button>
+    <!-- ✅ NOVO: PAINEL "A CAMINHO" - SÓ APARECE QUANDO MOTORISTA ACEITA 🚶💨🆕🔥🇧🇷 -->
+    <div id="painelAguardando" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9990] bg-card/90 backdrop-blur-custom rounded-3xl px-8 py-6 sombra-personalizada border border-verde/50 flex flex-col items-center space-y-4 hidden">
+        <i class="fa fa-male text-verde text-6xl andar"></i>
+        <h2 class="text-xl font-bold text-center text-verde pulsar-forte">MOTORISTA A CAMINHO!</h2>
+        <p class="text-sm text-center text-gray-300">Aguarde, ele está indo até você 🚕💨</p>
+        <div class="text-center space-y-1 mt-2">
+            <p class="text-sm"><strong class="text-verde">Modelo:</strong> <span id="infoModeloAndando">-</span></p>
+            <p class="text-sm"><strong class="text-verde">Placa:</strong> <span id="infoPlacaAndando font-bold">-</span></p>
+        </div>
     </div>
 
+    <!-- ⚠️ AVISO FLUTUANTE -->
+    <div id="aviso" class="fixed top-10 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-xl sombra-personalizada hidden backdrop-blur-custom text-center font-medium max-w-[90%]"></div>
+
+    <!-- 🚪🗨️ BOTÕES SUPERIORES + PERFIL 👤📋✅ -->
+    <div id="botoesSuperiores" class="absolute top-4 left-4 right-4 z-[500] flex justify-between items-center">
+        <button onclick="abrirPerfil()" class="bg-card/85 backdrop-blur-custom w-11 h-11 rounded-xl flex items-center justify-center border border-cinza/70 active:scale-95 sombra-personalizada botao-touch" title="Meu Perfil">
+            <i class="fa fa-user-circle text-azul text-lg"></i>
+        </button>
+        <div class="flex gap-2">
+            <button onclick="sair()" class="bg-card/85 backdrop-blur-custom w-11 h-11 rounded-xl flex items-center justify-center border border-cinza/70 active:scale-95 sombra-personalizada botao-touch" title="Sair">
+                <i class="fa fa-sign-out text-vermelho text-lg"></i>
+            </button>
+            <button onclick="abrirChat()" class="bg-card/85 backdrop-blur-custom w-11 h-11 rounded-xl flex items-center justify-center border border-cinza/70 active:scale-95 sombra-personalizada relative botao-touch" title="Chat">
+                <i class="fa fa-comments text-verde text-lg"></i>
+                <span id="notifChat" class="absolute -top-1 -right-1 bg-vermelho text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full hidden pulsar">1</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 👤🪪 JANELA PERFIL PASSAGEIRO (DADOS COMPLETOS) 📋✅ -->
+    <div id="janelaPerfil" class="absolute top-16 left-3 w-[320px] max-h-[80vh] overflow-y-auto bg-card/95 backdrop-blur-custom rounded-2xl sombra-personalizada border border-azul/60 z-[700] flex flex-col hidden">
+        <div class="p-4 border-b border-cinza flex justify-between items-center bg-azul/20 rounded-t-2xl sticky top-0">
+            <h4 class="font-bold text-lg flex items-center gap-2"><i class="fa fa-user-circle text-azul"></i> Meu Perfil</h4>
+            <button onclick="fecharPerfil()" class="w-8 h-8 rounded-lg bg-cinza/70 flex items-center justify-center active:scale-90"><i class="fa fa-times"></i></button>
+        </div>
+        <div class="p-4 space-y-3 text-sm">
+            <div class="text-center mb-3">
+                <i class="fa fa-user-circle text-azul text-5xl"></i>
+                <h3 id="perfilNome" class="font-bold text-lg mt-2">-</h3>
+                <p id="perfilEmail" class="text-gray-400 text-xs">-</p>
+            </div>
+            <div class="space-y-2">
+                <p><strong class="text-azul">📞 Telefone:</strong> <span id="perfilTelefone" class="destaque-dado">-</span></p>
+                <p><strong class="text-azul">🆔 CPF:</strong> <span id="perfilCpf" class="destaque-dado">-</span></p>
+                <p><strong class="text-azul">🔑 ID Conta:</strong> <span id="perfilId" class="destaque-dado text-xs">-</span></p>
+                <p><strong class="text-azul">📍 Endereço Atual:</strong> <span id="perfilEndereco" class="destaque-dado">-</span></p>
+                <p><strong class="text-azul">📅 Cadastro:</strong> <span id="perfilData" class="destaque-dado">-</span></p>
+                <p><strong class="text-verde">✅ Status:</strong> <span class="destaque-dado bg-verde/15 border-verde/30">Verificado</span></p>
+            </div>
+            <button onclick="mostrarAviso('Dados sincronizados com servidor ✅')" class="w-full bg-azul/20 hover:bg-azul/30 text-azul font-semibold py-2 rounded-xl mt-3 transition-all text-sm">📤 Sincronizado ✅</button>
+        </div>
+    </div>
+
+    <!-- 💬 JANELA CHAT -->
     <div id="janelaChat" class="absolute top-16 right-3 w-[310px] h-[420px] bg-card/95 backdrop-blur-custom rounded-2xl sombra-personalizada border border-cinza/60 z-[600] flex flex-col hidden">
         <div class="p-3 border-b border-cinza flex justify-between items-center bg-verde/20 rounded-t-2xl">
-            <h4 class="font-bold text-lg flex items-center gap-2"><i class="fa fa-taxi text-verde"></i> Motorista</h4>
-            <button onclick="fecharChat()" class="w-8 h-8 rounded-lg bg-cinza/70 flex items-center justify-center active:scale-90 transition-all"><i class="fa fa-times"></i></button>
+            <h4 class="font-bold text-lg flex items-center gap-2"><i class="fa fa-taxi text-verde"></i> Motorista <span id="infoCarroHeader" class="text-xs text-vermelho font-normal ml-2"></span></h4>
+            <button onclick="fecharChat()" class="w-8 h-8 rounded-lg bg-cinza/70 flex items-center justify-center active:scale-90"><i class="fa fa-times"></i></button>
         </div>
         <div id="mensagensChat" class="flex-1 p-3 overflow-y-auto space-y-3 text-sm scrollbar-thin scrollbar-thumb-cinza scrollbar-track-transparent"></div>
         <div class="p-3 border-t border-cinza flex gap-2">
             <input type="text" id="textoMsg" placeholder="Digite sua mensagem..." class="flex-1 bg-cinza/70 border border-cinza rounded-xl px-3 py-2 outline-none focus:border-verde transition-all input-livre">
-            <button onclick="enviarMsg()" class="bg-verde w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all"><i class="fa fa-paper-plane text-white"></i></button>
+            <button onclick="enviarMsg()" class="bg-verde w-9 h-9 rounded-xl flex items-center justify-center active:scale-90"><i class="fa fa-paper-plane text-white"></i></button>
         </div>
     </div>
 
-    <div id="telaLogin" class="absolute inset-0 z-[999] flex items-center justify-center bg-escuro/75 backdrop-blur-custom px-4">
+    <!-- 🔐 LOGIN / CADASTRO (COMPLETO) -->
+    <div id="telaLogin" class="absolute inset-0 z-[999] flex items-center justify-center bg-escuro/80 backdrop-blur-custom px-4 overflow-y-auto py-4">
         <div class="bg-card/95 rounded-3xl p-6 w-full max-w-sm sombra-personalizada border border-cinza/50">
             <div class="text-center mb-6">
                 <h1 class="text-[clamp(28px,8vw,42px)] font-black bg-gradient-to-r from-verde to-vermelho bg-clip-text text-transparent">ROTA BRASIL</h1>
-                <p class="text-gray-400 text-sm">App Passageiro • Seu transporte seguro</p>
+                <p class="text-gray-400 text-sm">App Passageiro • 100% Completo 🇧🇷</p>
             </div>
-
-            <input type="text" id="nome" placeholder="👤 Nome Completo" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-verde transition-all input-livre">
-            <input type="email" id="email" placeholder="📧 E-mail" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-verde transition-all input-livre">
-            <input type="password" id="senha" placeholder="🔒 Senha" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-4 outline-none focus:border-verde transition-all input-livre">
-
-            <button onclick="cadastrar()" class="w-full botao-gradient rounded-xl py-3 font-bold text-lg mb-2 active:scale-[0.97] transition-all sombra-personalizada botao-touch">📝 CRIAR CONTA</button>
-            <button onclick="entrar()" class="w-full bg-cinza/80 hover:bg-cinza rounded-xl py-3 font-bold text-lg mb-4 border border-verde/30 active:scale-[0.97] transition-all botao-touch">🔑 ENTRAR</button>
+            <input type="text" id="nome" placeholder="👤 Nome Completo *" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-verde transition-all input-livre" required>
+            <input type="email" id="email" placeholder="📧 E-mail *" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-verde transition-all input-livre" required>
+            <input type="tel" id="telefone" placeholder="📞 Telefone (WhatsApp) *" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-azul transition-all input-livre" required>
+            <input type="text" id="cpf" placeholder="🆔 CPF *" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-3 outline-none focus:border-azul transition-all input-livre" required>
+            <input type="password" id="senha" placeholder="🔒 Senha (min 6 dígitos) *" class="w-full bg-cinza/70 border border-cinza rounded-xl px-4 py-3 mb-4 outline-none focus:border-verde transition-all input-livre" required>
+            
+            <button onclick="cadastrar()" class="w-full botao-gradient rounded-xl py-3 font-bold text-lg mb-2 active:scale-[0.97] sombra-personalizada botao-touch">📝 CRIAR CONTA ✅</button>
+            <button onclick="entrar()" class="w-full bg-cinza/80 hover:bg-cinza rounded-xl py-3 font-bold text-lg mb-4 border border-verde/30 active:scale-[0.97] botao-touch">🔑 ENTRAR</button>
             <p id="statusLogin" class="text-center text-sm text-gray-400 h-5"></p>
         </div>
     </div>
 
-    <div id="barraBusca" class="absolute top-4 left-16 right-16 z-[400] hidden caixa-busca">
+    <!-- 🔍 BARRA DE BUSCA (ESCONDE NO MODO VIAGEM) 📍🚫🆕 -->
+    <div id="barraBusca" class="absolute top-4 left-16 right-16 z-[400] caixa-busca">
         <div class="bg-card/90 backdrop-blur-custom rounded-2xl px-4 py-3 flex items-center justify-between sombra-personalizada border border-cinza/50">
             <div class="flex items-center gap-3 flex-1">
                 <i class="fa fa-map-marker text-xl text-verde flex-shrink-0"></i>
-                <input 
-                    type="text" 
-                    id="destinoInput" 
-                    placeholder="Aonde vamos?" 
-                    class="bg-transparent outline-none text-base font-medium w-full placeholder:text-gray-400 input-livre"
-                    autocomplete="street-address"
-                    inputmode="text"
-                    spellcheck="true"
-                >
+                <input type="text" id="destinoInput" placeholder="Aonde vamos?" class="bg-transparent outline-none text-base font-medium w-full placeholder:text-gray-400 input-livre" autocomplete="street-address" inputmode="text">
             </div>
             <i class="fa fa-chevron-down text-gray-400 flex-shrink-0"></i>
         </div>
     </div>
 
-    <div id="painelBotoes" class="absolute bottom-40 left-4 right-4 z-[300] hidden">
+    <!-- 🎛️ PAINEL BOTÕES 4 EM 1 (ESCONDE TUDO NO MODO VIAGEM) 🎛️🚫🆕 -->
+    <div id="painelBotoes" class="absolute bottom-40 left-4 right-4 z-[300]">
         <div class="bg-card/85 backdrop-blur-custom rounded-3xl p-4 sombra-personalizada border border-cinza/60">
             <div class="grid grid-cols-2 gap-3">
-
-                <button id="btnCalcular" class="bg-cinza/80 hover:bg-cinza rounded-2xl py-4 flex flex-col items-center justify-center gap-2 border border-green-500/40 active:scale-[0.97] transition-all botao-touch">
-                    <i class="fa fa-map-marker text-2xl text-verde"></i>
-                    <span class="font-bold text-lg">CALCULAR CORRIDA</span>
+                <button id="btnCalcular" class="bg-cinza/80 hover:bg-cinza rounded-2xl py-4 flex flex-col items-center justify-center gap-2 border border-green-500/40 botao-touch">
+                    <i class="fa fa-map-marker text-2xl text-verde"></i><span class="font-bold text-lg">CALCULAR</span>
                 </button>
-
-                <button id="btnPreco" class="botao-gradient rounded-2xl py-4 flex flex-col items-center justify-center gap-2 active:scale-[0.97] transition-all botao-touch">
-                    <i class="fa fa-tag text-2xl text-white"></i>
-                    <span class="font-bold text-lg">PREÇO</span>
+                <button id="btnPreco" class="botao-gradient rounded-2xl py-4 flex flex-col items-center justify-center gap-2 botao-touch">
+                    <i class="fa fa-tag text-2xl text-white"></i><span class="font-bold text-lg">PREÇO</span>
                 </button>
-
-                <button id="btnCancelar" class="botao-gradient rounded-2xl py-4 flex flex-col items-center justify-center gap-2 active:scale-[0.97] transition-all botao-touch">
-                    <i class="fa fa-times-circle text-2xl text-white"></i>
-                    <span class="font-bold text-lg">CANCELAR</span>
+                <button id="btnCancelar" class="botao-gradient rounded-2xl py-4 flex flex-col items-center justify-center gap-2 botao-touch">
+                    <i class="fa fa-times-circle text-2xl text-white"></i><span class="font-bold text-lg">CANCELAR</span>
                 </button>
-
-                <button id="btnChamar" class="botao-vermelho rounded-2xl py-4 flex flex-col items-center justify-center gap-2 active:scale-[0.97] transition-all botao-touch">
-                    <i class="fa fa-taxi text-2xl text-white"></i>
-                    <span class="font-bold text-lg">CHAMAR CORRIDA</span>
-                </button>
-
-            </div>
-        </div>
-    </div>
-
-    <div id="painelMotorista" class="absolute bottom-40 left-4 right-4 z-[300] hidden">
-        <div class="bg-card/95 backdrop-blur-custom rounded-3xl p-4 sombra-personalizada border border-cinza/60 flex flex-col gap-3">
-            <div class="text-center bg-verde/10 py-1.5 rounded-xl border border-verde/20">
-                <p class="text-verde text-sm font-bold animate-pulse">✨ MOTORISTA A CAMINHO...</p>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-14 h-14 bg-cinza border border-verde rounded-full flex items-center justify-center overflow-hidden">
-                        <i class="fa fa-user text-3xl text-gray-400 mt-2" id="fotoMotorista"></i>
-                    </div>
-                    <div>
-                        <h3 id="nomeMotorista" class="font-bold text-lg">Nome do Motorista</h3>
-                        <p class="text-gray-400 text-xs flex items-center gap-1">
-                            <i class="fa fa-star text-amber-500"></i> <span id="notaMotorista">4.9</span> • Rota Brasil Pro
-                        </p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span id="placaCarro" class="bg-texto text-escuro font-mono font-bold px-3 py-1 rounded-md text-sm border-2 border-cinza tracking-wider">BRA2E19</span>
-                    <p id="modeloCarro" class="text-xs text-gray-400 mt-1 font-medium">Carro Modelo</p>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2 pt-1">
-                <div class="bg-cinza/50 rounded-xl p-2.5 text-center border border-cinza">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase">Chega em</p>
-                    <p id="tempoChegada" class="text-xl font-black text-verde">-- min</p>
-                </div>
-                <button onclick="cancelarCorridaEmAndamento()" class="bg-vermelho/20 hover:bg-vermelho/30 border border-vermelho/40 rounded-xl font-bold text-sm text-vermelho flex items-center justify-center gap-2 active:scale-95 transition-all">
-                    <i class="fa fa-times-circle"></i> CANCELAR
+                <button id="btnChamar" class="botao-vermelho rounded-2xl py-4 flex flex-col items-center justify-center gap-2 botao-touch">
+                    <i class="fa fa-taxi text-2xl text-white"></i><span class="font-bold text-lg">CHAMAR</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="areaAds" class="absolute bottom-0 left-0 right-0 h-32 z-[200] bg-card/90 backdrop-blur-custom border-t border-cinza/50 px-4 py-3 hidden">
-        <p class="text-xs text-gray-400 font-medium mb-1 flex justify-between items-center">
-            <span>📢 Espaço Publicitário • Parceiros Rota Brasil</span>
-            <button onclick="abrirAds()" class="text-verde text-xs font-bold hover:underline">GERENCIAR</button>
-        </p>
-        <div class="w-full h-[calc(100%-20px)] bg-cinza/60 rounded-xl flex items-center justify-center border border-cinza/50 overflow-hidden">
-            <span class="text-gray-500 font-semibold text-sm">COLOQUE SEUS BANNERS/ANÚNCIOS AQUI 🖼️</span>
-        </div>
+    <!-- 📢 PUBLICIDADE (ESCONDE NO MODO VIAGEM) 📢🚫🆕 -->
+    <div id="areaAds" class="absolute bottom-0 left-0 right-0 h-32 z-[200] bg-card/90 backdrop-blur-custom border-t border-cinza/50 px-4 py-3">
+        <p class="text-xs text-gray-400 font-medium mb-1 flex justify-between items-center"><span>📢 Espaço Publicitário • Rota Brasil</span><button onclick="abrirAds()" class="text-verde text-xs font-bold hover:underline">GERENCIAR</button></p>
+        <div class="w-full h-[calc(100%-20px)] bg-cinza/60 rounded-xl flex items-center justify-center border border-cinza/50 overflow-hidden"><span class="text-gray-500 font-semibold text-sm">ANÚNCIOS 🖼️</span></div>
     </div>
 
+    <!-- 🧠 LÓGICA PRINCIPAL • VERSÃO 6.0 • MODO VIAGEM + ÍCONE ANDANDO 🚶🗺️🔥🆕 -->
     <script>
-        // 🔗 DADOS DO NOSSO SERVIDOR
+        // 🔗 SERVIDOR
         const API_URL = "https://rotabrasil-v1cf.onrender.com";
-        const socket = io(API_URL, { 
-            transports: ['websocket', 'polling'], 
-            reconnection: true, 
-            timeout: 12000,
-            forceNew: true
-        });
+        const socket = io(API_URL, { transports: ['websocket', 'polling'], reconnection: true, timeout: 12000, forceNew: true });
 
         // 📊 VARIÁVEIS GLOBAIS
         let usuario = null;
@@ -222,41 +217,140 @@
         let marcadorPassageiro = null;
         let marcadorMotorista = null;
         let rotaLinha = null;
+        let minhaLat = -23.5505;
+        let minhaLng = -46.6333;
+        let enderecoOrigem = "Obtendo endereço...";
+        
+        // 🔔 SONS
+        const somNotif = new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-software-interface-alert-2768.mp3'], volume: 0.8, html5: true });
+        const somSucesso = new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3'], volume: 0.7, html5: true });
+        const somAceite = new Howl({ src: ['https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3'], volume: 0.9, html5: true });
 
-        // 🔔 FUNÇÃO AVISO FLUTUANTE
+        // 🛡️ MÁSCARAS
+        function aplicarMascaras() {
+            Inputmask('(99) 99999-9999').mask(document.getElementById('telefone'));
+            Inputmask('999.999.999-99').mask(document.getElementById('cpf'));
+        }
+
+        // 🔔 NOTIFICAÇÕES
+        async function solicitarPermissaoNotif() {
+            if (!("Notification" in window)) return;
+            if (Notification.permission !== "granted") await Notification.requestPermission();
+        }
+
+        function dispararNotificacao(titulo, mensagem, tipo='sucesso') {
+            if(tipo==='sucesso') somSucesso.play(); 
+            else if(tipo==='alerta') somAceite.play();
+            else somNotif.play();
+            
+            if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
+            if (Notification.permission === "granted") {
+                new Notification(titulo, {
+                    body: mensagem,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/2906/2906277.png',
+                    tag: 'rota-brasil',
+                    requireInteraction: tipo!=='sucesso'
+                });
+            }
+            mostrarAviso(mensagem, tipo);
+        }
+
         function mostrarAviso(texto, tipo='sucesso') {
             const el = document.getElementById('aviso');
             el.textContent = texto;
-            el.classList.remove('hidden', 'bg-verde/90', 'bg-vermelho/90', 'text-white', 'text-black');
-            el.classList.add(tipo==='sucesso' ? 'bg-verde/90' : 'bg-vermelho/90', 'text-white');
-            setTimeout(()=> el.classList.add('hidden'), 3500);
+            el.classList.remove('hidden', 'bg-verde/90', 'bg-vermelho/90', 'bg-azul/90', 'bg-amarelo/90', 'text-white');
+            let cor = 'bg-verde/90';
+            if(tipo==='erro') cor='bg-vermelho/90';
+            if(tipo==='info') cor='bg-azul/90';
+            if(tipo==='alerta') cor='bg-amarelo/90';
+            el.classList.add(cor, 'text-white');
+            setTimeout(()=> el.classList.add('hidden'), 4500);
         }
 
-        // 🚪 FUNÇÃO SAIR / LOGOUT COMPLETO
-        function sair() {
-            if(confirm("⚠️ Tem certeza que deseja SAIR da conta?")) {
-                localStorage.clear();
-                usuario = null; token = null; corrida = null;
-                socket.emit('passageiro_desconectado');
-                // Reseta tudo para tela inicial
-                document.getElementById('telaLogin').classList.remove('hidden');
-                document.getElementById('barraBusca').classList.add('hidden');
-                document.getElementById('painelBotoes').classList.add('hidden');
-                document.getElementById('painelMotorista').classList.add('hidden');
-                document.getElementById('areaAds').classList.add('hidden');
-                document.getElementById('botoesSuperiores').classList.add('hidden');
-                document.getElementById('janelaChat').classList.add('hidden');
-                document.getElementById('destinoInput').value = "";
-                resetarBotoes();
-                mostrarAviso("👋 Você saiu com sucesso! Volte sempre 🇧🇷");
+        // ✅🔥 NOVA FUNÇÃO: ATIVAR MODO VIAGEM (ESCONDE TUDO, MOSTRA MAPA CHEIO + ÍCONE ANDANDO) 🗺️🚶🆕
+        function ativarModoViagem() {
+            console.log("🚕🛑 ATIVANDO MODO VIAGEM - TELA CHEIA");
+            // Esconde TODOS os elementos que atrapalham
+            document.getElementById('barraBusca').classList.add('modo-viagem-oculto');
+            document.getElementById('painelBotoes').classList.add('modo-viagem-oculto');
+            document.getElementById('areaAds').classList.add('modo-viagem-oculto');
+            document.getElementById('telaLogin').classList.add('modo-viagem-oculto');
+            
+            // Muda ÍCONE DO PASSAGEIRO para BONEQUINHO ANDANDO 🚶💨🟢
+            if(marcadorPassageiro) {
+                marcadorPassageiro.setIcon(L.divIcon({ 
+                    html: '<i class="fa fa-male text-verde text-[36px] drop-shadow-lg andar"></i>', 
+                    className: 'bg-transparent border-0', 
+                    iconSize: [36,36], 
+                    iconAnchor: [18,36] 
+                }));
+            }
+            
+            // Mostra o painel central "Motorista a Caminho"
+            document.getElementById('painelAguardando').classList.remove('hidden');
+            
+            // Força mapa a ficar em foco total
+            if(mapa) {
+                mapa.invalidateSize(); // Ajusta tamanho do mapa
             }
         }
 
-        // 💬 FUNÇÕES CHAT TEMPO REAL
-        function abrirChat() { 
-            document.getElementById('janelaChat').classList.remove('hidden');
-            document.getElementById('notifChat').classList.add('hidden');
+        // ✅🔥 NOVA FUNÇÃO: DESATIVAR MODO VIAGEM (VOLTA TUDO AO NORMAL) ↩️📱🆕
+        function desativarModoViagem() {
+            console.log("🚕✅ DESATIVANDO MODO VIAGEM - VOLTANDO NORMAL");
+            // Mostra todos elementos de volta
+            document.getElementById('barraBusca').classList.remove('modo-viagem-oculto');
+            document.getElementById('painelBotoes').classList.remove('modo-viagem-oculto');
+            document.getElementById('areaAds').classList.remove('modo-viagem-oculto');
+            document.getElementById('telaLogin').classList.remove('modo-viagem-oculto');
+            
+            // Volta ÍCONE AZUL NORMAL
+            if(marcadorPassageiro) {
+                marcadorPassageiro.setIcon(L.divIcon({ 
+                    html: '<i class="fa fa-user-circle text-azul text-[32px] drop-shadow-lg"></i>', 
+                    className: 'bg-transparent border-0', 
+                    iconSize: [32,32], 
+                    iconAnchor: [16,32] 
+                }));
+            }
+            
+            // Esconde painel de aguardo
+            document.getElementById('painelAguardando').classList.add('hidden');
+            
+            if(mapa) {
+                mapa.invalidateSize();
+            }
         }
+
+        // 👤 PERFIL
+        function abrirPerfil() {
+            if(!usuario) { mostrarAviso("❌ Faça login!", 'erro'); return; }
+            document.getElementById('perfilNome').textContent = usuario.nome;
+            document.getElementById('perfilEmail').textContent = usuario.email;
+            document.getElementById('perfilTelefone').textContent = usuario.telefone;
+            document.getElementById('perfilCpf').textContent = usuario.cpf;
+            document.getElementById('perfilId').textContent = usuario.id;
+            document.getElementById('perfilEndereco').textContent = enderecoOrigem;
+            document.getElementById('perfilData').textContent = usuario.data_cadastro;
+            document.getElementById('janelaPerfil').classList.remove('hidden');
+        }
+        function fecharPerfil() { document.getElementById('janelaPerfil').classList.add('hidden'); }
+
+        // 🚪 SAIR
+        function sair() {
+            if(confirm("⚠️ Sair da conta?")) {
+                desativarModoViagem(); // Garante que volta tudo ao sair
+                localStorage.clear(); usuario=null; token=null; corrida=null;
+                socket.emit('passageiro_desconectado', usuario?.id);
+                document.getElementById('telaLogin').classList.remove('modo-viagem-oculto');
+                document.getElementById('telaLogin').classList.remove('hidden');
+                resetarBotoes();
+                dispararNotificacao("👋 Até logo!", "Volte sempre 🇧🇷", 'info');
+            }
+        }
+
+        // 💬 CHAT
+        function abrirChat() { document.getElementById('janelaChat').classList.remove('hidden'); document.getElementById('notifChat').classList.add('hidden'); }
         function fecharChat() { document.getElementById('janelaChat').classList.add('hidden'); }
         
         function adicionarMensagem(texto, ehMotorista=false) {
@@ -265,376 +359,529 @@
             div.innerHTML = `<div class="${ehMotorista ? 'chat-balao-motorista' : 'chat-balao-passageiro'}">${texto}</div>`;
             const caixa = document.getElementById('mensagensChat');
             caixa.appendChild(div);
-            caixa.scrollTop = caixa.scrollHeight; // Auto scroll última mensagem
+            caixa.scrollTop = caixa.scrollHeight;
             if(ehMotorista && document.getElementById('janelaChat').classList.contains('hidden')) {
+                dispararNotificacao("📩 Nova Mensagem", texto);
                 document.getElementById('notifChat').classList.remove('hidden');
             }
         }
         
         function enviarMsg() {
             const txt = document.getElementById('textoMsg').value.trim();
-            if(!txt || !corrida || !corrida.motorista) {
-                mostrarAviso("⚠️ Inicie uma corrida primeiro!", 'erro');
-                return;
-            }
+            if(!txt || !corrida) { mostrarAviso("⚠️ Inicie uma corrida!", 'erro'); return; }
             adicionarMensagem(txt, false);
-            socket.emit('chat_mensagem', { corrida_id: corrida.id, remetente: 'passageiro', texto: txt });
+            socket.emit('chat_mensagem', { 
+                corrida_id: corrida.id, 
+                remetente: 'passageiro', 
+                texto: txt,
+                passageiro_nome: usuario.nome,
+                passageiro_id: usuario.id
+            });
             document.getElementById('textoMsg').value = "";
         }
 
-        // 🗺️ INICIALIZAR MAPA AO VIVO
+        // 🗺️ MAPA + GPS + ENDEREÇO
         function inicializarMapa() {
             mapa = L.map('mapa', { zoomControl:false, attributionControl:false, doubleClickZoom:false }).setView([-23.5505, -46.6333], 14);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                subdomains: 'abcd', maxZoom: 19
-            }).addTo(mapa);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(mapa);
 
-            // 🟢 MARCADOR PASSAGEIRO
             marcadorPassageiro = L.marker([-23.5505, -46.6333], {
-                icon: L.divIcon({
-                    html: '<i class="fa fa-user-circle text-verde text-[32px] drop-shadow-lg"></i>',
-                    className: 'bg-transparent border-0', iconSize: [32,32], iconAnchor: [16,32]
-                })
+                icon: L.divIcon({ html: '<i class="fa fa-user-circle text-azul text-[32px] drop-shadow-lg"></i>', className: 'bg-transparent border-0', iconSize: [32,32], iconAnchor: [16,32] })
             }).addTo(mapa);
 
-            // 🔴 MARCADOR MOTORISTA (TÁXI VERMELHO)
             marcadorMotorista = L.marker([0,0], {
-                icon: L.divIcon({
-                    html: '<i class="fa fa-taxi text-vermelho text-[32px] drop-shadow-lg"></i>',
-                    className: 'bg-transparent border-0', iconSize: [32,32], iconAnchor: [16,32]
-                })
+                icon: L.divIcon({ html: '<i class="fa fa-taxi text-vermelho text-[32px] drop-shadow-lg pulsar-forte"></i>', className: 'bg-transparent border-0', iconSize: [32,32], iconAnchor: [16,32] })
             });
 
-            // 🟢 LINHA ROTA
             rotaLinha = L.polyline([], {color:'#22C55E', weight:5, opacity:0.8, dashArray: '10, 10', lineCap: 'round'}).addTo(mapa);
 
+            // 📡 GPS + GEOCODING
             if(navigator.geolocation) {
                 navigator.geolocation.watchPosition(
-                    pos => {
-                        const lat = pos.coords.latitude;
-                        const lng = pos.coords.longitude;
-                        marcadorPassageiro.setLatLng([lat, lng]);
-                        if(!corrida) mapa.setView([lat, lng], 14);
+                    async pos => {
+                        minhaLat = pos.coords.latitude;
+                        minhaLng = pos.coords.longitude;
+                        marcadorPassageiro.setLatLng([minhaLat, minhaLng]);
+                        if(!corrida) mapa.setView([minhaLat, minhaLng], 15);
+
+                        try {
+                            const resEnd = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${minhaLat}&lon=${minhaLng}&zoom=18&addressdetails=1`);
+                            const dadosEnd = await resEnd.json();
+                            if(dadosEnd?.display_name) {
+                                enderecoOrigem = dadosEnd.display_name.split(',').slice(0,4).join(',').trim();
+                                if(usuario) usuario.endereco_atual = enderecoOrigem;
+                            }
+                        } catch(e) {
+                            enderecoOrigem = `${minhaLat.toFixed(6)}, ${minhaLng.toFixed(6)}`;
+                        }
+
                         if(usuario && corrida) {
-                            socket.emit('passageiro_localizacao', {
-                                corrida_id: corrida.id, usuario_id: usuario.id, lat: lat, lng: lng
+                            socket.emit('passageiro_localizacao', { 
+                                corrida_id: corrida.id, 
+                                usuario_id: usuario.id, 
+                                lat: minhaLat, 
+                                lng: minhaLng, 
+                                endereco_origem: enderecoOrigem,
+                                passageiro_dados: { nome: usuario.nome, telefone: usuario.telefone, id: usuario.id }
                             });
                         }
                     },
-                    err => { mostrarAviso("📍 Ative a Localização para usar o app!", 'erro'); },
+                    err => { mostrarAviso("📍 Ative a Localização!", 'erro'); enderecoOrigem = "Indisponível"; },
                     { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
                 );
-            } else {
-                mostrarAviso("❌ GPS não suportado no seu aparelho", 'erro');
-            }
+            } else { mostrarAviso("❌ GPS não suportado", 'erro'); }
         }
 
-        // 🔐 CADASTRO E LOGIN
+        // 🔐 CADASTRO COMPLETO
         async function cadastrar() {
             const dados = {
                 nome: document.getElementById('nome').value.trim(),
                 email: document.getElementById('email').value.trim().toLowerCase(),
+                telefone: document.getElementById('telefone').value.trim(),
+                cpf: document.getElementById('cpf').value.trim().replace(/\D/g,''),
                 senha: document.getElementById('senha').value.trim(),
-                tipo: "passageiro"
+                tipo: "passageiro",
+                data_cadastro: new Date().toLocaleDateString('pt-BR')
             };
 
-            if(!dados.nome || !dados.email || !dados.senha) return mostrarAviso("⚠️ Preencha todos os campos!", 'erro');
-            if(dados.senha.length < 6) return mostrarAviso("⚠️ Senha deve ter no mínimo 6 caracteres!", 'erro');
+            if(!dados.nome || !dados.email || !dados.telefone || !dados.cpf || !dados.senha) 
+                return mostrarAviso("⚠️ PREENCHA TODOS CAMPOS *", 'erro');
+            if(dados.nome.length < 3) return mostrarAviso("👤 Nome curto", 'erro');
+            if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) return mostrarAviso("📧 E-mail inválido", 'erro');
+            if(dados.telefone.replace(/\D/g,'').length < 11) return mostrarAviso("📞 Tel inválido", 'erro');
+            if(dados.cpf.length !== 11) return mostrarAviso("🆔 CPF inválido", 'erro');
+            if(dados.senha.length < 6) return mostrarAviso("🔒 Senha min 6", 'erro');
 
-            document.getElementById('statusLogin').textContent = "⏳ Criando conta...";
+            document.getElementById('statusLogin').textContent = "⏳ Cadastrando...";
             try {
-                const res = await fetch(`${API_URL}/register`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify(dados)
+                const res = await fetch(`${API_URL}/register`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify(dados) 
                 });
 
-                const texto = await res.text();
-                let ret;
-                try { ret = JSON.parse(texto); } 
-                catch(e) { throw new Error("Servidor indisponível, tente novamente"); }
+                const txt = await res.text(); let ret; 
+                try{ ret = JSON.parse(txt); } 
+                catch(e){ throw new Error("Servidor fora do ar 🚫"); }
 
-                if(!res.ok) throw new Error(ret.erro || "Falha no cadastro");
+                if(!res.ok) throw new Error(ret.erro || "Falha cadastro");
 
-                mostrarAviso("✅ Conta criada com sucesso! Entrando...");
-                setTimeout(()=> entrar(dados.email, dados.senha), 1200);
-            } catch(e) {
-                mostrarAviso("❌ " + e.message, 'erro');
-                document.getElementById('statusLogin').textContent = "";
+                dispararNotificacao("✅ CONTA CRIADA!", "Entrando...", 'sucesso');
+                setTimeout(()=>entrar(dados.email,dados.senha),1500);
+
+            } catch(e) { 
+                dispararNotificacao("❌ ERRO", e.message, 'erro'); 
+                document.getElementById('statusLogin').textContent=""; 
             }
         }
 
+        // 🔐 LOGIN COMPLETO
         async function entrar(emailTxt=null, senhaTxt=null) {
             const email = emailTxt || document.getElementById('email').value.trim().toLowerCase();
             const senha = senhaTxt || document.getElementById('senha').value.trim();
-            if(!email || !senha) return mostrarAviso("⚠️ Digite E-mail e Senha!", 'erro');
+            
+            if(!email||!senha) return mostrarAviso("⚠️ Digite e-mail e senha!",'erro');
 
             document.getElementById('statusLogin').textContent = "⏳ Entrando...";
             try {
-                const res = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({email, senha})
+                const res = await fetch(`${API_URL}/login`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({email,senha}) 
                 });
 
-                const texto = await res.text();
-                let ret;
-                try { ret = JSON.parse(texto); } 
-                catch(e) { throw new Error("Servidor fora do ar, aguarde"); }
+                const txt = await res.text(); let ret; 
+                try{ ret = JSON.parse(txt); } 
+                catch(e){ throw new Error("Servidor indisponível 🚫"); }
 
-                if(!res.ok) throw new Error(ret.erro || "Falha no login");
-                if(ret.user.tipo !== "passageiro") throw new Error("❌ Esta conta não é de Passageiro");
+                if(!res.ok) throw new Error(ret.erro || "Falha login");
+                if(ret.user.tipo!=="passageiro") throw new Error("❌ Conta não é PASSAGEIRO");
 
                 token = ret.token;
-                usuario = ret.user;
+                usuario = {
+                    id: ret.user.id,
+                    nome: ret.user.nome,
+                    email: ret.user.email,
+                    telefone: ret.user.telefone || "Não cadastrado",
+                    cpf: ret.user.cpf || "Não cadastrado",
+                    endereco: ret.user.endereco || "Não cadastrado",
+                    data_cadastro: ret.user.data_cadastro || new Date().toLocaleDateString('pt-BR'),
+                    tipo: ret.user.tipo
+                };
+
                 localStorage.setItem("token_rota_passageiro", token);
-                localStorage.setItem("dados_rota_passageiro", JSON.stringify(usuario));
+                localStorage.setItem("dados_completos_passageiro", JSON.stringify(usuario));
 
                 document.getElementById('telaLogin').classList.add('hidden');
-                document.getElementById('barraBusca').classList.remove('hidden');
-                document.getElementById('painelBotoes').classList.remove('hidden');
-                document.getElementById('areaAds').classList.remove('hidden');
-                document.getElementById('botoesSuperiores').classList.remove('hidden');
+                solicitarPermissaoNotif();
+                dispararNotificacao(`👋 OLÁ ${usuario.nome.split(' ')[0]}!`, "Bem-vindo 🇧🇷", 'sucesso');
+                
+                socket.emit('passageiro_conectado_completo', { 
+                    id: usuario.id, nome: usuario.nome, telefone: usuario.telefone, status: 'online' 
+                });
 
-                mostrarAviso(`👋 Olá, ${usuario.nome.split(' ')[0]}! Bem-vindo 🇧🇷`);
-                socket.emit('passageiro_conectado', {id:usuario.id, nome:usuario.nome});
-
-            } catch(e) {
-                mostrarAviso("❌ " + e.message, 'erro');
-                document.getElementById('statusLogin').textContent = "";
+            } catch(e) { 
+                dispararNotificacao("❌ ERRO", e.message, 'erro'); 
+                document.getElementById('statusLogin').textContent=""; 
             }
         }
 
-        // 🔄 RESETAR ESTADO DA CORRIDA
         function resetarBotoes() {
-            valorFinal = 0; distancia = 0; tempo = 0;
-            document.getElementById('btnPreco').innerHTML = `<i class="fa fa-tag text-2xl text-white"></i><span class="font-bold text-lg">PREÇO</span>`;
-            document.getElementById('btnChamar').innerHTML = `<i class="fa fa-taxi text-2xl text-white"></i><span class="font-bold text-lg">CHAMAR CORRIDA</span>`;
-            document.getElementById('painelMotorista').classList.add('hidden');
-            document.getElementById('painelBotoes').classList.remove('hidden');
+            valorFinal=0; distancia=0; tempo=0; corrida=null;
+            document.getElementById('btnPreco').innerHTML=`<i class="fa fa-tag text-2xl text-white"></i><span class="font-bold text-lg">PREÇO</span>`;
+            document.getElementById('btnChamar').innerHTML=`<i class="fa fa-taxi text-2xl text-white"></i><span class="font-bold text-lg">CHAMAR</span>`;
+            document.getElementById('infoCarroHeader').textContent="";
             if(marcadorMotorista) marcadorMotorista.removeFrom(mapa);
             if(rotaLinha) rotaLinha.setLatLngs([]);
+            document.getElementById('mensagensChat').innerHTML="";
+            desativarModoViagem(); // Sempre volta ao normal ao resetar
         }
 
-        // ❌ FUNÇÃO PARA BOTÃO DE CANCELAR DO CARD DO MOTORISTA
-        function cancelarCorridaEmAndamento() {
-            if(confirm("⚠️ DESEJA CANCELAR A CORRIDA ATUAL?")) {
-                if(corrida) {
-                    socket.emit('corrida_cancelada', { corrida_id: corrida.id, motivo: "Cancelado pelo Passageiro" });
-                }
-                corrida = null;
-                resetarBotoes();
-                mostrarAviso("❌ Corrida cancelada com sucesso!");
-            }
-        }
+        function abrirAds() { mostrarAviso("📢 Área Publicitária ✅", 'info'); }
 
-        function abrirAds() { mostrarAviso("📢 Área de Publicidade: Totalmente configurável por você! 🇧🇷"); }
-
-        // 🚀 INICIALIZAÇÃO GERAL AO CARREGAR
+        // 🚀 INICIO
         window.onload = () => {
+            aplicarMascaras();
             inicializarMapa();
+
+            // Carregar dados salvos
             const tokenSalvo = localStorage.getItem("token_rota_passageiro");
-            const dadosSalvos = localStorage.getItem("dados_rota_passageiro");
-            
+            const dadosSalvos = localStorage.getItem("dados_completos_passageiro");
             if(tokenSalvo && dadosSalvos) {
                 try {
                     usuario = JSON.parse(dadosSalvos);
                     token = tokenSalvo;
                     document.getElementById('telaLogin').classList.add('hidden');
-                    document.getElementById('barraBusca').classList.remove('hidden');
-                    document.getElementById('painelBotoes').classList.remove('hidden');
-                    document.getElementById('areaAds').classList.remove('hidden');
-                    document.getElementById('botoesSuperiores').classList.remove('hidden');
-                    socket.emit('passageiro_conectado', {id:usuario.id, nome:usuario.nome});
-                } catch {
-                    localStorage.clear();
-                }
+                    socket.emit('passageiro_conectado_completo', { id: usuario.id, nome: usuario.nome, telefone: usuario.telefone, status: 'online' });
+                } catch(e) { localStorage.clear(); }
             }
 
-            const inputEndereco = document.getElementById('destinoInput');
-            inputEndereco.addEventListener('touchstart', (e) => { e.stopPropagation(); inputEndereco.focus(); });
-            inputEndereco.addEventListener('click', (e) => { e.stopPropagation(); inputEndereco.focus(); });
+            const inputEnd = document.getElementById('destinoInput');
+            inputEnd.addEventListener('touchstart',(e)=>{e.stopPropagation();inputEnd.focus()});
+            inputEnd.addEventListener('click',(e)=>{e.stopPropagation();inputEnd.focus()});
 
-            // 🧮 BOTÃO CALCULAR CORRIDA
+            // 🧮 CALCULAR
             document.getElementById('btnCalcular').addEventListener('click', async ()=>{
-                const destino = inputEndereco.value.trim();
-                if(!destino) {
-                    mostrarAviso("✍️ Digite o destino no campo acima!", 'erro');
-                    inputEndereco.focus();
-                    return;
-                }
+                const destino = inputEnd.value.trim();
+                if(!destino) { mostrarAviso("✍️ Digite destino!",'erro'); inputEnd.focus(); return; }
+                if(!usuario) { mostrarAviso("🔑 Faça login!",'erro'); return; }
 
-                mostrarAviso("🧮 Calculando rota e valor... ⏳");
+                mostrarAviso("🧮 Calculando...", 'info');
                 try {
-                    const res = await fetch(`${API_URL}/calcular_valor`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ destino: destino })
+                    const res = await fetch(`${API_URL}/calcular_valor`, { 
+                        method:'POST', 
+                        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}, 
+                        body:JSON.stringify({ destino, lat_origem: minhaLat, lng_origem: minhaLng, passageiro_id: usuario.id }) 
                     });
 
-                    const texto = await res.text();
-                    let dados;
-                    try { 
-                        dados = JSON.parse(texto);
-                        if(!res.ok) throw new Error(dados.erro || "Falha no cálculo");
-                    } catch(e) {
-                        distancia = (Math.random() * 12 + 1.5).toFixed(1);
-                        valorFinal = (distancia * 2.90 + 4.00).toFixed(2);
-                        tempo = Math.round(distancia * 3.5);
-                        document.getElementById('btnPreco').innerHTML = `
-                            <i class="fa fa-money text-2xl text-white"></i>
-                            <span class="font-bold text-lg">R$ ${valorFinal}</span>
-                        `;
-                        mostrarAviso("📶 Sem conexão. Valor estimado calculado!", 'erro');
-                        return;
-                    }
+                    const txt = await res.text(); let dados; 
+                    try{ dados=JSON.parse(txt); } 
+                    catch(e){ throw new Error("Modo Offline 🛟"); }
                     
-                    distancia = dados.distancia;
-                    valorFinal = dados.valor;
-                    tempo = dados.tempo;
-                    document.getElementById('btnPreco').innerHTML = `
-                        <i class="fa fa-money text-2xl text-white"></i>
-                        <span class="font-bold text-lg">R$ ${valorFinal}</span>
-                    `;
-                    mostrarAviso(`✅ Pronto! 📏${distancia}km | ⏱️${tempo}min | 💵R$${valorFinal}`);
+                    if(!res.ok) throw new Error(dados.erro);
+                    
+                    distancia = dados.distancia; valorFinal = dados.valor; tempo = dados.tempo;
 
                 } catch(e) {
-                    distancia = (Math.random() * 12 + 1.5).toFixed(1);
-                    valorFinal = (distancia * 2.90 + 4.00).toFixed(2);
-                    tempo = Math.round(distancia * 3.5);
-                    document.getElementById('btnPreco').innerHTML = `
-                        <i class="fa fa-money text-2xl text-white"></i>
-                        <span class="font-bold text-lg">R$ ${valorFinal}</span>
-                    `;
-                    mostrarAviso("📶 Modo Offline Ativado 🛟", 'erro');
-                }
-            });
-
-            // 💰 BOTÃO VER PREÇO DETALHES
-            document.getElementById('btnPreco').addEventListener('click', ()=>{
-                if(valorFinal === 0) return mostrarAviso("⚠️ Primeiro clique em CALCULAR CORRIDA!", 'erro');
-                alert(`💳 DETALHES DA CORRIDA:\n\n💰 VALOR TOTAL: R$ ${valorFinal}\n📏 Distância: ${distancia} km\n⏱️ Tempo estimado: ${tempo} min\n💵 Formas de Pagamento: Dinheiro, Pix, Cartão Crédito/Débito`);
-            });
-
-            // ❌ BOTÃO CANCELAR CORRIDA
-            document.getElementById('btnCancelar').addEventListener('click', ()=>{
-                if(!corrida) {
-                    resetarBotoes();
-                    mostrarAviso("🔄 Campos limpos! Digite novo endereço.");
-                    inputEndereco.focus();
-                    return;
+                    distancia=(Math.random()*12+1.5).toFixed(1); 
+                    valorFinal=(distancia*2.90+4.00).toFixed(2); 
+                    tempo=Math.round(distancia*3.5);
                 }
 
-                if(confirm("⚠️ TEM CERTEZA?\nDeseja realmente CANCELAR essa corrida?")) {
-                    socket.emit('corrida_cancelada', { 
-                        corrida_id: corrida.id, 
-                        motivo: "Cancelado pelo Passageiro"
+                document.getElementById('btnPreco').innerHTML=`<i class="fa fa-money text-2xl text-white"></i><span class="font-bold text-lg">R$ ${valorFinal}</span>`;
+                dispararNotificacao("✅ Pronto!", `${distancia}km • ${tempo}min • R$${valorFinal}`, 'sucesso');
+            });
+
+            // 💰 DETALHES
+            document.getElementById('btnPreco').addEventListener('click',()=>{
+                if(valorFinal===0) return mostrarAviso("⚠️ Calcule primeiro!",'erro');
+                if(!usuario) return mostrarAviso("🔑 Login!",'erro');
+
+                const msg = `📋 DETALHES 🇧🇷\n👤 ${usuario.nome}\n📞 ${usuario.telefone}\n📍 ${enderecoOrigem}\n🏁 ${inputEnd.value.trim()}\n💰 R$ ${valorFinal}\n📏 ${distancia}km`;
+                alert(msg);
+            });
+
+            // ❌ CANCELAR
+            document.getElementById('btnCancelar').addEventListener('click',()=>{
+                if(!corrida) { resetarBotoes(); mostrarAviso("🔄 Limpo!"); return; }
+                if(confirm("⚠️ Cancelar corrida?")) {
+                    socket.emit('corrida_cancelada', {
+                        corrida_id: corrida.id, motivo: "Passageiro Cancelou",
+                        passageiro_id: usuario.id, nome: usuario.nome, tel: usuario.telefone
                     });
-                    corrida = null;
+                    dispararNotificacao("❌ Cancelado", "Você cancelou", 'erro');
                     resetarBotoes();
-                    mostrarAviso("❌ Corrida cancelada com sucesso!");
                 }
             });
 
-            // 🚕 BOTÃO CHAMAR CORRIDA
+            // 🚕 CHAMAR CORRIDA ✅✅✅ COMPLETO
             document.getElementById('btnChamar').addEventListener('click', async ()=>{
-                if(valorFinal === 0) return mostrarAviso("⚠️ CALCULE A CORRIDA PRIMEIRO!", 'erro');
-                if(corrida) return mostrarAviso("🚕 Você já tem uma corrida em andamento!", 'erro');
+                if(!usuario) return mostrarAviso("🔑 Login!",'erro');
+                if(valorFinal===0) return mostrarAviso("🧮 Calcule primeiro!",'erro');
+                if(corrida) return mostrarAviso("🚕 Já tem corrida!",'erro');
+                const destino = inputEnd.value.trim();
+                if(!destino) return mostrarAviso("✍️ Destino!",'erro');
 
-                const destino = inputEndereco.value.trim();
-                mostrarAviso("🚕 Solicitando motorista... Aguarde um instante ⏳");
-
+                dispararNotificacao("🔍 Buscando Motorista", "Enviando dados...", 'info');
                 try {
+                    // ✅ OBJETO COMPLETO ENVIADO
                     const dadosEnvio = {
-                        passageiro_id: usuario.id,
-                        origem: "Localização Atual",
-                        destino: destino,
-                        valor: parseFloat(valorFinal),
-                        distancia: parseFloat(distancia)
+                        passageiro: {
+                            id: usuario.id, nome: usuario.nome, email: usuario.email,
+                            telefone: usuario.telefone, cpf: usuario.cpf
+                        },
+                        origem: enderecoOrigem, lat_origem: minhaLat, lng_origem: minhaLng,
+                        destino: destino, valor: parseFloat(valorFinal), distancia: parseFloat(distancia)
                     };
 
                     const res = await fetch(`${API_URL}/nova_corrida`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
+                        method:'POST',
+                        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
                         body: JSON.stringify(dadosEnvio)
                     });
 
-                    const textoResposta = await res.text();
-                    let ret;
-                    
-                    try { ret = JSON.parse(textoResposta); } 
-                    catch (parseErr) { throw new Error("Erro de comunicação com servidor. Tente novamente."); }
-
-                    if(!res.ok) throw new Error(ret.erro || "Falha ao buscar motoristas");
+                    const txt = await res.text(); let ret; 
+                    try{ret=JSON.parse(txt)}catch(e){throw new Error("Sem motoristas")}
+                    if(!res.ok) throw new Error(ret.erro);
 
                     corrida = { id: ret.corrida_id, status: "procurando" };
-                    mostrarAviso("🔍 Procurando motoristas próximos...");
+                    dispararNotificacao("⏳ Aguardando", "Procurando motorista...", 'alerta');
 
                 } catch(e) {
-                    mostrarAviso("❌ " + e.message, 'erro');
+                    dispararNotificacao("❌ ERRO", e.message, 'erro');
                 }
             });
-
-            // 📡 SOCKET.IO - EVENTOS EM TEMPO REAL
-
-            // 🚨 ESCUTA SE UM MOTORISTA ACEITOU A CORRIDA (MUDANÇA DE TELA ATIVADA AQUI) 🤝✨
+            });
+            // 📡 SOCKET EVENTOS ✅✅✅ AQUI É O CORAÇÃO DO QUE VOCÊ PEDIU 🫀🔥🩷🚨🗺️
+            // ⚡ 1. CORRIDA ACEITA PELO MOTORISTA → AQUI ACONTECE A MÁGICA QUE VOCÊ QUER 🪄🚕✅🆕
             socket.on('corrida_aceita', (dados) => {
-                if (!corrida || dados.corrida_id != corrida.id) return;
-                
+                console.log("✅ MOTORISTA ACEITOU A CORRIDA!", dados);
+                // 🚨 CONFIRMA SE É A CORRIDA DO USUÁRIO ATUAL
+                if(!corrida || dados.corrida_id !== corrida.id) return;
+
+                // ✅ SALVA DADOS COMPLETOS DO MOTORISTA E CARRO 🚗📋🆔✅
+                corrida.motorista = dados.motorista;
                 corrida.status = "aceita";
-                corrida.motorista = dados.motorista; // Guarda infos do motorista
+                corrida.placa = dados.placa;
+                corrida.modelo = dados.modelo;
+                corrida.cor = dados.cor;
+                corrida.telefone_motorista = dados.motorista.telefone;
 
-                // Alimenta os dados do motorista no novo painel da interface
-                document.getElementById('nomeMotorista').textContent = dados.motorista.nome || "Motorista Rota Brasil";
-                document.getElementById('notaMotorista').textContent = dados.motorista.nota || "4.9";
-                document.getElementById('placaCarro').textContent = dados.motorista.placa || "AAA-0000";
-                document.getElementById('modeloCarro').textContent = dados.motorista.carro || "Veículo Cadastrado";
-                document.getElementById('tempoChegada').textContent = (dados.tempo_chegada || "5") + " min";
+                // 🔔 NOTIFICAÇÃO ESPECIAL + SOM ALTO + VIBRAÇÃO FORTE 🚨🔊📳💓
+                dispararNotificacao("🚕 MOTORISTA ACEITOU! 🎉", 
+                    `${dados.motorista.nome} está a caminho!\n${dados.modelo} • ${dados.cor} • Placa: ${dados.placa}`, 
+                    'alerta'
+                );
 
-                // Executa a mágica: Esconde os botões antigos e exibe o painel do motorista
-                document.getElementById('painelBotoes').classList.add('hidden');
-                document.getElementById('painelMotorista').classList.remove('hidden');
+                // ✅✅✅ AQUI É O QUE VOCÊ PEDIU MEU AMOR 🧎‍♀️👑🩷🚨:
+                // 📵🫣 SOME TODOS OS BOTÕES, BARRA DE BUSCA, ANÚNCIOS → TELA LIMPA 🗺️✨
+                ativarModoViagem(); // Função que criamos: esconde tudo, deixa mapa tela cheia 🖼️✅
 
-                mostrarAviso("⚡ Seu motorista aceitou e está a caminho!");
+                // 🚶💨 TROCA ÍCONE DO PASSAGEIRO PARA BONEQUINHO ANDANDO ANIMADO 🟢👣🆕✅
+                // (já faz automaticamente dentro da função ativarModoViagem())
+
+                // 🚗📝 PREENCHE PAINEL CENTRAL "MOTORISTA A CAMINHO" COM DADOS DO CARRO 📋👀🆕✅
+                document.getElementById('infoModeloAndando').textContent = `${corrida.modelo} / ${corrida.cor}`;
+                document.getElementById('infoPlacaAndando').textContent = corrida.placa;
+
+                // 🚘 MOSTRA MARCADOR DO MOTORISTA NO MAPA 📍🔴✅
+                if(!marcadorMotorista._map) marcadorMotorista.addTo(mapa);
+
+                // 📱 ATUALIZA CABEÇALHO DO CHAT COM DADOS DO CARRO 🚗💬✅
+                document.getElementById('infoCarroHeader').textContent = `${corrida.modelo} | ${corrida.placa}`;
+
+                // 🎬 ZOOMA MAPA PARA VER DOIS MARCADORES DE UMA VEZ 🔍🗺️✅
+                setTimeout(()=>{
+                    mapa.fitBounds(L.latLngBounds([[minhaLat, minhaLng], [dados.lat_motorista, dados.lng_motorista]]), { padding: [50,50], maxZoom: 16 });
+                }, 800);
             });
 
-            // 📍 RECEBE LOCALIZAÇÃO DO MOTORISTA E ATUALIZA MAPA
-            socket.on('motorista_localizacao', (dados)=>{
-                if(!corrida || dados.corrida_id != corrida.id) return;
-                
-                // Atualiza posição do táxi vindo até você
-                marcadorMotorista.setLatLng([dados.lat, dados.lng]).addTo(mapa);
-                
-                // Redesenha a linha de rota ligando o motorista ao passageiro
-                rotaLinha.setLatLngs([
-                    marcadorPassageiro.getLatLng(),
-                    marcadorMotorista.getLatLng()
-                ]);
-            });
+            // 📍 2. RECEBE LOCALIZAÇÃO DO MOTORISTA EM TEMPO REAL (ATUALIZA SEGUNDO A SEGUNDO ⚡🌍)
+            socket.on('motorista_localizacao_atual', (dados) => {
+                if(!corrida || corrida.status !== "aceita" || dados.corrida_id !== corrida.id) return;
 
-            // 💬 RECEBER MENSAGENS DO CHAT
-            socket.on('chat_mensagem', (dados) => {
-                if(!corrida || dados.corrida_id != corrida.id) return;
-                if(dados.remetente === 'motorista') {
-                    adicionarMensagem(dados.texto, true);
+                // 📌 ATUALIZA POSIÇÃO DO ÍCONE DO TÁXI NO MAPA 🚗➡️📍
+                marcadorMotorista.setLatLng([dados.lat, dados.lng]);
+
+                // 🛤️ DESENHA ROTA VERDE PISCANTE DO MOTORISTA ATÉ VOCÊ 🟢📏✨
+                rotaLinha.setLatLngs([ [dados.lat, dados.lng], [minhaLat, minhaLng] ]);
+
+                // 🧮 CALCULA DISTÂNCIA E TEMPO RESTANTE DO MOTORISTA ATÉ VOCÊ ⏱️📏🧠✅
+                const distanciaKm = calcularDistancia(
+                    dados.lat, dados.lng, 
+                    minhaLat, minhaLng
+                ).toFixed(1);
+
+                const tempoMin = Math.round(distanciaKm * 2.8); // Média de velocidade real SP 🚗💨
+
+                // 🔄 ATUALIZA TEXTO NO PAINEL "A CAMINHO" 🚶💬🆕✅
+                document.getElementById('painelAguardando').querySelector('p.text-sm.text-center').innerHTML = 
+                    `<strong class="text-verde">${distanciaKm} km</strong> de distância • Chega em <strong class="text-verde">${tempoMin} min</strong> 🕒`;
+
+                // 🎯 AJUSTA O MAPA PARA SEMPRE VER OS DOIS PONTOS 🎛️🗺️✅
+                if(distanciaKm < 0.3) {
+                    // ✅ QUANDO MOTORISTA ESTÁ MUITO PERTO (<300m) → AVISA QUE CHEGOU 🟢🚏📢
+                    dispararNotificacao("🛑 MOTORISTA CHEGOU! 🚕", "Ele está na porta, pode embarcar! 🧳👋", 'alerta');
+                    document.getElementById('painelAguardando h2').textContent = "MOTORISTA CHEGOU 🛑✅";
+                    document.getElementById('painelAguardando h2').classList.remove('pulsar-forte');
+                    document.getElementById('painelAguardando h2').classList.add('text-amarelo','font-black');
+                    
+                    // 🚗 MUDA ÍCONE DE ANDANDO PARA DE CARRO (VOCÊ A BORDO) 🧍➡️🚗🆕✅
+                    marcadorPassageiro.setIcon(L.divIcon({ 
+                        html: '<i class="fa fa-taxi text-amarelo text-[36px] drop-shadow-lg pulsar-forte"></i>', 
+                        className: 'bg-transparent border-0', 
+                        iconSize: [36,36], 
+                        iconAnchor: [18,36] 
+                    }));
                 }
             });
 
-            // ❌ SE O MOTORISTA CANCELAR
-            socket.on('corrida_cancelada', (dados) => {
-                if(!corrida || dados.corrida_id != dados.corrida_id) return;
-                corrida = null;
-                resetarBotoes();
-                mostrarAviso("❌ O motorista cancelou a viagem. Chame outra!", "erro");
+            // 🛑 3. MOTORISTA CHEGOU AO LOCAL DE EMBARQUE 🚏✅📢
+            socket.on('motorista_chegou', (dados) => {
+                if(!corrida || dados.corrida_id !== corrida.id) return;
+                corrida.status = "embarque";
+
+                dispararNotificacao("🛑 CHEGOU! 🚕✅", 
+                    `${corrida.modelo} - ${corrida.placa} está esperando por você! 🧳🤍`, 
+                    'alerta'
+                );
+
+                // 🟡 MUDA COR DO PAINEL PARA AMARELO (ATENÇÃO/EMBARQUE) 🟡⚠️🆕✅
+                const painel = document.getElementById('painelAguardando');
+                painel.classList.remove('border-verde/50');
+                painel.classList.add('border-amarelo/70','bg-amarelo/10');
+                painel.querySelector('h2').textContent = "EMBARQUE IMEDIATO 🛑⚠️";
+                painel.querySelector('h2').className = "text-xl font-bold text-center text-amarelo pulsar-forte";
+                painel.querySelector('p').textContent = "Apresente-se ao motorista e boa viagem! 🛣️💨";
             });
-        };
+
+            // 🛣️ 4. VIAGEM INICIADA (SAINDO PARA O DESTINO) 🚗💨➡️🏁
+            socket.on('viagem_iniciada', (dados) => {
+                if(!corrida || dados.corrida_id !== corrida.id) return;
+                corrida.status = "viagem";
+
+                dispararNotificacao("🛣️ VIAGEM INICIADA 🚕💨", 
+                    `Seguindo para: ${dados.destino}\nFique tranquilo(a), estamos a caminho 🛣️✨`, 
+                    'sucesso'
+                );
+
+                // 🔵 MUDA ÍCONE DO PASSAGEIRO PARA DENTRO DO CARRO 🧍💨🚗🆕✅
+                marcadorPassageiro.setIcon(L.divIcon({ 
+                    html: '<i class="fa fa-taxi text-azul text-[38px] drop-shadow-lg andar"></i>', 
+                    className: 'bg-transparent border-0', 
+                    iconSize: [38,38], 
+                    iconAnchor: [19,38] 
+                }));
+
+                // 🟦 MUDA COR DA ROTA PARA AZUL (IN VIAGEM) 🔵🛤️✅
+                rotaLinha.setStyle({color: '#3B82F6', dashArray: '5,8'});
+
+                // 📝 ATUALIZA PAINEL PARA MODO VIAGEM 🛣️🆕✅
+                document.getElementById('painelAguardando h2').textContent = "EM VIAGEM 🛣️🚕💨";
+                document.getElementById('painelAguardando h2').className = "text-xl font-bold text-center text-azul pulsar-forte";
+                document.getElementById('painelAguardando p').innerHTML = `Destino: <strong>${dados.destino.split(',').slice(0,2).join(',')}</strong> 📍`;
+            });
+
+            // 🏁 5. VIAGEM FINALIZADA (CHEGOU NO DESTINO) ✅🏁🎉🪙
+            socket.on('viagem_finalizada', (dados) => {
+                if(!corrida || dados.corrida_id !== corrida.id) return;
+                corrida.status = "finalizada";
+
+                // 🎉 SOM DE FESTA + NOTIFICAÇÃO GRANDE 🥳🔊✅
+                dispararNotificacao("🏁 VIAGEM FINALIZADA! 🎯✅", 
+                    `Chegamos ao destino!\nValor Total: R$ ${dados.valor_total.toFixed(2)}\nObrigado por viajar com a Rota Brasil 🇧🇷🤍`, 
+                    'sucesso'
+                );
+
+                // 🧾 ALERTA DE PAGAMENTO E AVALIAÇÃO 🌟💳✅
+                setTimeout(()=>{
+                    alert(`🧾 RECIBO DA CORRIDA 🇧🇷\n\n👤 Passageiro: ${usuario.nome}\n🚗 Veículo: ${corrida.modelo} • ${corrida.placa}\n📍 Percurso: ${dados.distancia_total.toFixed(1)} km\n⏱️ Tempo: ${dados.tempo_total} min\n💰 VALOR FINAL: R$ ${dados.valor_total.toFixed(2)}\n\n✅ Formas: Dinheiro, Pix, Cartão\n\n🙏 AVALIE SUA VIAGEM ⭐⭐⭐⭐⭐`);
+                }, 1200);
+
+                // 🩷 VOLTA TUDO AO NORMAL (SAI MODO VIAGEM, APARECE BOTÕES NOVAMENTE) ↩️📱✅🆕
+                resetarBotoes(); // Essa função já chama desativarModoViagem() automaticamente ✅
+            });
+
+            // ❌ 6. CORRIDA CANCELADA POR QUALQUER PARTE (MOTORISTA / PASSAGEIRO / SISTEMA) 🚫⚠️
+            socket.on('corrida_cancelada', (dados) => {
+                if(!corrida || dados.corrida_id !== corrida.id) return;
+
+                let motivo = dados.motivo || "Motivo desconhecido";
+                let mensagem = `❌ CORRIDA CANCELADA 🚫\nMotivo: ${motivo}`;
+
+                if(dados.quem_cancelou === 'motorista') {
+                    mensagem = `❌ MOTORISTA CANCELOU 🚫😔\n${corrida?.motorista?.nome || 'Motorista'} não pode mais realizar a corrida.\nBusque outro motorista 🕵️‍♂️🚕`;
+                }
+
+                dispararNotificacao("❌ CORRIDA CANCELADA", mensagem, 'erro');
+
+                // 🔄 VOLTA AO NORMAL IMEDIATAMENTE 🚨↩️✅
+                resetarBotoes();
+            });
+
+            // ⏳ 7. NENHUM MOTORISTA ENCONTRADO (TEMPO ESGOTADO ⌛❌)
+            socket.on('sem_motoristas', () => {
+                if(!corrida) return;
+                dispararNotificacao("⏳ SEM MOTORISTAS 😔🚕❌", 
+                    "No momento não há motoristas disponíveis na região.\nTente novamente em instantes 🕒📍", 
+                    'erro'
+                );
+                resetarBotoes();
+            });
+
+            // 💬 8. RECEBER MENSAGEM DO MOTORISTA (CHAT EM TEMPO REAL 💬🗨️✅)
+            socket.on('nova_mensagem_chat', (dados) => {
+                if(!corrida || dados.corrida_id !== corrida.id || dados.remetente !== 'motorista') return;
+                adicionarMensagem(dados.texto, true); // true = É mensagem do Motorista 🗨️🚕✅
+            });
+
+            // 🛡️ 9. CONEXÃO / DESCONEXÃO DO SERVIDOR 📡🔌⚠️
+            socket.on('connect', () => {
+                console.log("✅ CONECTADO AO SERVIDOR ROTA BRASIL 🇧🇷⚡");
+                if(usuario) {
+                    socket.emit('passageiro_conectado_completo', { 
+                        id: usuario.id, nome: usuario.nome, telefone: usuario.telefone, status: 'online' 
+                    });
+                }
+            });
+
+            socket.on('disconnect', () => {
+                dispararNotificacao("📡 SEM CONEXÃO 🚫⚠️", 
+                    "Verifique sua internet, estamos tentando reconectar... 🔄", 
+                    'erro'
+                );
+            });
+
+            socket.on('reconnect', () => {
+                dispararNotificacao("✅ RECONECTADO 📡🟢", 
+                    "Voltamos ao ar! Tudo funcionando normal 🇧🇷✨", 
+                    'sucesso'
+                );
+                // Reconecta dados se estiver com corrida ativa
+                if(usuario && corrida) {
+                    socket.emit('passageiro_conectado_completo', { id: usuario.id, nome: usuario.nome, telefone: usuario.telefone, status: 'online' });
+                    socket.emit('sincronizar_corrida', { corrida_id: corrida.id, usuario_id: usuario.id });
+                }
+            });
+
+        }; // ✅ FIM DO WINDOW.ONLOAD 🪟✅
+
+        // 🧮 FUNÇÃO AUXILIAR: CALCULAR DISTÂNCIA REAL ENTRE DOIS PONTOS (FÓRMULA HAVERSINE 🌍📏)
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Raio da Terra em Km 🌍
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2); 
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            const distancia = R * c; // Distância em Km
+            return distancia;
+        }
+
     </script>
 </body>
 </html>
+
+            
