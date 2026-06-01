@@ -595,7 +595,7 @@
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 document.getElementById('origem').value = `${lat},${lng}`;
-                falar("✅ Localização definida!");
+                falar("Localização definida!");
                 
                 estadoLocalizacao = 1;
                 document.getElementById('btnLocalizacao').className = "btn-success";
@@ -786,7 +786,7 @@
             }
 
             tocarSom('alerta');
-            falar("🔍 Procurando motoristas próximos, aguarde...");
+            falar("Procurando motoristas próximos, aguarde...");
 
             try {
                 const res = await fetch(`${API}/nova_corrida`, {
@@ -982,7 +982,7 @@
         }
 
         async function cancelarCorrida() {
-            falar("🚫 Cancelando sua viagem, aguarde...");
+            falar("Cancelando sua viagem, aguarde...");
 
             if(!corridaAtual || !corridaAtual.id) {
                 resetarInterfaceAposCancelamento();
