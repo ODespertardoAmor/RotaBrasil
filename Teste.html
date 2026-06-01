@@ -2,202 +2,379 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rota Brasil - Passageiro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rota Brasil - Passageiro 🇧🇷</title>
     
-    <!-- Ícones e Fontes -->
+    <!-- 🎨 ICONES E FONTES -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Socket.io e Google Maps API -->
+    <!-- 🔌 SOCKET E GOOGLE MAPS -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API_AQUI&libraries=places"></script>
 
     <style>
+        /* 🎨 PALETA DE CORES NOVA - MAIS BONITA E MODERNA 🇧🇷🩷 */
         :root {
-            --cor-primaria: #2ecc71;
-            --cor-segunda: #27ae60;
-            --cor-fundo: #f5f6fa;
-            --cor-card: #ffffff;
-            --cor-texto: #2c3e50;
-            --cor-texto-secundario: #7f8c8d;
+            --cor-primaria: #22C55E;
+            --cor-segunda: #16A34A;
+            --cor-alerta: #EAB308;
+            --cor-perigo: #EF4444;
+            --cor-info: #3B82F6;
+            --cor-fundo: #0F172A;
+            --cor-fundo-card: #1E293B;
+            --cor-card-claro: #334155;
+            --cor-texto: #F8FAFC;
+            --cor-texto-secundario: #CBD5E1;
+            --cor-borda: #475569;
+            --sombra-suave: 0 8px 32px rgba(0,0,0,0.3);
+            --sombra-forte: 0 12px 40px rgba(0,0,0,0.4);
+            --borda-radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--cor-fundo);
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
             color: var(--cor-texto);
-            margin: 0;
-            padding: 20px;
+            min-height: 100vh;
+            padding: 16px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
+            align-items: flex-start;
         }
 
         .container {
             width: 100%;
-            max-width: 500px;
-            background: var(--cor-card);
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            padding: 25px;
-            box-sizing: border-box;
+            max-width: 480px;
+            background: var(--cor-fundo-card);
+            border-radius: var(--borda-radius);
+            box-shadow: var(--sombra-forte);
+            padding: 24px;
+            border: 1px solid var(--cor-borda);
+            backdrop-filter: blur(10px);
         }
 
-        h2, h3 {
+        /* 🚀 LOGO */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--cor-borda);
+        }
+
+        .logo-container img {
+            height: 45px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .logo-texto {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--cor-primaria), var(--cor-info));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        h2, h3, h4 {
             text-align: center;
-            margin-top: 0;
+            margin-bottom: 16px;
+            font-weight: 700;
         }
 
+        h2 { font-size: 22px; }
+        h3 { font-size: 18px; }
+
+        /* 📝 FORMULÁRIOS */
         .form-group {
             position: relative;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
         }
 
         .form-group i {
             position: absolute;
-            left: 15px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--cor-texto-secundario);
+            font-size: 18px;
+            z-index: 2;
         }
 
         input {
             width: 100%;
-            padding: 12px 12px 12px 40px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
+            padding: 14px 14px 14px 45px;
+            background-color: var(--cor-card-claro);
+            border: 1px solid var(--cor-borda);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--cor-texto);
+            transition: all 0.3s ease;
             outline: none;
-            transition: 0.3s;
         }
 
+        input::placeholder { color: var(--cor-texto-secundario); opacity: 0.8; }
         input:focus {
             border-color: var(--cor-primaria);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+            background-color: var(--cor-fundo-card);
         }
 
+        /* 🟢🔴 BOTÕES */
         button {
             width: 100%;
             padding: 14px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .btn-success { background-color: var(--cor-primaria); color: white; }
-        .btn-success:hover { background-color: var(--cor-segunda); }
-        .btn-danger { background-color: #e74c3c; color: white; }
-        .btn-danger:hover { background-color: #c0392b; }
-        .btn-secondary { background-color: #95a5a6; color: white; }
-        .btn-blocked { background-color: #bdc3c7; color: #7f8c8d; cursor: not-allowed; }
+        .btn-success { 
+            background: linear-gradient(135deg, var(--cor-primaria), var(--cor-segunda)); 
+            color: white; 
+        }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3); }
+        .btn-success:active { transform: translateY(0px); }
 
-        /* Sugestões do Autocomplete */
+        .btn-danger { 
+            background: linear-gradient(135deg, var(--cor-perigo), #DC2626); 
+            color: white; 
+        }
+        .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3); }
+
+        .btn-secondary { 
+            background: var(--cor-card-claro); 
+            color: var(--cor-texto); 
+            border: 1px solid var(--cor-borda);
+        }
+        .btn-secondary:hover { background: var(--cor-borda); }
+
+        .btn-blocked { 
+            background: var(--cor-card-claro) !important; 
+            color: var(--cor-texto-secundario) !important; 
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* 🔍 SUGESTÕES AUTOCOMPLETE */
         .suggestions {
-            border: 1px solid #ddd;
+            border: 1px solid var(--cor-borda);
             border-top: none;
-            background: white;
+            background: var(--cor-card-claro);
             position: absolute;
             width: 100%;
-            z-index: 1000;
-            max-height: 200px;
+            z-index: 9999;
+            max-height: 220px;
             overflow-y: auto;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0 0 12px 12px;
             display: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: var(--sombra-suave);
+            margin-top: -2px;
         }
 
         .suggestion-item {
-            padding: 12px;
+            padding: 12px 14px;
             cursor: pointer;
             font-size: 14px;
+            color: var(--cor-texto);
+            border-bottom: 1px solid var(--cor-borda);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .suggestion-item:hover { background-color: #f1f2f6; }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:hover { background: var(--cor-fundo-card); color: var(--cor-primaria); }
 
-        /* Status Container */
+        /* 📊 STATUS E ANIMAÇÕES */
         .status-container {
             text-align: center;
-            padding: 20px;
+            padding: 16px;
         }
 
         .status-icon {
-            font-size: 50px;
-            margin-bottom: 15px;
+            font-size: 55px;
+            margin-bottom: 12px;
         }
 
         .status-buscando {
-            color: #f1c40f;
-            animation: pulse 1.5s infinite;
+            color: var(--cor-alerta);
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        .status-aceito {
+            color: var(--cor-primaria);
+            animation: float 2s infinite alternate ease-in-out;
+        }
+        .status-chegou {
+            color: var(--cor-info);
+            animation: pulse 1s infinite ease-in-out;
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.6; }
+            0% { transform: scale(1); opacity: 0.7; }
             50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 0.7; }
         }
 
-        .status-texto { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
-        .status-subtexto { color: var(--cor-texto-secundario); font-size: 14px; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-6px); }
+        }
 
-        /* Card de Avaliações */
+        .status-texto { 
+            font-size: 20px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+        }
+        .status-subtexto { 
+            color: var(--cor-texto-secundario); 
+            font-size: 14px; 
+            line-height: 1.5;
+        }
+
+        /* 💳 CARDS */
+        .card {
+            background: var(--cor-card-claro);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 14px;
+            border: 1px solid var(--cor-borda);
+            transition: all 0.3s ease;
+        }
+
+        .card-titulo {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .linha-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+
+        .valor-destaque {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--cor-primaria);
+        }
+
+        .placa-badge {
+            background: linear-gradient(135deg, var(--cor-info), #1D4ED8);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 15px;
+        }
+
+        /* 🗺️ MAPA - AGORA LINDO E GRANDE 🚗📍✅ */
+        #cardMapa {
+            margin-top: 14px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid var(--cor-primaria);
+            box-shadow: var(--sombra-suave);
+            transition: all 0.4s ease;
+        }
+
+        #mapa {
+            width: 100%;
+            height: 320px; /* AUMENTEI PARA VER MELHOR 🩷👀 */
+            border-radius: 10px;
+        }
+
+        /* ⭐ AVALIAÇÕES */
         .avaliacoes-container {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
+            margin-top: 18px;
+            border-top: 1px solid var(--cor-borda);
+            padding-top: 14px;
         }
 
         .media-nota {
-            text-align: center;
-            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            background: var(--cor-card-claro);
+            padding: 10px;
+            border-radius: 10px;
         }
 
-        .nota-num { font-size: 32px; font-weight: bold; color: #f1c40f; }
-        .estrelas { color: #f1c40f; margin-left: 5px; }
+        .nota-num { 
+            font-size: 30px; 
+            font-weight: bold; 
+            color: var(--cor-alerta); 
+        }
+        .estrelas { color: var(--cor-alerta); font-size: 18px; }
         
         .avaliacao-item {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
+            background: var(--cor-card-claro);
+            padding: 10px 12px;
+            border-radius: 8px;
             margin-bottom: 8px;
+            border-left: 3px solid var(--cor-alerta);
         }
 
         .item-topo {
             display: flex;
             justify-content: space-between;
-            font-weight: bold;
+            align-items: center;
+            font-weight: 600;
             font-size: 13px;
             margin-bottom: 4px;
         }
 
-        #mapa {
-            width: 100%;
-            height: 250px;
-            border-radius: 8px;
-            margin-top: 15px;
-        }
+        /* 📱 SCROLL PERSONALIZADO */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--cor-fundo); }
+        ::-webkit-scrollbar-thumb { background: var(--cor-borda); border-radius: 3px; }
     </style>
 </head>
 <body>
 
     <div class="container">
         
+        <!-- 🚀 LOGO -->
+        <div class="logo-container">
+            <img src="https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/refs/heads/main/assets/logo.jpg" alt="Rota Brasil">
+            <span class="logo-texto">ROTA BRASIL</span>
+        </div>
+
         <!-- ==========================================
-            🔐 TELA DE LOGIN / CADASTRO
+            🔐 TELA DE LOGIN / CADASTRO (MANTIVE TUDO IGUAL, SÓ DESIGN)
         =========================================== -->
-        <div class="logo-container" style="max-width: 120px; height: 50px; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-    <img src="https://raw.githubusercontent.com/ODespertardoAmor/RotaBrasil/refs/heads/main/assets/logo.jpg" alt="Sua Marca" style="width: 100%; height: 100%; object-fit: contain;">
-    <span class="logo-texto" style="display: none;">🚗 ROTA BRASIL</span> 
-</div>
         <div id="loginCard">
-            
             <h2>🚗 Seja bem-vindo Passageiro!</h2>
-            <div>Este é um app de teste </div>
+            <p style="text-align:center; color:var(--cor-texto-secundario); margin-bottom:20px;">O melhor app de viagens do Brasil 🇧🇷</p>
+            
             <div class="form-group">
                 <i class="fas fa-user"></i>
                 <input type="text" id="nome" placeholder="Nome Completo (Apenas p/ Cadastro)">
@@ -215,9 +392,13 @@
                 <input type="text" id="telefone" placeholder="Telefone (Apenas p/ Cadastro)">
             </div>
             
-            <button class="btn-success" onclick="login()">🔑 Entrar</button>
-            <button class="btn-secondary" onclick="registerPassageiro()">📝 Cadastrar Nova Conta</button>
-            <div id="loginStatus" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+            <button class="btn-success" onclick="login()">
+                <i class="fas fa-key"></i> 🔑 Entrar
+            </button>
+            <button class="btn-secondary" onclick="registerPassageiro()">
+                <i class="fas fa-user-plus"></i> 📝 Cadastrar Nova Conta
+            </button>
+            <div id="loginStatus" style="text-align:center; margin-top:12px; font-weight:bold; min-height:20px;"></div>
         </div>
 
         <!-- ==========================================
@@ -225,68 +406,71 @@
         =========================================== -->
         <div id="dashboard" style="display: none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0;">Para onde vamos?</h3>
-                <button class="btn-danger" onclick="logoutPassageiro()" style="width:auto; padding:5px 10px; margin:0; font-size:12px;">Sair</button>
+                <h3 style="margin:0; font-size:19px;">Para onde vamos?</h3>
+                <button class="btn-danger" onclick="logoutPassageiro()" style="width:auto; padding:6px 12px; margin:0; font-size:12px; border-radius:8px;">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
             </div>
 
-            <!-- Endereços -->
+            <!-- 📍 ENDEREÇOS -->
             <div class="form-group">
-                <i class="fas fa-location-dot" style="color:#e74c3c;"></i>
-                <input type="text" id="origem" placeholder="Local de Origem (Aguardando GPS...)" oninput="buscarEndereco(this.value, 'origem')">
+                <i class="fas fa-location-dot" style="color:var(--cor-perigo);"></i>
+                <input type="text" id="origem" placeholder="Local de Origem (GPS Automático)" oninput="buscarEndereco(this.value, 'origem')">
                 <div id="sugestoes_origem" class="suggestions"></div>
             </div>
 
             <div class="form-group">
-                <i class="fas fa-flag-checkered" style="color:#2ecc71;"></i>
+                <i class="fas fa-flag-checkered" style="color:var(--cor-primaria);"></i>
                 <input type="text" id="destino" placeholder="Digite o endereço de destino..." oninput="buscarEndereco(this.value, 'destino')">
                 <div id="sugestoes_destino" class="suggestions"></div>
             </div>
 
-            <!-- Botão Multifunção (GPS / Busca) -->
+            <!-- 📡 BOTÃO GPS -->
             <button id="btnLocalizacao" class="btn-secondary" onclick="gerenciarBotaoLocalizacao()">
+                <i class="fas fa-location-arrow"></i>
                 <span id="txtBtnLocalizacao">📍 Capturar Minha Localização Atual</span>
             </button>
 
-            <!-- Card de Preço / Detalhes -->
-            <div id="cardValor" style="display: none; background:#f9f9f9; padding:15px; border-radius:8px; margin-top:15px; border-left:5px solid var(--cor-primaria);">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>Distância estimada:</span> <strong id="txtDistancia">0.0 km</strong>
+            <!-- 💰 CARD DE PREÇO -->
+            <div id="cardValor" class="card" style="display: none; border-left:4px solid var(--cor-primaria);">
+                <div class="linha-info">
+                    <span>📏 Distância estimada:</span> <strong id="txtDistancia">0.0 km</strong>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span>Tempo estimado:</span> <strong id="txtTempo">0 min</strong>
+                <div class="linha-info">
+                    <span>⏱️ Tempo estimado:</span> <strong id="txtTempo">0 min</strong>
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:18px; margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
-                    <span>Preço da Corrida:</span> <strong id="txtValor" style="color:var(--cor-segunda)">R$ 0,00</strong>
+                <div class="linha-info" style="font-size:18px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--cor-borda);">
+                    <span>💸 Preço da Corrida:</span> <strong id="txtValor" class="valor-destaque">R$ 0,00</strong>
                 </div>
-                <button id="btnChamar" class="btn-success" style="margin-top:15px;" onclick="gerenciarBotaoLocalizacao()">🚀 CHAMAR ROTA BRASIL</button>
+                <button id="btnChamar" class="btn-success" style="margin-top:15px;" onclick="gerenciarBotaoLocalizacao()">
+                    <i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL
+                </button>
             </div>
 
-            <!-- Card dinâmico de Monitoramento / Buscando / Aceito -->
-            <div id="cardStatus" style="display: none; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-top:15px;">
+            <!-- 🚦 STATUS DA CORRIDA -->
+            <div id="cardStatus" class="card" style="display: none;">
                 <div id="conteudoStatus"></div>
             </div>
 
-            <!-- Área do Google Maps -->
+            <!-- 🗺️ MAPA - AQUI É A MAGICA MEU AMOR 🩷🚗📍👀✅ -->
             <div id="cardMapa" style="display: none;">
                 <div id="mapa"></div>
             </div>
 
-            <!-- Seção de Avaliações Recebidas -->
+            <!-- ⭐ AVALIAÇÕES -->
             <div class="avaliacoes-container">
-                <h4>Minhas Avaliações como Passageiro</h4>
+                <h4 style="text-align:left; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><i class="fas fa-star" style="color:var(--cor-alerta)"></i> Minhas Avaliações</h4>
                 <div id="mediaNota" class="media-nota">
                     <span class="nota-num">--</span>
                     <span class="estrelas"></span>
                 </div>
                 <div id="listaAvaliacoes"></div>
             </div>
-
         </div>
-
     </div>
 
     <!-- ==========================================
-        ⚙️ LÓGICA JAVASCRIPT ATUALIZADA (FRONT)
+        ⚙️ LÓGICA JAVASCRIPT 100% ORIGINAL + MAPA RASTREAMENTO 🗺️🚗✅
     =========================================== -->
     <script>
         const API = "https://rotabrasil-v1cf.onrender.com";
@@ -304,30 +488,75 @@
         let passageiro = null;
         let corridaAtual = null;
         let mapa = null;
+        let markerPassageiro = null;
         let markerMotorista = null;
+        let rotaLinha = null;
         let autocompleteService = new google.maps.places.AutocompleteService();
         let distancia = 0;
         let valorFinal = 0;
         let estadoLocalizacao = 0; 
+        let atualizacaoRota = null;
 
-        // Conexão Inicial
+        // 🔌 CONEXÃO
         socket.on("connect", () => {
-            console.log("✅ Passageiro Conectado ao Sistema!");
+            console.log("✅ Passageiro Conectado ao Sistema! 🇧🇷");
         });
 
-        /* ========================================================
-            📡 ESCUTA DO SOCKET COM AS CHAVES REAIS DO FLASK
-        ======================================================== */
+        // ========================================================
+        // 🚨 EVENTO PRINCIPAL: MOTORISTA ACEITOU 🚗✅🗺️🩷
+        // ========================================================
         socket.on("corrida_aceita", (dadosCorrida) => {
-            console.log("🚗 Motorista aceitou a corrida!", dadosCorrida);
+            console.log("🚗 Motorista aceitou a corrida! 🩷", dadosCorrida);
             
             corridaAtual = { ...corridaAtual, ...dadosCorrida }; 
             
             tocarSom('sucesso');
-            falar(`Motorista ${dadosCorrida.motorista_nome || 'parceiro'} aceitou sua corrida e está a caminho!`);
+            falar(`Motorista ${dadosCorrida.motorista_nome || 'parceiro'} aceitou sua corrida e está a caminho! 🚗💨`);
             
-            // Dispara a montagem da tela ajustada ao Flask
+            // ✅ MOSTRA MAPA + TELA DE STATUS BONITA 🗺️✨
             mostrarStatusCorridaAceita(dadosCorrida);
+            inicializarMapaRastreamento(); // 🆕 INICIA MAPA PARA VER ELE VINDO 🚗📍👀
+        });
+
+        // ========================================================
+        // 📍 NOVO EVENTO: RECEBE LOCALIZAÇÃO DO MOTORISTA EM TEMPO REAL 🚗⚡🗺️✅
+        // ========================================================
+        socket.on("localizacao_motorista", (dados) => {
+            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            console.log("📍 Atualizando posição motorista:", dados);
+
+            // ✅ ATUALIZA MARCADOR NO MAPA 🚗➡️📍
+            if(markerMotorista && mapa) {
+                const posMotorista = new google.maps.LatLng(dados.lat, dados.lng);
+                markerMotorista.setPosition(posMotorista);
+
+                // ✅ DESENHA ROTA VERDE DO MOTORISTA ATÉ VOCÊ 🟢🛤️✨
+                tracarRota(markerPassageiro.getPosition(), posMotorista);
+
+                // ✅ CALCULA DISTÂNCIA E TEMPO ATUALIZADO 📏⏱️
+                const distanciaKm = calcularDistancia(
+                    markerPassageiro.getPosition().lat(), markerPassageiro.getPosition().lng(),
+                    dados.lat, dados.lng
+                ).toFixed(1);
+
+                const tempoMin = Math.round(distanciaKm * 2.5); // Velocidade média SP 🚗💨
+
+                // ✅ ATUALIZA TEXTO NA TELA 📝🔄
+                const statusEl = document.getElementById('conteudoStatus');
+                if(statusEl) {
+                    const distanciaEl = statusEl.querySelector('.distancia-atual');
+                    const tempoEl = statusEl.querySelector('.tempo-atual');
+                    if(distanciaEl) distanciaEl.textContent = `${distanciaKm} km de você`;
+                    if(tempoEl) tempoEl.textContent = `Chega em ${tempoMin} min 🕒`;
+
+                    // ✅ QUANDO ESTÁ PERTO (<500m) 🟡⚠️
+                    if(parseFloat(distanciaKm) < 0.5) {
+                        statusEl.querySelector('.status-texto').innerHTML = `<i class="fas fa-check-circle status-chegou"></i> MOTORISTA CHEGOU! 🛑✅`;
+                        falar("Seu motorista chegou! Embarque por favor.");
+                        tocarSom('alerta');
+                    }
+                }
+            }
         });
 
         function falar(texto) {
@@ -360,22 +589,22 @@
 
         function usarLocalizacaoAtual() {
             if(!navigator.geolocation) { alert("GPS não suportado"); return; }
-            falar("Buscando sua localização...");
+            falar("📍 Buscando sua localização...");
             
             navigator.geolocation.getCurrentPosition(pos => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 document.getElementById('origem').value = `${lat},${lng}`;
-                falar("Localização definida!");
+                falar("✅ Localização definida!");
                 
                 estadoLocalizacao = 1;
                 document.getElementById('btnLocalizacao').className = "btn-success";
-                document.getElementById('txtBtnLocalizacao').innerText = "🚗 Entrar Buscando Motorista";
+                document.getElementById('txtBtnLocalizacao').innerHTML = `<i class="fas fa-check"></i> 🚗 Entrar Buscando Motorista`;
                 
                 calcularValor();
             }, err => {
                 alert("⚠️ Ative a permissão de Localização/GPS!");
-            }, {enableHighAccuracy: true});
+            }, {enableHighAccuracy: true, maximumAge: 10000});
         }
 
         async function carregarAvaliacoes() {
@@ -402,7 +631,7 @@
                                     <span>👤 ${av.nome_avaliador || 'Anônimo'}</span>
                                     <span>${'⭐'.repeat(av.nota)}</span>
                                 </div>
-                                <div style="font-size:14px; color:var(--cor-texto);">${av.comentario || 'Sem comentários.'}</div>
+                                <div style="font-size:14px; color:var(--cor-texto-secundario); margin-top:4px;">${av.comentario || 'Sem comentários.'}</div>
                             </div>
                         `;
                     });
@@ -418,7 +647,7 @@
                 } else {
                     divMedia.querySelector(".nota-num").innerText = "5.0";
                     divMedia.querySelector(".estrelas").innerHTML = `<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>`;
-                    divLista.innerHTML = `<p style="text-align:center; font-size:14px; color:var(--cor-texto-secundario)">Nenhuma avaliação recebida ainda.</p>`;
+                    divLista.innerHTML = `<p style="text-align:center; font-size:14px; color:var(--cor-texto-secundario); padding:10px;">Nenhuma avaliação recebida ainda 🤍</p>`;
                 }
             } catch(e) { console.log("Erro ao carregar avaliações", e); }
         }
@@ -427,13 +656,18 @@
             const divSug = document.getElementById(`sugestoes_${tipo}`);
             if(texto.length < 3) { divSug.style.display = 'none'; return; }
 
-            autocompleteService.getPlacePredictions({ input: texto, language: 'pt-BR', componentRestrictions: {country: 'br'} }, (res, status) => {
+            autocompleteService.getPlacePredictions({ 
+                input: texto, 
+                language: 'pt-BR', 
+                componentRestrictions: {country: 'br'},
+                types: ['geocode', 'establishment']
+            }, (res, status) => {
                 if(status == 'OK' && res) {
                     divSug.innerHTML = '';
                     res.forEach(place => {
                         const item = document.createElement('div');
                         item.className = 'suggestion-item';
-                        item.innerHTML = `<i class="fas fa-map-pin"></i> ${place.description}`;
+                        item.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${place.description}`;
                         item.onclick = () => {
                             document.getElementById(tipo).value = place.description;
                             divSug.style.display = 'none';
@@ -514,12 +748,13 @@
                     localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
                     document.getElementById("loginCard").style.display = "none";
                     document.getElementById("dashboard").style.display = "block";
-                    falar(`Olá ${passageiro.nome}, pronto para viajar?`);
+                    falar(`Olá ${passageiro.nome}, pronto para viajar? 🚗💨`);
                     carregarAvaliacoes();
                 } else { alert("❌ " + (data.erro || "Dados inválidos")); }
             } catch(e) { alert("Erro conexão"); }
         }
 
+        // 🔄 MANTER LOGADO
         const tS = localStorage.getItem("token_passageiro");
         const uS = localStorage.getItem("user_passageiro");
         if(tS && uS) {
@@ -545,11 +780,13 @@
 
             const btn = document.getElementById('btnChamar');
             if(btn) {
-                btn.disabled = true; btn.classList.add('btn-blocked'); btn.innerHTML = "⏳ PROCURANDO MOTORISTAS...";
+                btn.disabled = true; 
+                btn.classList.add('btn-blocked'); 
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ⏳ PROCURANDO MOTORISTAS...`;
             }
 
             tocarSom('alerta');
-            falar("Procurando motoristas próximos, aguarde...");
+            falar("🔍 Procurando motoristas próximos, aguarde...");
 
             try {
                 const res = await fetch(`${API}/nova_corrida`, {
@@ -575,7 +812,9 @@
             } catch(err) {
                 alert("❌ Erro: " + (err.erro || "Tente novamente"));
                 if(btn) {
-                    btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = "🚀 CHAMAR ROTA BRASIL";
+                    btn.disabled = false; 
+                    btn.classList.remove('btn-blocked'); 
+                    btn.innerHTML = `<i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL`;
                 }
             }
         }
@@ -589,44 +828,161 @@
                 <div class="status-container">
                     <i class="fas fa-car-side status-icon status-buscando"></i>
                     <div class="status-texto">Procurando Motoristas...</div>
-                    <div class="status-subtexto">Aguarde, estamos encontrando o melhor motorista para você 🚗💨</div>
+                    <div class="status-subtexto">Aguarde, estamos encontrando o melhor motorista para você 🚗💨<br>Isso pode levar alguns segundos ⏳</div>
                     <br>
                     <button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar Viagem</button>
                 </div>
             `;
         }
 
-        /* ========================================================
-            🖥️ TELA DINÂMICA MAPEADA COM OS DADOS REAIS DO FLASK
-        ======================================================== */
+        // ========================================================
+        // 🖥️ TELA CORRIDA ACEITA - AGORA COM MAPA E DESIGN LINDO 🩷🗺️✅
+        // ========================================================
         function mostrarStatusCorridaAceita(dados) {
             document.getElementById('cardValor').style.display = 'none';
             document.getElementById('cardStatus').style.display = 'block';
-            document.getElementById('cardMapa').style.display = 'none';
+            document.getElementById('cardMapa').style.display = 'block'; // ✅ MOSTRA MAPA AUTOMATICAMENTE 🗺️👀
 
             document.getElementById('conteudoStatus').innerHTML = `
-                <div style="text-align: center; padding: 10px;">
-                    <div style="font-size: 24px; color: var(--cor-segunda); font-weight: bold; margin-bottom: 15px;">
-                        <i class="fas fa-check-circle"></i> Motorista a Caminho!
+                <div class="status-container">
+                    <div style="font-size: 26px; color: var(--cor-primaria); font-weight: bold; margin-bottom: 15px;">
+                        <i class="fas fa-male status-icon status-aceito" style="font-size:35px !important;"></i> 
+                        <div class="status-texto">Motorista a Caminho!</div>
                     </div>
                     
-                    <!-- Lendo os dados direto do dicionário Python Flask -->
-                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 15px; text-align: left;">
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-user"></i> Motorista:</strong> ${dados.motorista_nome || 'Confirmado'}</p>
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-car"></i> Veículo:</strong> ${dados.carro || 'Carro Executivo'}</p>
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-id-card"></i> Placa Real:</strong> <span style="background:#2c3e50; color:#fff; padding:3px 8px; border-radius:4px; font-weight:bold; font-family:monospace;">${dados.placa || '---'}</span></p>
-                        <p style="margin: 5px 0; font-size:15px;"><strong><i class="fas fa-star" style="color:#f1c40f"></i> Avaliação:</strong> ${dados.nota_motorista || '5.0'}</p>
+                    <!-- 🚗 DADOS DO MOTORISTA BONITO 🩷📋 -->
+                    <div style="background: var(--cor-card-claro); border-radius: 12px; padding: 16px; margin-bottom: 15px; text-align: left; border:1px solid var(--cor-borda);">
+                        <p class="linha-info"><strong><i class="fas fa-user-circle" style="color:var(--cor-info)"></i> Motorista:</strong> ${dados.motorista_nome || 'Confirmado ✅'}</p>
+                        <p class="linha-info"><strong><i class="fas fa-car-side" style="color:var(--cor-perigo)"></i> Veículo:</strong> ${dados.carro || 'Carro Executivo'}</p>
+                        <p class="linha-info"><strong><i class="fas fa-id-card"></i> Placa:</strong> <span class="placa-badge">${dados.placa || '---'}</span></p>
+                        <p class="linha-info"><strong><i class="fas fa-star" style="color:var(--cor-alerta)"></i> Avaliação:</strong> ⭐ ${dados.nota_motorista || '5.0'}</p>
+                        <p class="linha-info"><strong><i class="fas fa-ruler-horizontal"></i> Distância:</strong> <span class="distancia-atual">Calculando...</span></p>
+                        <p class="linha-info"><strong><i class="fas fa-clock"></i> Tempo:</strong> <span class="tempo-atual">Aguardando GPS...</span></p>
                     </div>
 
-                    <div class="status-subtexto">Por favor, aguarde no local de origem indicado.</div>
+                    <div class="status-subtexto">Por favor, aguarde no local de origem indicado 📍🤍<br>Evite atrasos, o motorista está vindo rápido 🚗💨</div>
                     <br>
                     <button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar Viagem</button>
                 </div>
             `;
         }
 
+        // ========================================================
+        // 🗺️ FUNÇÕES DO MAPA - RASTREAMENTO COMPLETO 🚗📍✅🩷
+        // ========================================================
+        function inicializarMapaRastreamento() {
+            // Se já tem mapa, só atualiza
+            if(!mapa) {
+                const mapaDiv = document.getElementById('mapa');
+                mapa = new google.maps.Map(mapaDiv, {
+                    center: { lat: -23.5505, lng: -46.6333 },
+                    zoom: 15,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true,
+                    styles: [ // 🎨 MAPA ESCURO BONITO 🖤✨
+                        { featureType: "all", elementType: "labels", stylers: [{ visibility: "on" }] },
+                        { featureType: "all", elementType: "geometry", stylers: [{ color: "#1E293B" }] },
+                        { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
+                        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#CBD5E1" }] },
+                        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#475569" }] }
+                    ]
+                });
+            }
+
+            // 🧍 MARCADOR DO PASSAGEIRO (AZUL) 👤🔵
+            if(!markerPassageiro) {
+                markerPassageiro = new google.maps.Marker({
+                    position: { lat: -23.5505, lng: -46.6333 },
+                    map: mapa,
+                    title: "Você 🧍",
+                    icon: {
+                        url: "https://cdn-icons-png.flaticon.com/512/1077/1077063.png",
+                        scaledSize: new google.maps.Size(40,40)
+                    },
+                    animation: google.maps.Animation.DROP
+                });
+
+                // 📍 PEGA LOCALIZAÇÃO ATUAL DO USUÁRIO
+                if(navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        const posUser = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+                        markerPassageiro.setPosition(posUser);
+                        mapa.setCenter(posUser);
+                    });
+                }
+            }
+
+            // 🚗 MARCADOR DO MOTORISTA (VERMELHO PULSANTE) 🚗🔴✨
+            if(!markerMotorista) {
+                markerMotorista = new google.maps.Marker({
+                    position: { lat: -23.5505, lng: -46.6333 },
+                    map: mapa,
+                    title: "Seu Motorista 🚗",
+                    icon: {
+                        url: "https://cdn-icons-png.flaticon.com/512/2979/2979992.png",
+                        scaledSize: new google.maps.Size(45,45)
+                    },
+                    animation: google.maps.Animation.BOUNCE
+                });
+            }
+
+            // 🟢 LINHA DA ROTA
+            if(!rotaLinha) {
+                rotaLinha = new google.maps.Polyline({
+                    path: [],
+                    geodesic: true,
+                    strokeColor: "#22C55E",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 5,
+                    icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: "#22C55E", fillOpacity:1 }, offset: "0", repeat: "15px" }]
+                });
+                rotaLinha.setMap(mapa);
+            }
+        }
+
+        // 🛤️ TRAÇAR ROTA ENTRE DOIS PONTOS 📏✅
+        function tracarRota(pontoA, pontoB) {
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer({
+                suppressMarkers: true,
+                polylineOptions: {
+                    strokeColor: "#22C55E",
+                    strokeWeight: 5,
+                    strokeOpacity: 0.9
+                }
+            });
+            directionsRenderer.setMap(mapa);
+
+            directionsService.route({
+                origin: pontoA,
+                destination: pontoB,
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                if (status === "OK") {
+                    directionsRenderer.setDirections(result);
+                }
+            });
+
+            // Ajusta zoom para ver os dois
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(pontoA);
+            bounds.extend(pontoB);
+            mapa.fitBounds(bounds);
+        }
+
+        // 📏 CALCULAR DISTÂNCIA ENTRE COORDENADAS
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Raio da Terra km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            return R * c;
+        }
+
         async function cancelarCorrida() {
-            falar("Cancelando sua viagem.");
+            falar("🚫 Cancelando sua viagem, aguarde...");
 
             if(!corridaAtual || !corridaAtual.id) {
                 resetarInterfaceAposCancelamento();
@@ -644,7 +1000,9 @@
                 });
 
                 if(res.ok) {
-                    alert("🚫 Viagem cancelada com sucesso!");
+                    tocarSom('alerta');
+                    alert("🚫 Viagem cancelada com sucesso! 🤍");
+                    falar("Viagem cancelada com sucesso.");
                 } else {
                     console.log("Aviso: Corrida já alterada no servidor.");
                 }
@@ -657,18 +1015,44 @@
 
         function resetarInterfaceAposCancelamento() {
             corridaAtual = null;
+            if(atualizacaoRota) clearInterval(atualizacaoRota);
             document.getElementById('cardStatus').style.display = 'none';
             document.getElementById('cardMapa').style.display = 'none';
             
+            // Reset mapa
+            if(mapa) mapa = null;
+            if(markerPassageiro) markerPassageiro = null;
+            if(markerMotorista) markerMotorista = null;
+            if(rotaLinha) rotaLinha = null;
+
             calcularValor();
 
             const btn = document.getElementById('btnChamar');
             if(btn) {
                 btn.disabled = false;
                 btn.classList.remove('btn-blocked');
-                btn.innerHTML = `🚀 CHAMAR ROTA BRASIL`;
+                btn.innerHTML = `<i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL`;
             }
         }
+
+        // ❌ TRATAR CORRIDA CANCELADA PELO MOTORISTA
+        socket.on("corrida_cancelada", (dados) => {
+            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            tocarSom('alerta');
+            falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
+            alert("❌ Motorista cancelou a corrida 😔\nBuscando outro...");
+            resetarInterfaceAposCancelamento();
+        });
+
+        // ✅ VIAGEM FINALIZADA
+        socket.on("viagem_finalizada", (dados) => {
+            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            tocarSom('sucesso');
+            falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
+            alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
+            resetarInterfaceAposCancelamento();
+        });
+
     </script>
 </body>
 </html>
