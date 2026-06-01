@@ -306,8 +306,19 @@
                     posicaoAtual.lng = pos.coords.longitude;
 
                     // 🗺️ ATUALIZA MAPA COM LOCALIZAÇÃO DO MOTORISTA ✅ URL GOOGLE CORRETA
-                    document.getElementById('mapaFrame').src = 
+                    // 🆕 NOVA FORMA DE CARREGAR ROTA: SUAVE, SEM PISCAR! 🛣️✅
+                    document.getElementById('mapaFrame').contentWindow.postMessage({
+                    action: 'carregarRota',
+                    origin: `${posicaoAtual.lat},${posicaoAtual.lng}`,
+                    destination: destino,
+                    mode: 'driving'
+                    }, '*');
+
+                    
                         `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
+                    // 🆕 NOVA FORMA DE CARREGAR ROTA: SUAVE, SEM PISCAR! 🛣️✅
+
+
 
                     // 📡 SE ESTIVER COM CORRIDA ACEITA, ENVIA PRO PASSAGEIRO
                     if (estado.aceito && corrida) {
