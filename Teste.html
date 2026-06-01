@@ -511,7 +511,7 @@
                 mostrarAviso("🚕 Solicitando motorista... Aguarde um instante ⏳");
 
                 try {
-                    const res = await fetch(`${API_URL}/solicitar_corrida`, {
+                    const res = await fetch(`${API_URL}/nova_corrida`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
