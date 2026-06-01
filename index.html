@@ -174,40 +174,10 @@
             <div id="statusLogin" class="status-text"></div>
         </div>
     </div>
-    //<!-- MAPA -->
-    //<div id="mapa">
-    //<iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
-    //</div>
-    <!-- 🗺️ MAPA OTIMIZADO SEM PISCAR - FEITO ESPECIALMENTE PRA VOCÊ ❤️🛡️ -->
-<div id="mapa">
-    <iframe id="mapaFrame" allow="geolocation *" style="border:none; width:100%; height:100%;" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap&disableDefaultUI=true&gestureHandling=greedy">
-        <script>
-            // 🧠 CÓDIGO INTERNO DO MAPA PARA NÃO PISCAR 🧠🫶
-            window.addEventListener('message', function(e) {
-                if(!e.data || !e.data.action) return;
-                const mapa = new google.maps.Map(document.documentElement, { zoom: e.data.zoom || 16 });
-                
-                if(e.data.action === 'panTo'){
-                    mapa.panTo(new google.maps.LatLng(e.data.lat, e.data.lng));
-                }
-
-                if(e.data.action === 'carregarRota'){
-                    const directionsService = new google.maps.DirectionsService();
-                    const directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false, preserveViewport: false });
-                    directionsRenderer.setMap(mapa);
-                    
-                    directionsService.route({
-                        origin: e.data.origin,
-                        destination: e.data.destination,
-                        travelMode: google.maps.TravelMode.DRIVING
-                    }, function(res, status){
-                        if(status === 'OK') directionsRenderer.setDirections(res);
-                    });
-                }
-            });
-        </script>
-    </iframe>
-</div>
+    <!-- MAPA -->
+    <div id="mapa">
+    <iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
+    </div>
 
     
 
