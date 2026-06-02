@@ -468,6 +468,36 @@
             </div>
         </div>
     </div>
+<!-- ⭐ MODAL DE AVALIAÇÃO DO MOTORISTA -->
+<div id="modalAvaliacaoPassageiro" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999;">
+    <div class="modal-conteudo" style="background: #1E293B; margin: 10% auto; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; border: 2px solid #22C55E;">
+        
+        <h3 id="tituloAvaliacao" style="color: #F8FAFC; margin-bottom: 15px;"></h3>
+        
+        <div class="estrelas" style="font-size: 40px; color: #aaa; margin: 15px 0;">
+            <span class="estrela" onclick="selecionarEstrela(1)">★</span>
+            <span class="estrela" onclick="selecionarEstrela(2)">★</span>
+            <span class="estrela" onclick="selecionarEstrela(3)">★</span>
+            <span class="estrela" onclick="selecionarEstrela(4)">★</span>
+            <span class="estrela" onclick="selecionarEstrela(5)">★</span>
+        </div>
+
+        <textarea id="comentarioAvaliacao" placeholder="Deixe um comentário (opcional)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #334155; color: white; margin: 10px 0; min-height: 80px;"></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button onclick="fecharAvaliacao()" class="btn-cinza" style="flex:1;">Pular</button>
+            <button onclick="enviarAvaliacaoMotorista()" class="btn-verde" style="flex:1;">Enviar Avaliação</button>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .estrela { cursor: pointer; transition: 0.3s; }
+    .estrela.ativa { color: #EAB308; transform: scale(1.1); }
+    .modal-conteudo { animation: aparecer 0.3s ease; }
+    @keyframes aparecer { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: translateY(0); } }
+</style>
 
     <!-- ==========================================
         ⚙️ LÓGICA JAVASCRIPT 100% ORIGINAL + MAPA RASTREAMENTO 🗺️🚗✅
