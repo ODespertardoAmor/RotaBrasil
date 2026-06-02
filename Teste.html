@@ -10,6 +10,7 @@
     
     <!-- 🔌 SOCKET E GOOGLE MAPS -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- ⚠️ COLOQUE SUA CHAVE DO GOOGLE MAPS NO LUGAR DE SUA_CHAVE_API_AQUI -->
     <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API_AQUI&libraries=places"></script>
 
     <style>
@@ -306,7 +307,7 @@
 
         #mapa {
             width: 100%;
-            height: 320px; /* AUMENTEI PARA VER MELHOR 🩷👀 */
+            height: 320px;
             border-radius: 10px;
         }
 
@@ -409,7 +410,7 @@
         </div>
 
         <!-- ==========================================
-            🔐 TELA DE LOGIN / CADASTRO (MANTIVE TUDO IGUAL, SÓ DESIGN)
+            🔐 TELA DE LOGIN / CADASTRO
         =========================================== -->
         <div id="loginCard">
             <h2>🚗 Seja bem-vindo Passageiro!</h2>
@@ -492,7 +493,7 @@
                 <div id="conteudoStatus"></div>
             </div>
 
-            <!-- 🗺️ MAPA - AQUI É A MAGICA MEU AMOR 🩷🚗📍👀✅ -->
+            <!-- 🗺️ MAPA -->
             <div id="cardMapa" style="display: none;">
                 <div id="mapa"></div>
             </div>
@@ -534,7 +535,7 @@
 </div>
 
     <!-- ==========================================
-        ⚙️ LÓGICA JAVASCRIPT 100% ORIGINAL + MAPA RASTREAMENTO + AVALIAÇÃO 🗺️🚗✅⭐
+        ⚙️ LÓGICA JAVASCRIPT CORRIGIDA E LIMPA
     =========================================== -->
     <script>
         const API = "https://rotabrasil-v1cf.onrender.com";
@@ -560,7 +561,7 @@
         let valorFinal = 0;
         let estadoLocalizacao = 0; 
         let atualizacaoRota = null;
-        let notaAvaliacao = 0; // ⭐ NOVA VARIÁVEL PARA AVALIAÇÃO
+        let notaAvaliacao = 0;
 
         // 🔌 CONEXÃO
         socket.on("connect", () => {
@@ -568,48 +569,44 @@
         });
 
         // ========================================================
-        // 🚨 EVENTO PRINCIPAL: MOTORISTA ACEITOU 🚗✅🗺️🩷
+        // 🚨 MOTORISTA ACEITOU
         // ========================================================
         socket.on("corrida_aceita", (dadosCorrida) => {
             console.log("🚗 Motorista aceitou a corrida! 🩷", dadosCorrida);
             
             corridaAtual = { ...corridaAtual, ...dadosCorrida }; 
             
-            // 🚪 ENTRA NA SALA PARA RECEBER FINALIZAÇÃO DEPOIS 🗝️✅
             socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || corridaAtual.corrida_id });
             
             tocarSom('sucesso');
             falar(`Motorista ${dadosCorrida.motorista_nome || 'parceiro'} aceitou sua corrida e está a caminho! 🚗💨`);
             
-            // ✅ MOSTRA MAPA + TELA DE STATUS BONITA 🗺️✨
             mostrarStatusCorridaAceita(dadosCorrida);
-            inicializarMapaRastreamento(); // 🆕 INICIA MAPA PARA VER ELE VINDO 🚗📍👀
+            inicializarMapaRastreamento();
         });
 
         // ========================================================
-        // 📍 NOVO EVENTO: RECEBE LOCALIZAÇÃO DO MOTORISTA EM TEMPO REAL 🚗⚡🗺️✅
+        // 📍 RECEBE LOCALIZAÇÃO DO MOTORISTA (NOME CORRIGIDO!)
         // ========================================================
         socket.on("localizacao_motorista", (dados) => {
             if(!corridaAtual || dados.corrida_id !== (corridaAtual.id || corridaAtual.corrida_id)) return;
             console.log("📍 Atualizando posição motorista:", dados);
 
-            // ✅ ATUALIZA MARCADOR NO MAPA 🚗➡️📍
             if(markerMotorista && mapa) {
                 const posMotorista = new google.maps.LatLng(dados.lat, dados.lng);
                 markerMotorista.setPosition(posMotorista);
 
-                // ✅ DESENHA ROTA VERDE DO MOTORISTA ATÉ VOCÊ 🟢🛤️✨
-                tracarRota(markerPassageiro.getPosition(), posMotorista);
+                if(markerPassageiro) {
+                    tracarRota(markerPassageiro.getPosition(), posMotorista);
+                }
 
-                // ✅ CALCULA DISTÂNCIA E TEMPO ATUALIZADO 📏⏱️
                 const distanciaKm = calcularDistancia(
                     markerPassageiro.getPosition().lat(), markerPassageiro.getPosition().lng(),
                     dados.lat, dados.lng
                 ).toFixed(1);
 
-                const tempoMin = Math.round(distanciaKm * 2.5); // Velocidade média SP 🚗💨
+                const tempoMin = Math.round(distanciaKm * 2.5);
 
-                // ✅ ATUALIZA TEXTO NA TELA 📝🔄
                 const statusEl = document.getElementById('conteudoStatus');
                 if(statusEl) {
                     const distanciaEl = statusEl.querySelector('.distancia-atual');
@@ -617,7 +614,6 @@
                     if(distanciaEl) distanciaEl.textContent = `${distanciaKm} km de você`;
                     if(tempoEl) tempoEl.textContent = `Chega em ${tempoMin} min 🕒`;
 
-                    // ✅ QUANDO ESTÁ PERTO (<500m) 🟡⚠️
                     if(parseFloat(distanciaKm) < 0.5) {
                         statusEl.querySelector('.status-texto').innerHTML = `<i class="fas fa-check-circle status-chegou"></i> MOTORISTA CHEGOU! 🛑✅`;
                         falar("Seu motorista chegou! Embarque por favor.");
@@ -625,6 +621,30 @@
                     }
                 }
             }
+        });
+
+        // ========================================================
+        // ❌ MOTORISTA CANCELA
+        // ========================================================
+        socket.on("corrida_cancelada", (dados) => {
+            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            tocarSom('alerta');
+            falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
+            alert("❌ Motorista cancelou a corrida 😔\nBuscando outro...");
+            resetarInterfaceAposCancelamento();
+        });
+
+        // ========================================================
+        // 🏁 CORRIDA FINALIZADA
+        // ========================================================
+        socket.on("corrida_finalizada", (dados) => {
+            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            tocarSom('sucesso');
+            falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
+            alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
+            
+            abrirAvaliacao(dados.motorista_id, dados.motorista_nome);
+            resetarInterfaceAposCancelamento();
         });
 
         function falar(texto) {
@@ -903,13 +923,10 @@
             `;
         }
 
-        // ========================================================
-        // 🖥️ TELA CORRIDA ACEITA - AGORA COM MAPA E DESIGN LINDO 🩷🗺️✅
-        // ========================================================
         function mostrarStatusCorridaAceita(dados) {
             document.getElementById('cardValor').style.display = 'none';
             document.getElementById('cardStatus').style.display = 'block';
-            document.getElementById('cardMapa').style.display = 'block'; // ✅ MOSTRA MAPA AUTOMATICAMENTE 🗺️👀
+            document.getElementById('cardMapa').style.display = 'block';
 
             document.getElementById('conteudoStatus').innerHTML = `
                 <div class="status-container">
@@ -918,7 +935,6 @@
                         <div class="status-texto">Motorista a Caminho!</div>
                     </div>
                     
-                    <!-- 🚗 DADOS DO MOTORISTA BONITO 🩷📋 -->
                     <div style="background: var(--cor-card-claro); border-radius: 12px; padding: 16px; margin-bottom: 15px; text-align: left; border:1px solid var(--cor-borda);">
                         <p class="linha-info"><strong><i class="fas fa-user-circle" style="color:var(--cor-info)"></i> Motorista:</strong> ${dados.motorista_nome || 'Confirmado ✅'}</p>
                         <p class="linha-info"><strong><i class="fas fa-car-side" style="color:var(--cor-perigo)"></i> Veículo:</strong> ${dados.carro || 'Carro Executivo'}</p>
@@ -936,106 +952,72 @@
         }
 
         // ========================================================
-        // 🗺️ FUNÇÕES DO MAPA - RASTREAMENTO COMPLETO 🚗📍✅🩷
+        // 🗺️ MAPA CORRIGIDO
         // ========================================================
         function inicializarMapaRastreamento() {
-    // Verifica se a API do Google Maps carregou direito
-    if (typeof google === 'undefined' || !google.maps) {
-        console.error("API do Google Maps não carregou!");
-        alert("⚠️ Mapa não carregou. Atualize a página ou desative bloqueadores.");
-        return;
-    }
+            if (typeof google === 'undefined' || !google.maps) {
+                console.error("API do Google Maps não carregou!");
+                alert("⚠️ Mapa não carregou. Verifique sua chave API!");
+                return;
+            }
 
-    // Se já tem mapa, só usa ele
-    if (!mapa) {
-        const mapaDiv = document.getElementById('mapa');
-        if (!mapaDiv) {
-            console.error("Div do mapa não existe no HTML!");
-            return;
+            if (!mapa) {
+                const mapaDiv = document.getElementById('mapa');
+                if (!mapaDiv) return;
+
+                mapa = new google.maps.Map(mapaDiv, {
+                    center: { lat: -23.5505, lng: -46.6333 },
+                    zoom: 15,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true,
+                    styles: [
+                        { featureType: "all", elementType: "labels", stylers: [{ visibility: "on" }] },
+                        { featureType: "all", elementType: "geometry", stylers: [{ color: "#1E293B" }] },
+                        { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
+                        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#CBD5E1" }] },
+                        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#475569" }] }
+                    ]
+                });
+            }
+
+            // 🧍 MARCADOR PASSAGEIRO
+            if (!markerPassageiro) {
+                markerPassageiro = new google.maps.Marker({
+                    position: { lat: -23.5505, lng: -46.6333 },
+                    map: mapa,
+                    title: "Você 🧍",
+                    icon: { url: "https://cdn-icons-png.flaticon.com/512/64/64572.png", scaledSize: new google.maps.Size(40, 40) },
+                    animation: google.maps.Animation.DROP
+                });
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            const posUser = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+                            markerPassageiro.setPosition(posUser);
+                            mapa.setCenter(posUser);
+                        },
+                        (erro) => {
+                            console.warn("Erro ao pegar localização:", erro);
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                }
+            }
+
+            // 🚗 MARCADOR MOTORISTA
+            if (!markerMotorista) {
+                markerMotorista = new google.maps.Marker({
+                    position: { lat: -23.5505, lng: -46.6333 },
+                    map: mapa,
+                    title: "Seu Motorista 🚗",
+                    icon: { url: "https://cdn-icons-png.flaticon.com/512/2979/2979991.png", scaledSize: new google.maps.Size(45, 45) },
+                    animation: google.maps.Animation.BOUNCE
+                });
+            }
         }
 
-        mapa = new google.maps.Map(mapaDiv, {
-            center: { lat: -23.5505, lng: -46.6333 }, // São Paulo como padrão
-            zoom: 15,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: true,
-            // 🎨 MAPA ESCURO BONITO MESMO 🖤✨
-            styles: [
-                { featureType: "all", elementType: "labels", stylers: [{ visibility: "on" }] },
-                { featureType: "all", elementType: "geometry", stylers: [{ color: "#1E293B" }] },
-                { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
-                { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#CBD5E1" }] },
-                { featureType: "poi", elementType: "geometry", stylers: [{ color: "#475569" }] }
-            ]
-        });
-    }
-
-    // 🧍 MARCADOR DO PASSAGEIRO (AZUL) 👤🔵
-    if (!markerPassageiro) {
-        markerPassageiro = new google.maps.Marker({
-            position: { lat: -23.5505, lng: -46.6333 },
-            map: mapa,
-            title: "Você 🧍",
-            icon: {
-                // ✅ ÍCONE NOVO E FUNCIONANDO
-                url: "https://cdn-icons-png.flaticon.com/512/64/64572.png",
-                scaledSize: new google.maps.Size(40, 40)
-            },
-            animation: google.maps.Animation.DROP
-        });
-
-        // 📍 PEGA LOCALIZAÇÃO ATUAL (COM TRATAMENTO DE ERRO)
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const posUser = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-                    markerPassageiro.setPosition(posUser);
-                    mapa.setCenter(posUser);
-                },
-                (erro) => {
-                    console.warn("Erro ao pegar localização:", erro);
-                    alert("⚠️ Não foi possível acessar sua localização. Verifique permissões.");
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-    }
-
-    // 🚗 MARCADOR DO MOTORISTA (VERMELHO PULSANTE) 🚗🔴✨
-    if (!markerMotorista) {
-        markerMotorista = new google.maps.Marker({
-            position: { lat: -23.5505, lng: -46.6333 },
-            map: mapa,
-            title: "Seu Motorista 🚗",
-            icon: {
-                // ✅ ÍCONE NOVO E FUNCIONANDO
-                url: "https://cdn-icons-png.flaticon.com/512/2979/2979991.png",
-                scaledSize: new google.maps.Size(45, 45)
-            },
-            animation: google.maps.Animation.BOUNCE
-        });
-    }
-
-    // 🟢 LINHA DA ROTA BONITA
-    if (!rotaLinha) {
-        rotaLinha = new google.maps.Polyline({
-            path: [],
-            geodesic: true,
-            strokeColor: "#22C55E",
-            strokeOpacity: 0.8,
-            strokeWeight: 5,
-            icons: [{
-                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: "#22C55E", fillOpacity: 1 },
-                offset: "0",
-                repeat: "15px"
-            }]
-        });
-        rotaLinha.setMap(mapa);
-    }
-}
-
-        // 🛤️ TRAÇAR ROTA ENTRE DOIS PONTOS 📏✅
         function tracarRota(pontoA, pontoB) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -1058,23 +1040,24 @@
                 }
             });
 
-            // Ajusta zoom para ver os dois
             const bounds = new google.maps.LatLngBounds();
             bounds.extend(pontoA);
             bounds.extend(pontoB);
             mapa.fitBounds(bounds);
         }
 
-        // 📏 CALCULAR DISTÂNCIA ENTRE COORDENADAS
         function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Raio da Terra km
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180
+            const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
             return R * c;
         }
 
+        // ========================================================
+        // ❌ CANCELAR CORRIDA (AGORA AVISA MOTORISTA)
+        // ========================================================
         async function cancelarCorrida() {
             falar("Cancelando sua viagem, aguarde...");
 
@@ -1083,44 +1066,62 @@
                 return;
             }
 
-            try {
+                       try {
                 const res = await fetch(`${API}/cancelar_corrida`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}`
                     },
-                    body: JSON.stringify({ corrida_id: corridaAtual.id })
+                    body: JSON.stringify({ 
+                        corrida_id: corridaAtual.id,
+                        motivo: "Cancelado pelo passageiro" 
+                    })
                 });
 
                 if(res.ok) {
+                    // ✅ AVISA O MOTORISTA NA HORA VIA SOCKET
+                    socket.emit("cancelar_corrida", { corrida_id: corridaAtual.id });
                     tocarSom('alerta');
-                    alert("🚫 Viagem cancelada com sucesso! 🤍");
+                    alert("🚫 Viagem cancelada com sucesso! O motorista já foi avisado 🤍");
                     falar("Viagem cancelada com sucesso.");
                 } else {
-                    console.log("Aviso: Corrida já alterada no servidor.");
+                    alert("⚠️ Não foi possível cancelar, tente novamente.");
                 }
             } catch(e) {
-                console.error("Erro na rota de cancelamento", e);
+                console.error("Erro ao cancelar corrida:", e);
+                alert("❌ Erro de conexão ao cancelar. Verifique sua internet.");
             } finally {
                 resetarInterfaceAposCancelamento();
             }
         }
 
+        // ========================================================
+        // 🔄 RESETAR TELA APÓS CANCELAMENTO OU FINALIZAÇÃO
+        // ========================================================
         function resetarInterfaceAposCancelamento() {
             corridaAtual = null;
-            if(atualizacaoRota) clearInterval(atualizacaoRota);
+            
+            // Para qualquer atualização automática que estiver rodando
+            if(atualizacaoRota) {
+                clearInterval(atualizacaoRota);
+                atualizacaoRota = null;
+            }
+
+            // Esconde os cards de status e mapa
             document.getElementById('cardStatus').style.display = 'none';
             document.getElementById('cardMapa').style.display = 'none';
             
-            // Reset mapa
+            // Reseta variáveis do mapa para recriar na próxima corrida
             if(mapa) mapa = null;
             if(markerPassageiro) markerPassageiro = null;
             if(markerMotorista) markerMotorista = null;
             if(rotaLinha) rotaLinha = null;
 
+            // Volta a mostrar o card de valor e recalcula preço se tiver endereços
             calcularValor();
 
+            // Libera o botão de chamar corrida novamente
             const btn = document.getElementById('btnChamar');
             if(btn) {
                 btn.disabled = false;
@@ -1129,264 +1130,72 @@
             }
         }
 
-        // ❌ TRATAR CORRIDA CANCELADA PELO MOTORISTA
-        socket.on("corrida_cancelada", (dados) => {
-            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
-            tocarSom('alerta');
-            falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
-            alert("❌ Motorista cancelou a corrida 😔\nBuscando outro...");
-            resetarInterfaceAposCancelamento();
-        });
-
-        // ✅ VIAGEM FINALIZADA ⭐ ABRE AVALIAÇÃO
-        socket.on("corrida_finalizada", (dados) => {
-            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
-            tocarSom('sucesso');
-            falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
-            alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
+        // ========================================================
+        // ⭐ FUNÇÕES DE AVALIAÇÃO DO MOTORISTA
+        // ========================================================
+        function abrirAvaliacao(motoristaId, nomeMotorista) {
+            notaAvaliacao = 0; // Zera a nota
+            // Limpa campos do modal
+            document.getElementById('comentarioAvaliacao').value = "";
+            document.getElementById('tituloAvaliacao').innerText = `Avalie ${nomeMotorista || 'Seu Motorista'}`;
             
-            // ⭐ ABRE MODAL PARA AVALIAR MOTORISTA
-// 📏 CALCULAR DISTÂNCIA ENTRE COORDENADAS
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Raio da Terra km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    return R * c;
-}
-
-// 🗺️ INICIALIZAR MAPA E RASTREAMENTO (ARRUMADO COMPLETO)
-function inicializarMapaRastreamento() {
-    if (typeof google === 'undefined' || !google.maps) {
-        alert("⚠️ Mapa não carregou. Desative bloqueadores!");
-        return;
-    }
-
-    if (!mapa) {
-        const mapaDiv = document.getElementById('mapa');
-        if (!mapaDiv) return;
-
-        mapa = new google.maps.Map(mapaDiv, {
-            center: { lat: -23.5505, lng: -46.6333 },
-            zoom: 15,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: true,
-            styles: [
-                { featureType: "all", elementType: "labels", stylers: [{ visibility: "on" }] },
-                { featureType: "all", elementType: "geometry", stylers: [{ color: "#1E293B" }] },
-                { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
-                { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#CBD5E1" }] },
-                { featureType: "poi", elementType: "geometry", stylers: [{ color: "#475569" }] }
-            ]
-        });
-    }
-
-    // 🧍 MARCADOR DO PASSAGEIRO
-    if (!markerPassageiro) {
-        markerPassageiro = new google.maps.Marker({
-            position: { lat: -23.5505, lng: -46.6333 },
-            map: mapa,
-            title: "Você 🧍",
-            icon: { url: "https://cdn-icons-png.flaticon.com/512/64/64572.png", scaledSize: new google.maps.Size(40,40) },
-            animation: google.maps.Animation.DROP
-        });
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    const posUser = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-                    markerPassageiro.setPosition(posUser);
-                    mapa.setCenter(posUser);
-                },
-                erro => console.warn("Localização negada", erro),
-                { enableHighAccuracy: true }
-            );
+            // Tira a cor de todas as estrelas
+            const estrelas = document.querySelectorAll('.estrela');
+            estrelas.forEach(e => e.classList.remove('ativa'));
+            
+            // Mostra o modal
+            document.getElementById('modalAvaliacaoPassageiro').style.display = "block";
         }
-    }
 
-    // 🚗 MARCADOR DO MOTORISTA (AGORA APARECE E ATUALIZA)
-    if (!markerMotorista) {
-        markerMotorista = new google.maps.Marker({
-            position: { lat: -23.5505, lng: -46.6333 },
-            map: mapa,
-            title: "Seu Motorista 🚗",
-            icon: { url: "https://cdn-icons-png.flaticon.com/512/2979/2979991.png", scaledSize: new google.maps.Size(45,45) },
-            animation: google.maps.Animation.BOUNCE
-        });
-    }
-
-    // 🟢 LINHA DA ROTA
-    if (!rotaLinha) {
-        rotaLinha = new google.maps.Polyline({
-            path: [],
-            geodesic: true,
-            strokeColor: "#22C55E",
-            strokeOpacity: 0.8,
-            strokeWeight: 5,
-            icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: "#22C55E" }, offset: "0", repeat: "15px" }]
-        });
-        rotaLinha.setMap(mapa);
-    }
-}
-
-// ❌ CANCELAR CORRIDA (AGORA AVISA MOTORISTA E SERVIDOR)
-async function cancelarCorrida() {
-    falar("Cancelando sua viagem, aguarde...");
-
-    if(!corridaAtual || !corridaAtual.id) {
-        resetarInterfaceAposCancelamento();
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API}/cancelar_corrida`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-                corrida_id: corridaAtual.id,
-                motivo: "Cancelado pelo passageiro" 
-            })
-        });
-
-        if(res.ok) {
-            // ✅ AGORA AVISA O MOTORISTA NA HORA
-            socket.emit("cancelar_corrida", { corrida_id: corridaAtual.id });
-            tocarSom('alerta');
-            alert("🚫 Viagem cancelada com sucesso! O motorista foi avisado 🤍");
-            falar("Viagem cancelada com sucesso.");
-        } else {
-            alert("⚠️ Não foi possível cancelar, tente novamente.");
+        function selecionarEstrela(nota) {
+            notaAvaliacao = nota;
+            const estrelas = document.querySelectorAll('.estrela');
+            
+            // Acende até a estrela clicada
+            estrelas.forEach((estrela, indice) => {
+                estrela.classList.toggle('ativa', indice < nota);
+            });
         }
-    } catch(e) {
-        console.error("Erro ao cancelar", e);
-        alert("❌ Erro de conexão ao cancelar.");
-    } finally {
-        resetarInterfaceAposCancelamento();
-    }
-}
 
-function resetarInterfaceAposCancelamento() {
-    corridaAtual = null;
-    if(atualizacaoRota) clearInterval(atualizacaoRota);
-    document.getElementById('cardStatus').style.display = 'none';
-    document.getElementById('cardMapa').style.display = 'none';
-    
-    if(mapa) mapa = null;
-    if(markerPassageiro) markerPassageiro = null;
-    if(markerMotorista) markerMotorista = null;
-    if(rotaLinha) rotaLinha = null;
-
-    calcularValor();
-
-    const btn = document.getElementById('btnChamar');
-    if(btn) {
-        btn.disabled = false;
-        btn.classList.remove('btn-blocked');
-        btn.innerHTML = `<i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL`;
-    }
-}
-
-// ========================================================
-// 📡 EVENTOS DO SOCKET (AGORA CHEGA TUDO AQUI!)
-// ========================================================
-
-// ❌ MOTORISTA CANCELA → VOCÊ FICA SABENDO
-socket.on("corrida_cancelada", (dados) => {
-    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
-    tocarSom('alerta');
-    falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
-    alert("❌ Motorista cancelou a corrida 😔\nBuscando outro...");
-    resetarInterfaceAposCancelamento();
-});
-
-// 🚗 MOTORISTA SE MOVIMENTA → MAPA ATUALIZA AQUI
-socket.on("atualizar_localizacao_motorista", (dados) => {
-    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
-    
-    // ✅ AGORA APARECE E MEXE NO MAPA!
-    if(markerMotorista) {
-        const novaPosicao = new google.maps.LatLng(dados.lat, dados.lng);
-        markerMotorista.setPosition(novaPosicao);
-        
-        // Atualiza linha da rota
-        if(rotaLinha) {
-            const caminho = rotaLinha.getPath();
-            caminho.push(novaPosicao);
-            rotaLinha.setPath(caminho);
+        function fecharAvaliacao() {
+            document.getElementById('modalAvaliacaoPassageiro').style.display = "none";
         }
-    }
-});
 
-// 🏁 MOTORISTA FINALIZA → VOCÊ RECEBE O AVISO E AVALIAÇÃO
-socket.on("corrida_finalizada", (dados) => {
-    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
-    tocarSom('sucesso');
-    falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
-    alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
-    
-    // ⭐ ABRE AVALIAÇÃO AUTOMÁTICO
-    abrirAvaliacao(dados.motorista_id, dados.motorista_nome);
-    
-    resetarInterfaceAposCancelamento();
-});
+        async function enviarAvaliacaoMotorista() {
+            if(notaAvaliacao === 0) { 
+                alert("⚠️ Por favor, dê uma nota de 1 a 5 estrelas antes de enviar!"); 
+                return; 
+            }
 
-// ========================================================
-// ⭐ FUNÇÕES DE AVALIAÇÃO
-// ========================================================
-function abrirAvaliacao(motoristaId, nomeMotorista) {
-    notaAvaliacao = 0;
-    document.getElementById('comentarioAvaliacao').value = "";
-    document.getElementById('tituloAvaliacao').innerText = `Avalie ${nomeMotorista || 'Seu Motorista'}`;
-    
-    const estrelas = document.querySelectorAll('.estrela');
-    estrelas.forEach(e => e.classList.remove('ativa'));
-    
-    document.getElementById('modalAvaliacaoPassageiro').style.display = "block";
-}
+            try {
+                const res = await fetch(`${API}/avaliar_motorista`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json", 
+                        "Authorization": `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({
+                        corrida_id: corridaAtual?.id,
+                        motorista_id: corridaAtual?.motorista_id,
+                        nota: notaAvaliacao,
+                        comentario: document.getElementById('comentarioAvaliacao').value
+                    })
+                });
 
-function selecionarEstrela(nota) {
-    notaAvaliacao = nota;
-    const estrelas = document.querySelectorAll('.estrela');
-    estrelas.forEach((estrela, idx) => {
-        estrela.classList.toggle('ativa', idx < nota);
-    });
-}
-
-function fecharAvaliacao() {
-    document.getElementById('modalAvaliacaoPassageiro').style.display = "none";
-}
-
-async function enviarAvaliacaoMotorista() {
-    if(notaAvaliacao === 0) { alert("⚠️ Dê uma nota de 1 a 5 estrelas!"); return; }
-
-    try {
-        const res = await fetch(`${API}/avaliar_motorista`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({
-                corrida_id: corridaAtual?.id,
-                motorista_id: corridaAtual?.motorista_id,
-                nota: notaAvaliacao,
-                comentario: document.getElementById('comentarioAvaliacao').value
-            })
-        });
-
-        if(res.ok) {
-            tocarSom('sucesso');
-            alert("✅ Avaliação enviada! Obrigado 🇧🇷🤍");
+                if(res.ok) {
+                    tocarSom('sucesso');
+                    alert("✅ Avaliação enviada com sucesso! Obrigado por viajar com a gente 🇧🇷🤍");
+                    // Atualiza a lista de avaliações na tela
+                    carregarAvaliacoes();
+                } else {
+                    alert("❌ Erro ao enviar avaliação, tente novamente.");
+                }
+            } catch(e) {
+                alert("❌ Erro de conexão ao enviar avaliação.");
+            } finally {
+                fecharAvaliacao();
+            }
         }
-    } catch(e) {
-        alert("❌ Erro ao enviar avaliação");
-    } finally {
-        fecharAvaliacao();
-    }
-}
- 
 
     </script>
 </body>
