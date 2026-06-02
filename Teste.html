@@ -356,6 +356,46 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--cor-fundo); }
         ::-webkit-scrollbar-thumb { background: var(--cor-borda); border-radius: 3px; }
+
+        /* ⭐ ESTILOS MODAL AVALIAÇÃO */
+        .modal {
+            z-index: 9999 !important;
+        }
+        .modal-conteudo {
+            animation: aparecer 0.3s ease;
+        }
+        @keyframes aparecer { 
+            from { opacity:0; transform: translateY(-20px); } 
+            to { opacity:1; transform: translateY(0); } 
+        }
+        .estrela { 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 40px;
+            color: #aaa;
+        }
+        .estrela.ativa { 
+            color: #EAB308; 
+            transform: scale(1.1); 
+        }
+        .btn-cinza {
+            background: var(--cor-card-claro);
+            color: var(--cor-texto);
+            border: 1px solid var(--cor-borda);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-verde {
+            background: linear-gradient(135deg, var(--cor-primaria), var(--cor-segunda));
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -468,6 +508,7 @@
             </div>
         </div>
     </div>
+
 <!-- ⭐ MODAL DE AVALIAÇÃO DO MOTORISTA -->
 <div id="modalAvaliacaoPassageiro" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999;">
     <div class="modal-conteudo" style="background: #1E293B; margin: 10% auto; padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; border: 2px solid #22C55E;">
@@ -492,15 +533,8 @@
     </div>
 </div>
 
-<style>
-    .estrela { cursor: pointer; transition: 0.3s; }
-    .estrela.ativa { color: #EAB308; transform: scale(1.1); }
-    .modal-conteudo { animation: aparecer 0.3s ease; }
-    @keyframes aparecer { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: translateY(0); } }
-</style>
-
     <!-- ==========================================
-        ⚙️ LÓGICA JAVASCRIPT 100% ORIGINAL + MAPA RASTREAMENTO 🗺️🚗✅
+        ⚙️ LÓGICA JAVASCRIPT 100% ORIGINAL + MAPA RASTREAMENTO + AVALIAÇÃO 🗺️🚗✅⭐
     =========================================== -->
     <script>
         const API = "https://rotabrasil-v1cf.onrender.com";
@@ -526,6 +560,7 @@
         let valorFinal = 0;
         let estadoLocalizacao = 0; 
         let atualizacaoRota = null;
+        let notaAvaliacao = 0; // ⭐ NOVA VARIÁVEL PARA AVALIAÇÃO
 
         // 🔌 CONEXÃO
         socket.on("connect", () => {
@@ -540,6 +575,9 @@
             
             corridaAtual = { ...corridaAtual, ...dadosCorrida }; 
             
+            // 🚪 ENTRA NA SALA PARA RECEBER FINALIZAÇÃO DEPOIS 🗝️✅
+            socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || corridaAtual.corrida_id });
+            
             tocarSom('sucesso');
             falar(`Motorista ${dadosCorrida.motorista_nome || 'parceiro'} aceitou sua corrida e está a caminho! 🚗💨`);
             
@@ -552,7 +590,7 @@
         // 📍 NOVO EVENTO: RECEBE LOCALIZAÇÃO DO MOTORISTA EM TEMPO REAL 🚗⚡🗺️✅
         // ========================================================
         socket.on("localizacao_motorista", (dados) => {
-            if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+            if(!corridaAtual || dados.corrida_id !== (corridaAtual.id || corridaAtual.corrida_id)) return;
             console.log("📍 Atualizando posição motorista:", dados);
 
             // ✅ ATUALIZA MARCADOR NO MAPA 🚗➡️📍
@@ -1005,7 +1043,7 @@
         function calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371; // Raio da Terra km
             const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180
             const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
             return R * c;
@@ -1074,15 +1112,84 @@
             resetarInterfaceAposCancelamento();
         });
 
-        // ✅ VIAGEM FINALIZADA
+        // ✅ VIAGEM FINALIZADA ⭐ ABRE AVALIAÇÃO
         socket.on("corrida_finalizada", (dados) => {
             if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
             tocarSom('sucesso');
             falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
             alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
+            
+            // ⭐ ABRE MODAL PARA AVALIAR MOTORISTA
+            abrirAvaliacao(dados.motorista_id, dados.motorista_nome);
+            
             resetarInterfaceAposCancelamento();
         });
+
+        // ========================================================
+        // ⭐ FUNÇÕES DE AVALIAÇÃO DO MOTORISTA
+        // ========================================================
+        function abrirAvaliacao(motoristaId, nomeMotorista) {
+            notaAvaliacao = 0;
+            document.getElementById('comentarioAvaliacao').value = "";
+            document.getElementById('tituloAvaliacao').innerText = `Avalie ${nomeMotorista || 'Seu Motorista'}`;
+            
+            // Reseta estrelas
+            const estrelas = document.querySelectorAll('.estrela');
+            estrelas.forEach(e => e.classList.remove('ativa'));
+            
+            document.getElementById('modalAvaliacaoPassageiro').style.display = "block";
+        }
+
+        function selecionarEstrela(nota) {
+            notaAvaliacao = nota;
+            const estrelas = document.querySelectorAll('.estrela');
+            
+            estrelas.forEach((estrela, idx) => {
+                if(idx < nota) estrela.classList.add('ativa');
+                else estrela.classList.remove('ativa');
+            });
+        }
+
+        function fecharAvaliacao() {
+            document.getElementById('modalAvaliacaoPassageiro').style.display = "none";
+        }
+
+        async function enviarAvaliacaoMotorista() {
+            if(notaAvaliacao === 0) {
+                alert("⚠️ Dê uma nota de 1 a 5 estrelas!");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/avaliar_motorista`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        corrida_id: corridaAtual?.id,
+                        motorista_id: corridaAtual?.motorista_id,
+                        nota: notaAvaliacao,
+                        comentario: document.getElementById('comentarioAvaliacao').value
+                    })
+                });
+
+                if(res.ok) {
+                    tocarSom('sucesso');
+                    alert("✅ Avaliação enviada! Obrigado por ajudar a melhorar 🇧🇷🤍");
+                } else {
+                    alert("❌ Erro ao enviar avaliação, tente novamente!");
+                }
+            } catch(e) {
+                alert("❌ Erro de conexão ao enviar avaliação");
+            } finally {
+                fecharAvaliacao();
+                carregarAvaliacoes(); // Atualiza lista na tela
+            }
+        }
 
     </script>
 </body>
 </html>
+
