@@ -1045,7 +1045,7 @@
         });
 
         // ✅ VIAGEM FINALIZADA
-        socket.on("finalizar_corrida", (dados) => {
+        socket.on("viagem_finalizada", (dados) => {
             if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
             tocarSom('sucesso');
             falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
