@@ -1146,74 +1146,247 @@
             alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
             
             // ⭐ ABRE MODAL PARA AVALIAR MOTORISTA
-            abrirAvaliacao(dados.motorista_id, dados.motorista_nome);
-            
-            resetarInterfaceAposCancelamento();
+// 📏 CALCULAR DISTÂNCIA ENTRE COORDENADAS
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Raio da Terra km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    return R * c;
+}
+
+// 🗺️ INICIALIZAR MAPA E RASTREAMENTO (ARRUMADO COMPLETO)
+function inicializarMapaRastreamento() {
+    if (typeof google === 'undefined' || !google.maps) {
+        alert("⚠️ Mapa não carregou. Desative bloqueadores!");
+        return;
+    }
+
+    if (!mapa) {
+        const mapaDiv = document.getElementById('mapa');
+        if (!mapaDiv) return;
+
+        mapa = new google.maps.Map(mapaDiv, {
+            center: { lat: -23.5505, lng: -46.6333 },
+            zoom: 15,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+            styles: [
+                { featureType: "all", elementType: "labels", stylers: [{ visibility: "on" }] },
+                { featureType: "all", elementType: "geometry", stylers: [{ color: "#1E293B" }] },
+                { featureType: "road", elementType: "geometry", stylers: [{ color: "#334155" }] },
+                { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#CBD5E1" }] },
+                { featureType: "poi", elementType: "geometry", stylers: [{ color: "#475569" }] }
+            ]
+        });
+    }
+
+    // 🧍 MARCADOR DO PASSAGEIRO
+    if (!markerPassageiro) {
+        markerPassageiro = new google.maps.Marker({
+            position: { lat: -23.5505, lng: -46.6333 },
+            map: mapa,
+            title: "Você 🧍",
+            icon: { url: "https://cdn-icons-png.flaticon.com/512/64/64572.png", scaledSize: new google.maps.Size(40,40) },
+            animation: google.maps.Animation.DROP
         });
 
-        // ========================================================
-        // ⭐ FUNÇÕES DE AVALIAÇÃO DO MOTORISTA
-        // ========================================================
-        function abrirAvaliacao(motoristaId, nomeMotorista) {
-            notaAvaliacao = 0;
-            document.getElementById('comentarioAvaliacao').value = "";
-            document.getElementById('tituloAvaliacao').innerText = `Avalie ${nomeMotorista || 'Seu Motorista'}`;
-            
-            // Reseta estrelas
-            const estrelas = document.querySelectorAll('.estrela');
-            estrelas.forEach(e => e.classList.remove('ativa'));
-            
-            document.getElementById('modalAvaliacaoPassageiro').style.display = "block";
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const posUser = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+                    markerPassageiro.setPosition(posUser);
+                    mapa.setCenter(posUser);
+                },
+                erro => console.warn("Localização negada", erro),
+                { enableHighAccuracy: true }
+            );
         }
+    }
 
-        function selecionarEstrela(nota) {
-            notaAvaliacao = nota;
-            const estrelas = document.querySelectorAll('.estrela');
-            
-            estrelas.forEach((estrela, idx) => {
-                if(idx < nota) estrela.classList.add('ativa');
-                else estrela.classList.remove('ativa');
-            });
+    // 🚗 MARCADOR DO MOTORISTA (AGORA APARECE E ATUALIZA)
+    if (!markerMotorista) {
+        markerMotorista = new google.maps.Marker({
+            position: { lat: -23.5505, lng: -46.6333 },
+            map: mapa,
+            title: "Seu Motorista 🚗",
+            icon: { url: "https://cdn-icons-png.flaticon.com/512/2979/2979991.png", scaledSize: new google.maps.Size(45,45) },
+            animation: google.maps.Animation.BOUNCE
+        });
+    }
+
+    // 🟢 LINHA DA ROTA
+    if (!rotaLinha) {
+        rotaLinha = new google.maps.Polyline({
+            path: [],
+            geodesic: true,
+            strokeColor: "#22C55E",
+            strokeOpacity: 0.8,
+            strokeWeight: 5,
+            icons: [{ icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: "#22C55E" }, offset: "0", repeat: "15px" }]
+        });
+        rotaLinha.setMap(mapa);
+    }
+}
+
+// ❌ CANCELAR CORRIDA (AGORA AVISA MOTORISTA E SERVIDOR)
+async function cancelarCorrida() {
+    falar("Cancelando sua viagem, aguarde...");
+
+    if(!corridaAtual || !corridaAtual.id) {
+        resetarInterfaceAposCancelamento();
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/cancelar_corrida`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                corrida_id: corridaAtual.id,
+                motivo: "Cancelado pelo passageiro" 
+            })
+        });
+
+        if(res.ok) {
+            // ✅ AGORA AVISA O MOTORISTA NA HORA
+            socket.emit("cancelar_corrida", { corrida_id: corridaAtual.id });
+            tocarSom('alerta');
+            alert("🚫 Viagem cancelada com sucesso! O motorista foi avisado 🤍");
+            falar("Viagem cancelada com sucesso.");
+        } else {
+            alert("⚠️ Não foi possível cancelar, tente novamente.");
         }
+    } catch(e) {
+        console.error("Erro ao cancelar", e);
+        alert("❌ Erro de conexão ao cancelar.");
+    } finally {
+        resetarInterfaceAposCancelamento();
+    }
+}
 
-        function fecharAvaliacao() {
-            document.getElementById('modalAvaliacaoPassageiro').style.display = "none";
+function resetarInterfaceAposCancelamento() {
+    corridaAtual = null;
+    if(atualizacaoRota) clearInterval(atualizacaoRota);
+    document.getElementById('cardStatus').style.display = 'none';
+    document.getElementById('cardMapa').style.display = 'none';
+    
+    if(mapa) mapa = null;
+    if(markerPassageiro) markerPassageiro = null;
+    if(markerMotorista) markerMotorista = null;
+    if(rotaLinha) rotaLinha = null;
+
+    calcularValor();
+
+    const btn = document.getElementById('btnChamar');
+    if(btn) {
+        btn.disabled = false;
+        btn.classList.remove('btn-blocked');
+        btn.innerHTML = `<i class="fas fa-rocket"></i> 🚀 CHAMAR ROTA BRASIL`;
+    }
+}
+
+// ========================================================
+// 📡 EVENTOS DO SOCKET (AGORA CHEGA TUDO AQUI!)
+// ========================================================
+
+// ❌ MOTORISTA CANCELA → VOCÊ FICA SABENDO
+socket.on("corrida_cancelada", (dados) => {
+    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+    tocarSom('alerta');
+    falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
+    alert("❌ Motorista cancelou a corrida 😔\nBuscando outro...");
+    resetarInterfaceAposCancelamento();
+});
+
+// 🚗 MOTORISTA SE MOVIMENTA → MAPA ATUALIZA AQUI
+socket.on("atualizar_localizacao_motorista", (dados) => {
+    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+    
+    // ✅ AGORA APARECE E MEXE NO MAPA!
+    if(markerMotorista) {
+        const novaPosicao = new google.maps.LatLng(dados.lat, dados.lng);
+        markerMotorista.setPosition(novaPosicao);
+        
+        // Atualiza linha da rota
+        if(rotaLinha) {
+            const caminho = rotaLinha.getPath();
+            caminho.push(novaPosicao);
+            rotaLinha.setPath(caminho);
         }
+    }
+});
 
-        async function enviarAvaliacaoMotorista() {
-            if(notaAvaliacao === 0) {
-                alert("⚠️ Dê uma nota de 1 a 5 estrelas!");
-                return;
-            }
+// 🏁 MOTORISTA FINALIZA → VOCÊ RECEBE O AVISO E AVALIAÇÃO
+socket.on("corrida_finalizada", (dados) => {
+    if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+    tocarSom('sucesso');
+    falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
+    alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nObrigado pela preferência!`);
+    
+    // ⭐ ABRE AVALIAÇÃO AUTOMÁTICO
+    abrirAvaliacao(dados.motorista_id, dados.motorista_nome);
+    
+    resetarInterfaceAposCancelamento();
+});
 
-            try {
-                const res = await fetch(`${API}/avaliar_motorista`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        corrida_id: corridaAtual?.id,
-                        motorista_id: corridaAtual?.motorista_id,
-                        nota: notaAvaliacao,
-                        comentario: document.getElementById('comentarioAvaliacao').value
-                    })
-                });
+// ========================================================
+// ⭐ FUNÇÕES DE AVALIAÇÃO
+// ========================================================
+function abrirAvaliacao(motoristaId, nomeMotorista) {
+    notaAvaliacao = 0;
+    document.getElementById('comentarioAvaliacao').value = "";
+    document.getElementById('tituloAvaliacao').innerText = `Avalie ${nomeMotorista || 'Seu Motorista'}`;
+    
+    const estrelas = document.querySelectorAll('.estrela');
+    estrelas.forEach(e => e.classList.remove('ativa'));
+    
+    document.getElementById('modalAvaliacaoPassageiro').style.display = "block";
+}
 
-                if(res.ok) {
-                    tocarSom('sucesso');
-                    alert("✅ Avaliação enviada! Obrigado por ajudar a melhorar 🇧🇷🤍");
-                } else {
-                    alert("❌ Erro ao enviar avaliação, tente novamente!");
-                }
-            } catch(e) {
-                alert("❌ Erro de conexão ao enviar avaliação");
-            } finally {
-                fecharAvaliacao();
-                carregarAvaliacoes(); // Atualiza lista na tela
-            }
+function selecionarEstrela(nota) {
+    notaAvaliacao = nota;
+    const estrelas = document.querySelectorAll('.estrela');
+    estrelas.forEach((estrela, idx) => {
+        estrela.classList.toggle('ativa', idx < nota);
+    });
+}
+
+function fecharAvaliacao() {
+    document.getElementById('modalAvaliacaoPassageiro').style.display = "none";
+}
+
+async function enviarAvaliacaoMotorista() {
+    if(notaAvaliacao === 0) { alert("⚠️ Dê uma nota de 1 a 5 estrelas!"); return; }
+
+    try {
+        const res = await fetch(`${API}/avaliar_motorista`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({
+                corrida_id: corridaAtual?.id,
+                motorista_id: corridaAtual?.motorista_id,
+                nota: notaAvaliacao,
+                comentario: document.getElementById('comentarioAvaliacao').value
+            })
+        });
+
+        if(res.ok) {
+            tocarSom('sucesso');
+            alert("✅ Avaliação enviada! Obrigado 🇧🇷🤍");
         }
+    } catch(e) {
+        alert("❌ Erro ao enviar avaliação");
+    } finally {
+        fecharAvaliacao();
+    }
+}
+ 
 
     </script>
 </body>
