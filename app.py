@@ -555,6 +555,13 @@ def repassar_finalizacao(dados):
         "valor": valor,
         "motorista_nome": motorista_nome
     }, room=f"corrida_{corrida_id}")
+@socketio.on('entrar_na_sala')
+def entrar_na_sala(dados):
+    cid = dados.get('corrida_id')
+    if cid:
+        join_room(f"corrida_{cid}") # <- Adiciona o usuário na sala
+        print(f"👤 Usuário entrou na sala corrida_{cid}")
+
 
 if __name__ == "__main__":
     with app.app_context():
