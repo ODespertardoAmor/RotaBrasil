@@ -539,6 +539,51 @@ def finalizar_corrida(corrida_id):
         "sucesso": True,
         "mensagem": "Corrida finalizada"
     })
+ # ==================================================
+# 🟢 ESCUTA O MOTORISTA QUANDO ELE FINALIZA 🚗✅📡
+# O NOME DO EVENTO É EXATAMENTE O MESMO QUE ELE USAU: "corrida_finalizada" 🚨🟡
+# ==================================================
+@socketio.on('corrida_finalizada')
+def receber_finalizacao_do_motorista(dados):
+    print("📥 RECEBI DO MOTORISTA: ", dados) # 🟡 Veja no terminal se chega tudo!
+
+    # 1️⃣ PEGA OS DADOS QUE O MOTORISTA ENVIOU (IGUALZINHO ELE ESCREVEU NO JS) 🤝🩷
+    corrida_id = dados.get('corrida_id')
+    valor = dados.get('valor')
+    motorista_nome = dados.get('motorista_nome')
+
+    # 🛑 SEGURANÇA: Se faltar dado, não faz nada
+    if not corrida_id or valor is None:
+        print("❌ Faltou dados na finalização!")
+        return
+
+    # ✅ (OPCIONAL MAS BOM) Você pode atualizar o banco aqui também ou só na rota HTTP
+    # conn = conectar_db()
+    # cursor = conn.cursor()
+    # cursor.execute("UPDATE corridas SET status = 'finalizada', valor = ? WHERE id = ?", (valor, corrida_id))
+    # conn.commit()
+    # conn.close()
+
+    # ==================================================
+    # 🚀 REPASSA TUDO ISSO AGORA PARA O PASSAGEIRO 📲🩷🏁
+    # ⚠️ AQUI É ONDE CONECTAMOS COM O CÓDIGO QUE VOCÊ FEZ NO PASSAGEIRO!!!
+    # 📛 O NOME DO EVENTO AGORA É: "viagem_finalizada" (O QUE SEU JS DO PASSAGEIRO ESPERA)
+    # ==================================================
+    dados_para_passageiro = {
+        "corrida_id": corrida_id,  # 🆔 Precisa ter para conferir
+        "valor": valor,            # 💰 Precisa ter para calcular o .toFixed()
+        "motorista_nome": motorista_nome # 👤 Você pode mandar também se quiser mostrar
+    }
+
+    # 🔊 ENVIA PARA A SALA CERTA (O passageiro ESTÁ DENTRO DESSA SALA, CERTO? 🥺🫶)
+    emit(
+        'viagem_finalizada',       # 📛 NOME DO EVENTO (IGUAL NO SEU JS DO PASSAGEIRO)
+        dados_para_passageiro,     # 📦 OS DADOS (corrida_id, valor...)
+        room=f"corrida_{corrida_id}" # 🚪 SALA EXATA DA CORRIDA
+    )
+
+    print(f"✅ Mensagem de finalização enviada para passageiro da corrida {corrida_id}! 📤🏁")
+   
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
