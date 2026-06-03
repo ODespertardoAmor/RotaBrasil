@@ -1059,42 +1059,43 @@
         // ❌ CANCELAR CORRIDA (AGORA AVISA MOTORISTA)
         // ========================================================
         async function cancelarCorrida() {
-            falar("Cancelando sua viagem, aguarde...");
+    falar("Cancelando sua viagem, aguarde...");
 
-            if(!corridaAtual || !corridaAtual.id) {
-                resetarInterfaceAposCancelamento();
-                return;
-            }
+    if(!corridaAtual || !corridaAtual.id) {
+        resetarInterfaceAposCancelamento();
+        return;
+    }
 
-               try {
-                const res = await fetch(`${API}/cancelar_corrida`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ 
-                        corrida_id: corridaAtual.id,
-                        motivo: "Cancelado pelo passageiro" 
-                    })
-                });
+    try {
+        // ✅ ID agora vai na URL, como a rota espera
+        const res = await fetch(`${API}/cancelar_corrida/${corridaAtual.id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            // Se quiser manter o motivo, continua enviando no body
+            body: JSON.stringify({ 
+                motivo: "Cancelado pelo passageiro" 
+            })
+        });
 
-                if(res.ok) {
-                    // ✅ AVISA O MOTORISTA NA HORA VIA SOCKET
-                    socket.emit("cancelar_corrida", { corrida_id: corridaAtual.id });
-                    tocarSom('alerta');
-                    alert("🚫 Viagem cancelada com sucesso! O motorista já foi avisado 🤍");
-                    falar("Viagem cancelada com sucesso.");
-                } else {
-                    alert("⚠️ Não foi possível cancelar, tente novamente.");
-                }
-            } catch(e) {
-                console.error("Erro ao cancelar corrida:", e);
-                alert("❌ Erro de conexão ao cancelar. Verifique sua internet.");
-            } finally {
-                resetarInterfaceAposCancelamento();
-            }
+        if(res.ok) {
+            socket.emit("cancelar_corrida", { corrida_id: corridaAtual.id });
+            tocarSom('alerta');
+            alert("🚫 Viagem cancelada com sucesso! O motorista já foi avisado 🤍");
+            falar("Viagem cancelada com sucesso.");
+        } else {
+            const erro = await res.json().catch(() => ({}));
+            alert(`⚠️ Não foi possível cancelar: ${erro.erro || "tente novamente"}`);
         }
+    } catch(e) {
+        console.error("Erro ao cancelar corrida:", e);
+        alert("❌ Erro de conexão ao cancelar. Verifique sua internet.");
+    } finally {
+        resetarInterfaceAposCancelamento();
+    }
+}
 
         // ========================================================
         // 🔄 RESETAR TELA APÓS CANCELAMENTO OU FINALIZAÇÃO
