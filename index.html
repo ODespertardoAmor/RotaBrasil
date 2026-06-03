@@ -792,7 +792,7 @@
         // ==============================================
         // 🔴 CANCELAMENTO (SOCKET)
         // ==============================================
-        socket.on("corrida_cancelada", (dados) => {
+        socket.on("cancelar_corrida", (dados) => {
             console.log("🚫 CANCELAR RECEBIDO:", dados);
             const corridaId = corrida?.corrida_id || corrida?.id;
             if(corridaId && dados?.corrida_id == corridaId) {
