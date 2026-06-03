@@ -1036,7 +1036,7 @@
         }
 
         // ❌ TRATAR CORRIDA CANCELADA PELO MOTORISTA
-        socket.on("corrida_cancelada", (dados) => {
+        socket.on("cancelar_corrida", (dados) => {
             if(!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
             tocarSom('alerta');
             falar("A corrida foi cancelada pelo motorista. Vamos buscar outro para você 🚗💨");
