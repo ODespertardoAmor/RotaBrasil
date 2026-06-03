@@ -1131,6 +1131,21 @@
             }
         }
 
+        //finalizar corrida
+        socket.on("viagem_finalizada", (dados) => {
+    if (!corridaAtual || dados.corrida_id !== corridaAtual.id) return;
+
+    tocarSom('sucesso');
+    falar("Chegamos ao destino! Obrigado por viajar com a Rota Brasil 🇧🇷🤍");
+    
+    alert(`🏁 VIAGEM FINALIZADA ✅\nValor Total: R$ ${dados.valor.toFixed(2)}\nMotorista: ${dados.motorista_nome}\nObrigado pela preferência!`);
+
+    // 🧹 Finaliza e limpa tudo
+    resetarInterfaceAposCancelamento(); // Essa mesma função serve para finalizar também
+});
+
+
+        
         // ========================================================
         // ⭐ FUNÇÕES DE AVALIAÇÃO DO MOTORISTA
         // ========================================================
