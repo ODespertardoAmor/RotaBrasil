@@ -539,7 +539,7 @@ def finalizar_corrida(corrida_id):
         "mensagem": "Corrida finalizada"
     })
  # 🔄 REPASSA FINALIZAÇÃO MOTORISTA ➡️ PASSAGEIRO
-@socketio.on('corrida_finalizada')
+@socketio.on('viagem_finalizada')
 def repassar_finalizacao(dados):
     corrida_id = dados.get('corrida_id')
     valor = dados.get('valor')
