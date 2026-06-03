@@ -730,7 +730,7 @@
                     document.getElementById('somDinheiro').play();
                     falar("Corrida finalizada! Você recebeu R$ " + valorFinal.toFixed(2).replace('.', ','));
 
-                    socket.emit('corrida_finalizada', {
+                    socket.emit('viagem_finalizada', {
                         corrida_id: corridaId,
                         valor: valorFinal,
                         motorista_nome: usuario.nome
