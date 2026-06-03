@@ -549,7 +549,7 @@ def repassar_finalizacao(dados):
         return
 
     # 📡 ENVIA PARA O PASSAGEIRO NO EVENTO CERTO
-    emit('viagem_finalizada', {
+    socketio.emit('viagem_finalizada', {
         "corrida_id": corrida_id,
         "valor": valor,
         "motorista_nome": motorista_nome
