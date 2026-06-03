@@ -521,46 +521,29 @@ def minhas_avaliacoes():
     conn.close()
 
     return jsonify(avaliacoes)
- 
 @app.route("/finalizar_corrida/<int:corrida_id>", methods=["POST"])
 @jwt_required()
 def finalizar_corrida(corrida_id):
-
     corrida = Corrida.query.get(corrida_id)
 
     if not corrida:
-        return jsonify({"erro":"Corrida não encontrada"}),404
+        return jsonify({"erro": "Corrida não encontrada"}), 404
 
     corrida.status = "finalizada"
-
     db.session.commit()
+
+    # 🔊 Dispara evento para todos na sala da corrida
+    socketio.emit('viagem_finalizada', {
+        "corrida_id": corrida.id,
+        "valor": corrida.valor,  # Certifique-se que esse campo existe na tabela
+        "motorista_nome": corrida.motorista.nome  # Ajuste conforme sua estrutura
+    }, room=f"corrida_{corrida_id}")
 
     return jsonify({
         "sucesso": True,
         "mensagem": "Corrida finalizada"
     })
- # 🔄 REPASSA FINALIZAÇÃO MOTORISTA ➡️ PASSAGEIRO
-@socketio.on('corrida_finalizada')
-def repassar_finalizacao(dados):
-    corrida_id = dados.get('corrida_id')
-    valor = dados.get('valor')
-    motorista_nome = dados.get('motorista_nome')
 
-    if not corrida_id or valor is None:
-        return
-
-    # 📡 ENVIA PARA O PASSAGEIRO NO EVENTO CERTO
-    emit('viagem_finalizada', {
-        "corrida_id": corrida_id,
-        "valor": valor,
-        "motorista_nome": motorista_nome
-    }, room=f"corrida_{corrida_id}")
-@socketio.on('entrar_na_sala')
-def entrar_na_sala(dados):
-    cid = dados.get('corrida_id')
-    if cid:
-        join_room(f"corrida_{cid}") # <- Adiciona o usuário na sala
-        print(f"👤 Usuário entrou na sala corrida_{cid}")
 
 
 if __name__ == "__main__":
