@@ -836,7 +836,7 @@
                     localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
                     document.getElementById("loginCard").style.display = "none";
                     document.getElementById("dashboard").style.display = "block";
-                    falar(`Olá ${passageiro.nome}, pronto para viajar? 🚗💨`);
+                    falar(`Olá ${passageiro.nome},pronto para viajar.bora de rota brasil!`);
                     carregarAvaliacoes();
                 } else { alert("❌ " + (data.erro || "Dados inválidos")); }
             } catch(e) { alert("Erro conexão"); }
