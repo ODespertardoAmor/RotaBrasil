@@ -688,67 +688,38 @@
         // ==============================================
         // 🏁 PASSO 3: FINALIZAR ✅ ROTA /finalizar_corrida/{id} CORRETA
         // ==============================================
-        async function finalizarAgora() {
-            if(!corrida) return mostrarErro("Nenhuma corrida ativa.");
-            if(!usuario || !token) return mostrarErro("Faça login novamente.");
-            if(!estado.aceito) return mostrarErro("Corrida não aceita.");
-            if(!estado.pegouPassageiro) return mostrarErro("Vá até o passageiro primeiro.");
-            if(!estado.viagemIniciada) return mostrarErro("Clique em INICIAR VIAGEM antes de finalizar!");
+        async function finalizarCorrida() {
+    falar("Finalizando corrida, aguarde...");
 
-            const valorFinal = parseFloat(corrida.valor || 0);
-            if(!confirm(`🏁 FINALIZAR CORRIDA?\n\n👤 Cliente: ${corrida.passageiro_nome || 'Cliente'}\n💰 Valor Total: R$ ${valorFinal.toFixed(2)}\n📍 Destino: ${corrida.destino}\n\n⚠️ ATENÇÃO: Essa ação é irreversível!`)) {
-                return;
+    if (!corridaAtual || !corridaAtual.id) {
+        alert("⚠️ Não há corrida em andamento para finalizar.");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/finalizar_corrida/${corridaAtual.id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${tokenMotorista}`
             }
+        });
 
-            const corridaId = corrida.corrida_id || corrida.id;
-            const dadosEnvio = {
-                status: "finalizada",
-                valor_final: valorFinal,
-                distancia_total: parseFloat(corrida.distancia || 0),
-                motorista_id: String(usuario.id),
-                finalizado_em: new Date().toISOString()
-            };
-
-            try {
-                // ✅ ROTA EXATA: /finalizar_corrida/<corridaId>
-                const resposta = await fetch(`${API_URL}/finalizar_corrida/${corridaId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(dadosEnvio)
-                });
-
-                let retornoServidor = {};
-                try { 
-                    retornoServidor = await resposta.json(); 
-                } catch(e) {}
-
-                if(resposta.ok || resposta.status === 200 || resposta.status === 201) {
-                    document.getElementById('somDinheiro').play();
-                    falar("Corrida finalizada! Você recebeu R$ " + valorFinal.toFixed(2).replace('.', ','));
-
-                    socket.emit('viagem_finalizada', {
-                        corrida_id: corridaId,
-                        valor: valorFinal,
-                        motorista_nome: usuario.nome
-                    });
-
-                    if(envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-
-                    document.getElementById('modalAvaliacao').style.display = 'block';
-
-                } else {
-                    throw new Error(retornoServidor.erro || `Código: ${resposta.status}`);
-                }
-
-            } catch (erro) {
-                console.error("ERRO AO FINALIZAR:", erro);
-                mostrarErro("Falha ao finalizar: " + erro.message);
-            }
+        if (res.ok) {
+            alert("🏁 Corrida finalizada com sucesso!");
+            falar("Corrida finalizada.");
+            resetarInterfaceAposCancelamento();
+        } else {
+            const erro = await res.json().catch(() => ({}));
+            alert(`⚠️ Não foi possível finalizar: ${erro.erro || "Tente novamente"}`);
         }
+
+    } catch (e) {
+        console.error("Erro ao finalizar corrida:", e);
+        alert("❌ Erro de conexão. Verifique sua internet.");
+    }
+}
+
 
         // ⭐ ENVIAR AVALIAÇÃO ✅ ROTA /avaliar_passageiro CORRETA
         async function enviarAvaliacao() {
