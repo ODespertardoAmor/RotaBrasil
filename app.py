@@ -234,7 +234,7 @@ def cancelar_corrida(id):
     corrida.status = "cancelada"
     db.session.commit()
 
-    socketio.emit("corrida_cancelada", {"corrida_id": corrida.id})
+    socketio.emit("cancelar_corrida", {"corrida_id": corrida.id})
     return jsonify({"status": "cancelada"}), 200
 
 # ==========================================
