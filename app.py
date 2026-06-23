@@ -1,16 +1,27 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit, join_room
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
+import time
+import mercadopago
+from datetime import datetime
+MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN")
 
+if not MP_ACCESS_TOKEN:
+    raise ValueError("MP_ACCESS_TOKEN não encontrado no ambiente.")
+
+sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
 
 app = Flask(__name__)
-CORS(app)
+# ✅ CONFIGURAÇÃO CORRETA DO CORS
+CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
-# CONFIGURAÇÃO INTELIGENTE PARA POSTGRESQL
+#CORS(app)
+
+# 📌 CONFIGURAÇÃO PARA POSTGRESQL
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///rotabrasil.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -23,14 +34,13 @@ app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-ke
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# 🔧 CORREÇÃO CRUCIAL PARA O RENDER SOCKET.IO
+# 📡 SOCKET.IO COMPATÍVEL COM RENDER E NAVEGADORES
 socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'polling'])
 
-# ==========================================
-# MODELOS DO BANCO DE DADOS (CORRIGIDO ✅)
-# REMOVI O CAMPO DISTANCIA DAQUI DE BAIXO!
-# ==========================================
 
+# ==========================================
+# MODELOS DO BANCO
+# ==========================================
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
@@ -38,9 +48,25 @@ class Usuario(db.Model):
     senha = db.Column(db.String(200), nullable=False)
     telefone = db.Column(db.String(20))
     tipo = db.Column(db.String(20), default="passageiro")
+    foto_perfil = db.Column(db.String(255), nullable=True)
     carro = db.Column(db.String(50), nullable=True)
     placa = db.Column(db.String(20), nullable=True)
     online = db.Column(db.Boolean, default=False)
+    admin = db.Column(db.Boolean,default=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'email': self.email,
+            'telefone': self.telefone,
+            'tipo': self.tipo,
+            'foto_perfil': self.foto_perfil,
+            'carro': self.carro,
+            'placa': self.placa,
+            'online': self.online
+        }
+
 
 class Corrida(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,35 +75,68 @@ class Corrida(db.Model):
     origem = db.Column(db.String(255), nullable=False)
     destino = db.Column(db.String(255), nullable=False)
     valor = db.Column(db.Float, nullable=False)
-    # 🚨 REMOVI A LINHA "distancia = ..." DAQUI! AGORA NÃO EXISTE MAIS NO BANCO
     status = db.Column(db.String(20), default="pendente")
-#===========SISTEMA DE AVALIACAO=======
+
+
 class Avaliacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    corrida_id = db.Column(db.Integer)
+    avaliador_id = db.Column(db.Integer)
+    avaliado_id = db.Column(db.Integer)
+    nota = db.Column(db.Integer)
+    comentario = db.Column(db.String(255))
 
-    id = db.Column(
+class Carteira(db.Model):
+    __tablename__ = "carteiras"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    usuario_id = db.Column(
         db.Integer,
-        primary_key=True
+        nullable=False,
+        unique=True
     )
 
-    corrida_id = db.Column(
-        db.Integer
+    saldo = db.Column(
+        db.Float,
+        default=0.0
     )
 
-    avaliador_id = db.Column(
-        db.Integer
+    saldo_bloqueado = db.Column(
+        db.Float,
+        default=0.0
     )
 
-    avaliado_id = db.Column(
-        db.Integer
+    criado_em = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+class Transacao(db.Model):
+    __tablename__ = "transacoes"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    usuario_id = db.Column(
+        db.Integer,
+        nullable=False
     )
 
-    nota = db.Column(
-        db.Integer
+    tipo = db.Column(
+        db.String(50)
     )
 
-    comentario = db.Column(
-        db.String(255)
+    valor = db.Column(
+        db.Float
     )
+
+    descricao = db.Column(
+        db.String(300)
+    )
+
+    data = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )    
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO
 # ==========================================
@@ -92,14 +151,120 @@ def register():
         senha=senha_cripto,
         telefone=dados.get("telefone"),
         tipo=dados.get("tipo", "passageiro"),
+        foto_perfil=dados.get("foto_perfil"),
         carro=dados.get("carro"),
         placa=dados.get("placa")
     )
     
     db.session.add(novo_usuario)
     db.session.commit()
-    return jsonify({"status": "Conta criada com sucesso!"}), 201
+    #====criar a carteiro do usuario===
+    nova_carteira = Carteira(
+    usuario_id=novo_usuario.id
+    )
 
+    db.session.add(nova_carteira)
+    db.session.commit()
+    return jsonify({"status": "Conta criada com sucesso!"}), 201
+from functools import wraps
+from flask_jwt_extended import (
+    verify_jwt_in_request,
+    get_jwt_identity
+)
+
+def admin_required(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        # Verifica se existe JWT válido
+        verify_jwt_in_request()
+
+        usuario_id = get_jwt_identity()
+
+        usuario = Usuario.query.get(usuario_id)
+
+        # Verifica se é admin
+        if not usuario or not usuario.admin:
+            return jsonify({
+                "erro": "Acesso negado"
+            }), 403
+
+        return func(*args, **kwargs)
+
+    return wrapper    
+#========Consulta de saldo=====
+@app.route("/carteira/saldo")
+@jwt_required()
+def saldo():
+
+    usuario_id = get_jwt_identity()
+
+    carteira = Carteira.query.filter_by(
+        usuario_id=usuario_id
+    ).first()
+
+    return jsonify({
+        "saldo": carteira.saldo,
+        "bloqueado": carteira.saldo_bloqueado
+    })
+#=======acompanha toda transação ====   
+@app.route('/transacoes')
+def admin_transacoes():
+
+    transacoes = Transacao.query.all()
+
+    return jsonify([
+        {
+            "id": t.id,
+            "usuario_id": t.usuario_id,
+            "tipo": t.tipo,
+            "valor": t.valor,
+            "descricao": t.descricao
+        }
+        for t in transacoes
+    ])    
+#=======Historico da carteira=========    
+@app.route('/carteira/historico')
+@jwt_required()
+def historico():
+
+    usuario_id = get_jwt_identity()
+
+    transacoes = Transacao.query.filter_by(
+        usuario_id=usuario_id
+    ).order_by(
+        Transacao.data.desc()
+    ).all()
+
+    return jsonify([
+        {
+            "tipo": t.tipo,
+            "valor": t.valor,
+            "descricao": t.descricao,
+            "data": t.data.strftime("%d/%m/%Y %H:%M")
+        }
+        for t in transacoes
+    ])    
+#=========bliquear valor =======    
+def bloquear_valor_corrida(
+    usuario_id,
+    valor
+):
+
+    carteira = Carteira.query.filter_by(
+        usuario_id=usuario_id
+    ).first()
+
+    if carteira.saldo < valor:
+        return False
+
+    carteira.saldo -= valor
+    carteira.saldo_bloqueado += valor
+
+    db.session.commit()
+
+    return True    
 @app.route("/login", methods=["POST"])
 def login():
     dados = request.get_json()
@@ -115,27 +280,16 @@ def login():
         "nome": usuario.nome,
         "email": usuario.email,
         "tipo": usuario.tipo,
+        "foto_perfil": usuario.foto_perfil,
         "carro": usuario.carro,
         "placa": usuario.placa
     }
     
     return jsonify({"token": token, "user": dados_user}), 200
-# =========================
-# 🔴 MOTORISTA OFFLINE
-# =========================
-@app.route("/ficar_offline/<int:id>", methods=["POST"])
-def ficar_offline(id):
 
-    motorista = Usuario.query.get(id)
-
-    if motorista:
-        motorista.online = False
-        db.session.commit()
-
-    return jsonify({"status": "Motorista offline"}), 200
 
 # ==========================================
-# ROTAS DO MOTORISTA
+# STATUS MOTORISTA
 # ==========================================
 @app.route("/ficar_online/<int:id>", methods=["POST"])
 def ficar_online(id):
@@ -145,6 +299,16 @@ def ficar_online(id):
         db.session.commit()
     return jsonify({"status": "Motorista online"}), 200
 
+
+@app.route("/ficar_offline/<int:id>", methods=["POST"])
+def ficar_offline(id):
+    motorista = Usuario.query.get(id)
+    if motorista:
+        motorista.online = False
+        db.session.commit()
+    return jsonify({"status": "Motorista offline"}), 200
+
+
 @app.route("/motoristas_online", methods=["GET"])
 def motoristas_online():
     motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
@@ -153,23 +317,121 @@ def motoristas_online():
         lista.append({
             "id": m.id,
             "nome": m.nome,
+            "foto_perfil": m.foto_perfil,
             "carro": m.carro if m.carro else "Carro Particular",
             "placa": m.placa if m.placa else ""
         })
     return jsonify(lista), 200
 
+#=====liberar pagamento=========
+def liberar_pagamento(
+    passageiro_id,
+    motorista_id,
+    valor
+):
+
+    plataforma = valor * 0.15
+
+    motorista_recebe = valor - plataforma
+
+    carteira_passageiro = Carteira.query.filter_by(
+        usuario_id=passageiro_id
+    ).first()
+
+    carteira_motorista = Carteira.query.filter_by(
+        usuario_id=motorista_id
+    ).first()
+
+    carteira_passageiro.saldo_bloqueado -= valor
+
+    carteira_motorista.saldo += motorista_recebe
+
+    db.session.commit()
+#= ======devolução de dinheiro ======
+def devolver_saldo(
+    usuario_id,
+    valor
+    ):
+
+    carteira = Carteira.query.filter_by(
+        usuario_id=usuario_id
+    ).first()
+
+    carteira.saldo += valor
+    carteira.saldo_bloqueado -= valor
+
+    db.session.commit()
+# ==========================================
+# CORRIDAS
+# ==========================================
+@app.route("/nova_corrida", methods=["POST"])
+@jwt_required()
+def nova_corrida():
+
+    passageiro_id = get_jwt_identity()
+    passageiro = Usuario.query.get(passageiro_id)
+    dados = request.get_json()
+
+    valor_corrida = float(dados.get("valor"))
+
+    if not bloquear_valor_corrida(
+        passageiro_id,
+        valor_corrida
+    ):
+        return jsonify({
+            "erro": "Saldo insuficiente"
+        }), 400
+
+    nova = Corrida(
+        passageiro_id=passageiro_id,
+        origem=dados.get("origem"),
+        destino=dados.get("destino"),
+        valor=float(dados.get("valor")),
+        status="pendente"
+    )
+
+    db.session.add(nova)
+    db.session.commit()
+
+    dados_chamada = {
+        "corrida_id": nova.id,
+        "passageiro_id": passageiro.id,
+        "passageiro_nome": passageiro.nome,
+        "foto_perfil": passageiro.foto_perfil,
+        "origem": nova.origem,
+        "destino": nova.destino,
+        "valor": nova.valor,
+        "distancia": dados.get("distancia", "Calculando...")
+    }
+
+    motoristas = Usuario.query.filter_by(
+        tipo="motorista",
+        online=True
+    ).all()
+
+    for motorista in motoristas:
+
+        socketio.emit(
+            "nova_corrida",
+            dados_chamada,
+            room=f"motorista_{motorista.id}"
+        )
+
+    return jsonify({
+        "status": "Procurando motoristas",
+        "corrida_id": nova.id
+    }), 201
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
     motorista_id = get_jwt_identity()
     motorista = Usuario.query.get(motorista_id)
     corrida = Corrida.query.get(id)
-    
+
     if not corrida:
         return jsonify({"erro": "Corrida não encontrada"}), 404
-        
     if corrida.status != "pendente":
-        return jsonify({"erro": "Esta corrida já foi aceita por outro motorista"}), 400
+        return jsonify({"erro": "Corrida já aceita"}), 400
 
     corrida.motorista_id = motorista.id
     corrida.status = "aceita"
@@ -179,73 +441,140 @@ def aceitar_corrida(id):
         "corrida_id": corrida.id,
         "motorista_id": motorista.id,
         "motorista_nome": motorista.nome,
-        "carro": motorista.carro if motorista.carro else "Carro Particular",
-        "placa": motorista.placa if motorista.placa else "Sem Placa"
+        "foto_perfil": motorista.foto_perfil,
+        "carro": motorista.carro,
+        "placa": motorista.placa
     }
 
-    socketio.emit("corrida_aceita", dados_socket)
-    socketio.emit("corrida_removida", {"corrida_id": corrida.id})
+    socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
+    return jsonify({"sucesso": True, "corrida_id": corrida.id, "status":"aceita"}), 200
 
-    return jsonify({"status": "Corrida aceita com sucesso", "corrida_id": corrida.id}), 200
-
-# ==========================================
-# ROTAS DO PASSAGEIRO (CORRIGIDA ✅ SEM DISTANCIA NO INSERT)
-# ==========================================
-@app.route("/nova_corrida", methods=["POST"])
-@jwt_required()
-def nova_corrida():
-    passageiro_id = get_jwt_identity()
-    passageiro = Usuario.query.get(passageiro_id)
-    dados = request.get_json()
-    
-    # 🔧 AQUI É O PRINCIPAL: REMOVI A LINHA DE "distancia" DA CRIAÇÃO DA CORRIDA
-    nova = Corrida(
-        passageiro_id=passageiro_id,
-        origem=dados.get("origem"),
-        destino=dados.get("destino"),
-        valor=float(dados.get("valor")),
-        status="pendente"
-    )
-    
-    db.session.add(nova)
-    db.session.commit()
-    
-    # ✅ AQUI EU ENVIO A DISTANCIA APENAS PARA TELA, NÃO SALVO NO BANCO!
-    dados_chamada = {
-        "corrida_id": nova.id,
-        "passageiro_id": passageiro.id,
-        "passageiro_nome": passageiro.nome,
-        "origem": nova.origem,
-        "destino": nova.destino,
-        "valor": nova.valor,
-        "distancia": dados.get("distancia", "Calculando...") # <-- Vem do frontend, só mostra
-    }
-    
-    socketio.emit("nova_corrida", dados_chamada)
-    return jsonify({"status": "Procurando motoristas", "corrida_id": nova.id}), 201
 
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
 @jwt_required()
 def cancelar_corrida(id):
     corrida = Corrida.query.get(id)
+    
+    # 1. Validações básicas
     if not corrida:
-        return jsonify({"erro": "Corrida não encontrada"}), 404
+        return jsonify({"sucesso": False, "erro": "Corrida não encontrada"}), 404
+        
+    if corrida.status == "finalizada":
+        return jsonify({"sucesso": False, "erro": "Corrida já finalizada"}), 400
+        
+    if corrida.status == "cancelada":
+        return jsonify({"sucesso": False, "erro": "Corrida já estava cancelada"}), 400
 
-    corrida.status = "cancelada"
+    try:
+        # 2. Atualiza o status da corrida
+        corrida.status = "cancelada"
+        
+        # 3. Executa a devolução do dinheiro usando os dados da própria corrida
+        # (Ajuste 'passageiro_id' e 'valor' de acordo com as colunas do seu modelo Corrida)
+        devolver_saldo(corrida.passageiro_id, corrida.valor)
+        
+        # 4. Salva todas as alterações no banco de dados de uma vez
+        db.session.commit()
+        
+    except Exception as e:
+        # Se der qualquer erro na devolução ou no banco, desfaz as alterações
+        db.session.rollback()
+        return jsonify({"sucesso": False, "erro": f"Erro ao processar cancelamento: {str(e)}"}), 500
+
+    # 5. Avisa os envolvidos via Socket e retorna o sucesso
+    socketio.emit("corrida_cancelada", {"corrida_id": id}, room=f"corrida_{id}")
+    
+    return jsonify({"sucesso": True, "corrida_id": corrida.id}), 200
+
+@app.route('/finalizar_corrida/<corrida_id>', methods=['POST'])
+def finalizar_corrida(corrida_id):
+
+    try:
+        corrida_id = int(corrida_id)
+    except:
+        return jsonify({
+            "sucesso": False,
+            "erro": "ID inválido"
+        }), 400
+
+    dados = request.get_json() or {}
+
+    corrida = Corrida.query.get(corrida_id)
+
+    if not corrida:
+        return jsonify({
+            "sucesso": False,
+            "erro": "Corrida não encontrada"
+        }), 404
+
+    corrida.status = "finalizada"
+
+    # Libera pagamento
+    liberar_pagamento(
+        corrida.passageiro_id,
+        corrida.motorista_id,
+        corrida.valor
+    )
+
+    # Registra no histórico
+    registro = Transacao(
+        usuario_id=corrida.passageiro_id,
+        tipo="corrida",
+        valor=corrida.valor,
+        descricao=f"Corrida concluída #{corrida.id}"
+    )
+
+    db.session.add(registro)
+
     db.session.commit()
 
-    socketio.emit("cancelar_corrida", {"corrida_id": corrida.id})
-    return jsonify({"status": "cancelada"}), 200
+    socketio.emit(
+        'viagem_finalizada',
+        {
+            "corrida_id": corrida_id,
+            "valor": corrida.valor,
+            "motorista_nome": dados.get(
+                'motorista_nome',
+                "Motorista"
+            ),
+            "motorista_id": corrida.motorista_id
+        },
+        room=f"corrida_{corrida_id}"
+    )
+
+    return jsonify({
+        "sucesso": True,
+        "valor": corrida.valor
+    })
 
 # ==========================================
-# ROTAS DE MONITORAMENTO GPS
+# SOCKETIO — SALAS E EVENTOS ALINHADOS
 # ==========================================
+@socketio.on("connect")
+def on_connect():
+    print(f"✅ Cliente conectado")
+
+
+@socketio.on('entrar_na_sala')
+def entrar_na_sala(dados):
+    cid = dados.get('corrida_id')
+    if cid:
+        join_room(f"corrida_{cid}")
+        print(f"✅ Entrou na sala corrida_{cid}")
+
+
+@socketio.on('iniciar_viagem')
+def repassar_inicio(dados):
+    corrida_id = dados.get('corrida_id')
+    if corrida_id:
+        socketio.emit('viagem_iniciada', {"corrida_id": corrida_id}, room=f"corrida_{corrida_id}")
+
+
 @app.route("/atualizar_localizacao", methods=["POST"])
 @jwt_required()
 def atualizar_localizacao():
     motorista_id = get_jwt_identity()
     dados = request.get_json()
-    
     latitude = dados.get("latitude")
     longitude = dados.get("longitude")
 
@@ -257,316 +586,471 @@ def atualizar_localizacao():
         "latitude": float(latitude),
         "longitude": float(longitude)
     }
-    
-    socketio.emit("localizacao_motorista", dados_gps)
+    socketio.emit("atualizacao_localizacao", dados_gps, room=f"corrida_{dados.get('corrida_id')}")
     return jsonify({"status": "Localização atualizada"}), 200
 
-# EVENTO PADRÃO DO SOCKETIO
-@socketio.on("connect")
-def on_connect():
-    print(f"✅ Cliente conectado com sucesso!")
-# =========================================
-# LISTAR MOTORISTAS
-# =========================================
 
-#@app.route("/admin/motoristas")
-#def admin_motoristas():
-
-   # motoristas = Motorista.query.all()
-
-   # lista = []
-
-    #for m in motoristas:
-
-       # user = User.query.get(m.user_id)
-
-       # lista.append({
-
-            #"id": m.id,
-
-            #"user_id": m.user_id,
-
-           # "nome": user.nome if user else "Motorista",
-
-           # "email": user.email if user else "",
-
-           # "carro": m.carro,
-
-           # "placa": m.placa,
-
-            #"online": m.online
-
-       # })
-
-   # return jsonify(lista)
-
-
-# =========================================
-# Rota para recriar bd /perigosa
-# =========================================
-@app.route("/recriar")
-def recriar():
-
-    db.drop_all()
-
-    db.create_all()
-
-    return "banco recriado"
-# =========================================
-
-# =========================================
-
-
-# =========================================
-
-# =========================================
-# LISTAR MOTORISTAS ADM
-# =========================================
-
-@app.route("/admin/motoristas")
-def admin_motoristas():
-
-    motoristas = Usuario.query.filter_by(
-        tipo="motorista"
-    ).all()
-
-    lista = []
-
-    for m in motoristas:
-
-        lista.append({
-
-            "id": m.id,
-
-            "nome": m.nome,
-
-            "email": m.email,
-
-            "carro": m.carro if m.carro else "Carro Particular",
-
-            "placa": m.placa if m.placa else "",
-
-            "online": m.online
-
-        })
-
-    return jsonify(lista), 200
-
-
-# =========================================
-# EXCLUIR MOTORISTA ADM
-# =========================================
-
-@app.route(
-    "/admin/excluir_motorista/<int:id>",
-    methods=["DELETE"]
-)
-def excluir_motorista(id):
-
-    motorista = Usuario.query.get(id)
-
-    if not motorista:
-
-        return jsonify({
-            "erro":"motorista nao encontrado"
-        }), 404
-
-    db.session.delete(motorista)
-
-    db.session.commit()
-
-    return jsonify({
-        "status":"motorista excluido"
-    }), 200
-# =========================================
-# LISTAR PASSAGEIROS ADM
-# =========================================
-
-@app.route("/admin/passageiros")
-def admin_passageiros():
-
-    passageiros = Usuario.query.filter_by(
-        tipo="passageiro"
-    ).all()
-
-    lista = []
-
-    for p in passageiros:
-
-        lista.append({
-
-            "id": p.id,
-
-            "nome": p.nome,
-
-            "email": p.email,
-
-            "telefone": p.telefone if p.telefone else ""
-
-        })
-
-    return jsonify(lista), 200
-
-
-# =========================================
-# EXCLUIR PASSAGEIRO ADM
-# =========================================
-
-@app.route(
-    "/admin/excluir_passageiro/<int:id>",
-    methods=["DELETE"]
-)
-def excluir_passageiro(id):
-
-    passageiro = Usuario.query.get(id)
-
-    if not passageiro:
-
-        return jsonify({
-            "erro":"passageiro nao encontrado"
-        }), 404
-
-    db.session.delete(passageiro)
-
-    db.session.commit()
-
-    return jsonify({
-        "status":"passageiro excluido"
-    }), 200    
-#========≠ROTA DE AVALIAÇÃO======
-@app.route(
-    "/avaliar",
-    methods=["POST"]
-)
+# ==========================================
+# AVALIAÇÕES
+# ==========================================
+@app.route("/avaliar", methods=["POST"])
 @jwt_required()
 def avaliar():
-
     user_id = get_jwt_identity()
-
     dados = request.get_json()
 
     avaliacao = Avaliacao(
-
         corrida_id=dados.get("corrida_id"),
-
         avaliador_id=user_id,
-
         avaliado_id=dados.get("avaliado_id"),
-
         nota=dados.get("nota"),
-
         comentario=dados.get("comentario")
-
     )
-
     db.session.add(avaliacao)
-
     db.session.commit()
+    return jsonify({"status":"avaliado"})
 
-    return jsonify({
-        "status":"avaliado"
-    })
-  
-#======== Avaliações no painel ADM ========
 
 @app.route("/admin/avaliacoes")
 def admin_avaliacoes():
-
     avaliacoes = Avaliacao.query.all()
-
     lista = []
-
     for a in avaliacoes:
-
         avaliador = Usuario.query.get(a.avaliador_id)
-
         avaliado = Usuario.query.get(a.avaliado_id)
-
         lista.append({
-
             "id": a.id,
-
             "corrida_id": a.corrida_id,
-
             "avaliador": avaliador.nome if avaliador else "Usuário",
-
             "avaliado": avaliado.nome if avaliado else "Usuário",
-
             "nota": a.nota,
-
             "comentario": a.comentario
-
         })
-
     return jsonify(lista)
-#=======≠===Minhas Avaliações ==========     
+
+
 @app.route("/minhas_avaliacoes", methods=["GET"])
 @jwt_required()
 def minhas_avaliacoes():
-
     usuario_id = get_jwt_identity()
+    avaliacoes = Avaliacao.query.filter_by(avaliado_id=usuario_id).all()
+    lista = []
+    for a in avaliacoes:
+        lista.append({
+            "nota": a.nota,
+            "comentario": a.comentario
+        })
+    return jsonify(lista)
 
-    conn = conectar()
-    c = conn.cursor(dictionary=True)
 
-    c.execute("""
-        SELECT nota, comentario, created_at
-        FROM avaliacoes
-        WHERE avaliado_id = %s
-        ORDER BY id DESC
-    """, (usuario_id,))
+# ==========================================
+# ADMIN
+# ==========================================
+@app.route("/admin/motoristas")
+def admin_motoristas():
+    motoristas = Usuario.query.filter_by(tipo="motorista").all()
+    lista = []
+    for m in motoristas:
+        lista.append({
+            "id": m.id,
+            "nome": m.nome,
+            "email": m.email,
+            "carro": m.carro or "Carro Particular",
+            "foto_perfil": m.foto_perfil,
+            "placa": m.placa or "",
+            "online": m.online
+        })
+    return jsonify(lista), 200
 
-    avaliacoes = c.fetchall()
 
-    conn.close()
+@app.route("/admin/excluir_motorista/<int:id>", methods=["DELETE"])
+def excluir_motorista(id):
+    motorista = Usuario.query.get(id)
+    if not motorista:
+        return jsonify({"erro":"motorista não encontrado"}), 404
+    db.session.delete(motorista)
+    db.session.commit()
+    return jsonify({"status":"motorista excluído"}), 200
 
-    return jsonify(avaliacoes)
-@app.route("/finalizar_corrida/<int:corrida_id>", methods=["POST"])
+
+@app.route("/admin/passageiros")
+def admin_passageiros():
+    passageiros = Usuario.query.filter_by(tipo="passageiro").all()
+    lista = []
+    for p in passageiros:
+        lista.append({
+            "id": p.id,
+            "nome": p.nome,
+            "email": p.email,
+            "foto_perfil": p.foto_perfil,
+            "telefone": p.telefone or ""
+        })
+    return jsonify(lista), 200
+
+
+@app.route("/admin/excluir_passageiro/<int:id>", methods=["DELETE"])
+def excluir_passageiro(id):
+    passageiro = Usuario.query.get(id)
+    if not passageiro:
+        return jsonify({"erro":"passageiro não encontrado"}), 404
+    db.session.delete(passageiro)
+    db.session.commit()
+    return jsonify({"status":"passageiro excluído"}), 200
+
+
+# ==========================================
+# DEMAIS ROTAS
+# ==========================================
+@app.route("/atualizar_foto", methods=["POST"])
 @jwt_required()
-def finalizar_corrida(corrida_id):
+def atualizar_foto():
+    usuario_id = get_jwt_identity()
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    dados = request.get_json()
+    usuario.foto_perfil = dados.get("foto_perfil")
+    db.session.commit()
+    return jsonify({"status": "Foto atualizada com sucesso", "foto_perfil": usuario.foto_perfil}), 200
 
-    corrida = Corrida.query.get(corrida_id)
 
-    if not corrida:
-        return jsonify({"erro":"Corrida não encontrada"}),404
+@app.route("/teste")
+def teste():
+    return jsonify({"status": "online", "mensagem": "API Rota Brasil funcionando!"}), 200
 
-    corrida.status = "finalizada"
+
+@app.route("/recriar")
+def recriar():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+    return "Banco recriado"
+
+
+# 📄 ROTAS DE TELAS
+@app.route("/")
+def index(): return render_template("index.html")
+@app.route("/passageiro")
+def passageiro(): return render_template("passageiro.html")
+@app.route("/motorista")
+def motorista(): return render_template("motorista.html")
+@app.route("/cadastro")
+def cadastro(): return render_template("cadastro.html")
+@app.route('/teste/adicionar_saldo/<int:usuario_id>')
+def adicionar_saldo(usuario_id):
+
+    carteira = Carteira.query.filter_by(
+        usuario_id=usuario_id
+    ).first()
+
+    carteira.saldo += 100
 
     db.session.commit()
 
     return jsonify({
-        "sucesso": True,
-        "mensagem": "Corrida finalizada"
+        "saldo": carteira.saldo
     })
- # 🔄 REPASSA FINALIZAÇÃO MOTORISTA ➡️ PASSAGEIRO
-@socketio.on('viagem_finalizada')
-def repassar_finalizacao(dados):
-    corrida_id = dados.get('corrida_id')
-    valor = dados.get('valor')
-    motorista_nome = dados.get('motorista_nome')
+    
+@app.route('/criar_adms')
+def criar_adms():
 
-    if not corrida_id or valor is None:
-        return
+    adm1 = Usuario.query.filter_by(
+        email="rotabrasil@junior.com"
+    ).first()
 
-    # 📡 ENVIA PARA O PASSAGEIRO NO EVENTO CERTO
-    socketio.emit('viagem_finalizada', {
-        "corrida_id": corrida_id,
-        "valor": valor,
-        "motorista_nome": motorista_nome
-    }, room=f"corrida_{corrida_id}")
-@socketio.on('entrar_na_sala')
-def entrar_na_sala(dados):
-    cid = dados.get('corrida_id')
-    if cid:
-        join_room(f"corrida_{cid}") # <- Adiciona o usuário na sala
-        print(f"👤 Usuário entrou na sala corrida_{cid}")
+    adm2 = Usuario.query.filter_by(
+        email="rotabrasil@ferreira.com"
+    ).first()
+
+    if adm1:
+        adm1.admin = True
+
+    if adm2:
+        adm2.admin = True
+
+    db.session.commit()
+
+    return jsonify({
+        "sucesso": True
+    })
+    
+#=======≠=PAINEL DE CONTROLE ROTA BRASIL========
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+
+    usuarios = Usuario.query.count()
+
+    corridas = Corrida.query.count()
+
+    motoristas_online = Usuario.query.filter_by(
+        online=True
+    ).count()
+
+    saldo_total = db.session.query(
+        db.func.sum(Carteira.saldo)
+    ).scalar() or 0
+
+    return jsonify({
+        "usuarios": usuarios,
+        "corridas": corridas,
+        "motoristas_online": motoristas_online,
+        "saldo_total": saldo_total
+    })
+
+
+@socketio.on("motorista_online")
+def motorista_online(dados):
+
+    motorista_id = dados["id"]
+
+    join_room(
+        f"motorista_{motorista_id}"
+    )
+
+    print(
+        f"Motorista {motorista_id} entrou na sala"
+    )
+#@app.route("/pix/criar", methods=["POST"])
+#@jwt_required()
+def criar_pix():
+
+    usuario_id = get_jwt_identity()
+
+    dados = request.get_json()
+
+    valor = float(
+        dados.get("valor", 0)
+    )
+
+    pagamento = sdk.payment().create({
+        "transaction_amount": valor,
+        "description": "Recarga carteira Rota Brasil",
+        "payment_method_id": "pix",
+        "payer": {
+            "email": "cliente@rotabrasil.com"
+        }
+    })
+
+    return jsonify(
+        pagamento["response"]
+    )    
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.get_json()
+
+    print("WEBHOOK RECEBIDO:", data)
+
+    payment_id = data.get("data", {}).get("id")
+
+    if payment_id:
+        payment_info = sdk.payment().get(payment_id)
+        status = payment_info["response"]["status"]
+
+        print("STATUS:", status)
+
+    return "OK", 200
+@app.route("/checkout/criar", methods=["POST"])
+@jwt_required()
+def criar_checkout():
+
+    dados = request.get_json()
+    valor = float(dados["valor"])
+
+    preference_data = {
+        "items": [
+            {
+                "title": "Recarga Carteira",
+                "quantity": 1,
+                "unit_price": valor
+            }
+        ]
+    }
+
+    preference = sdk.preference().create(preference_data)
+
+    response = preference.get("response", {})
+
+    link = response.get("init_point") or response.get("sandbox_init_point")
+
+    return jsonify({"link": link}) 
+#π√%✓∆ Caucular corrida openRout $€÷=====
+#================={{{{{{{{{=====≠=========
+
+import math
 
 
 
+
+
+
+BANDEIRADA = 5.0
+VALOR_KM = 2.5
+
+# 🔑 COLOQUE SUA CHAVE AQUI
+ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNzdmNzYyMzU3YzQxZThhODJjMDNlMmJlOTJlMTNiIiwiaCI6Im11cm11cjY0In0="
+
+@app.route("/calcular_corrida", methods=["POST", "OPTIONS"])
+def calcular_corrida():
+    # ✅ Responde a requisições OPTIONS (preflight)
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "ok"})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        return response
+    
+    try:
+        # ✅ Verifica se os dados foram recebidos
+        if not request.json:
+            return jsonify({"erro": "Dados não recebidos"}), 400
+            
+        dados = request.get_json()
+        print(f"📥 Dados recebidos: {dados}")
+        
+        # ✅ Verifica se as coordenadas existem
+        if not dados.get("lat_origem") or not dados.get("lon_origem") or not dados.get("lat_destino") or not dados.get("lon_destino"):
+            return jsonify({"erro": "Coordenadas incompletas"}), 400
+        
+        lat_origem = float(dados["lat_origem"])
+        lon_origem = float(dados["lon_origem"])
+        lat_destino = float(dados["lat_destino"])
+        lon_destino = float(dados["lon_destino"])
+        
+        # TENTA PRIMEIRO: OpenRouteService
+        try:
+            url = "https://api.openrouteservice.org/v2/directions/driving-car"
+            headers = {
+                "Authorization": ORS_API_KEY,
+                "Content-Type": "application/json"
+            }
+            body = {
+                "coordinates": [
+                    [lon_origem, lat_origem],
+                    [lon_destino, lat_destino]
+                ]
+            }
+            
+            print(f"📤 Enviando para ORS: {body}")
+            response = requests.post(url, json=body, headers=headers, timeout=10)
+            print(f"📊 Status ORS: {response.status_code}")
+            
+            if response.status_code == 200:
+                dados_rota = response.json()
+                if dados_rota.get("routes") and len(dados_rota["routes"]) > 0:
+                    distancia_metros = dados_rota["routes"][0]["summary"]["distance"]
+                    distancia_km = distancia_metros / 1000
+                    tempo_segundos = dados_rota["routes"][0]["summary"]["duration"]
+                    tempo_minutos = tempo_segundos / 60
+                    
+                    valor = BANDEIRADA + (distancia_km * VALOR_KM)
+                    
+                    resultado = {
+                        "distancia": round(distancia_km, 2),
+                        "valor": round(valor, 2),
+                        "tempo": round(tempo_minutos, 0),
+                        "fonte": "ORS"
+                    }
+                    
+                    print(f"✅ Resposta: {resultado}")
+                    return jsonify(resultado)
+        except Exception as e:
+            print(f"⚠️ Erro no ORS: {e}")
+        
+        # SEGUNDA TENTATIVA: OSRM (gratuito, sem chave)
+        try:
+            url = f"http://router.project-osrm.org/route/v1/driving/{lon_origem},{lat_origem};{lon_destino},{lat_destino}?overview=false"
+            print(f"📤 Tentando OSRM: {url}")
+            
+            response = requests.get(url, timeout=10)
+            print(f"📊 Status OSRM: {response.status_code}")
+            
+            if response.status_code == 200:
+                dados_rota = response.json()
+                if dados_rota.get("routes") and len(dados_rota["routes"]) > 0:
+                    distancia_metros = dados_rota["routes"][0]["distance"]
+                    distancia_km = distancia_metros / 1000
+                    tempo_segundos = dados_rota["routes"][0]["duration"]
+                    tempo_minutos = tempo_segundos / 60
+                    
+                    valor = BANDEIRADA + (distancia_km * VALOR_KM)
+                    
+                    resultado = {
+                        "distancia": round(distancia_km, 2),
+                        "valor": round(valor, 2),
+                        "tempo": round(tempo_minutos, 0),
+                        "fonte": "OSRM"
+                    }
+                    
+                    print(f"✅ Resposta: {resultado}")
+                    return jsonify(resultado)
+        except Exception as e:
+            print(f"⚠️ Erro no OSRM: {e}")
+        
+        # ÚLTIMO RECURSO: Calcular distância aproximada
+        print("🔄 Usando cálculo aproximado (Haversine)")
+        
+        R = 6371
+        lat1 = math.radians(lat_origem)
+        lon1 = math.radians(lon_origem)
+        lat2 = math.radians(lat_destino)
+        lon2 = math.radians(lon_destino)
+        
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        distancia_km = R * c
+        
+        tempo_minutos = (distancia_km / 30) * 60
+        valor = BANDEIRADA + (distancia_km * VALOR_KM)
+        
+        resultado = {
+            "distancia": round(distancia_km, 2),
+            "valor": round(valor, 2),
+            "tempo": round(tempo_minutos, 0),
+            "fonte": "Haversine (aproximado)"
+        }
+        
+        print(f"✅ Resposta: {resultado}")
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"❌ ERRO: {e}")
+        return jsonify({"erro": str(e)}), 500
+
+@app.route("/teste2", methods=["GET"])
+def teste2():
+    return jsonify({
+        "status": "online",
+        "mensagem": "API de cálculo de corrida funcionando! 🚗"
+    })
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "online",
+        "endpoints": [
+            "GET  /teste",
+            "GET  /",
+            "POST /calcular_corrida"
+        ]
+    })
+
+
+
+# ==========================================
+# INICIAR
+# ==========================================
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    
+
     port = int(os.environ.get("PORT", 5000))
-    # 🔧 MODO DEBUG DESLIGADO PARA PRODUÇÃO NO RENDER (MAIS ESTÁVEL)
     socketio.run(app, host="0.0.0.0", port=port, debug=False)
