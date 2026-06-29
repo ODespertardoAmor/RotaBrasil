@@ -1,5 +1,16 @@
-// Configuração base
-const API_BASE = window.location.origin;
+// ==========================================
+// CONFIGURAÇÃO PARA RENDER.COM
+// ==========================================
+
+// 🔥 ALTERE ESTA URL PARA A DO SEU BACKEND NO RENDER
+const API_BASE = 'https://rotabrasil-tobu.onrender.com'; // Substitua pela sua URL
+
+// Ou use esta configuração para detectar automaticamente
+// const API_BASE = window.location.hostname === 'localhost' 
+//     ? 'http://localhost:5000' 
+//     : 'https://seu-backend.onrender.com';
+
+// Token de autenticação
 const token = localStorage.getItem('token') || '';
 
 // Headers padrão para requisições
@@ -8,13 +19,25 @@ const headers = {
     'Authorization': `Bearer ${token}`
 };
 
-// Inicialização
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se está logado
+    if (!token) {
+        // Redirecionar para login ou mostrar mensagem
+        console.warn('Usuário não autenticado');
+        // window.location.href = '/login';
+    }
+
     // Toggle sidebar
-    document.getElementById('toggleSidebar').addEventListener('click', function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('mainContent').classList.toggle('expanded');
-    });
+    const toggleBtn = document.getElementById('toggleSidebar');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('mainContent').classList.toggle('expanded');
+        });
+    }
 
     // Navegação
     document.querySelectorAll('.sidebar .nav-link[data-section]').forEach(link => {
@@ -48,6 +71,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 30000);
 });
 
+// ==========================================
+// FUNÇÕES DE CARREGAMENTO
+// ==========================================
+
 // Mostrar seção
 function showSection(section) {
     document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
@@ -58,7 +85,18 @@ function showSection(section) {
 // ==================== DASHBOARD ====================
 async function carregarDashboard() {
     try {
-        const response = await fetch(`${API_BASE}/admin/dashboard2`, { headers });
+        const response = await fetch(`${API_BASE}/admin/dashboard2`, { 
+            headers,
+            credentials: 'include'
+        });
+        
+        if (response.status === 401) {
+            // Token expirado ou inválido
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            return;
+        }
+        
         if (!response.ok) throw new Error('Erro ao carregar dashboard');
         
         const data = await response.json();
@@ -75,6 +113,7 @@ async function carregarDashboard() {
         
     } catch (error) {
         console.error('Erro ao carregar dashboard:', error);
+        mostrarToast('Erro ao carregar dados do dashboard', 'danger');
     }
 }
 
@@ -392,7 +431,7 @@ async function carregarCarteiras() {
 
 // Excluir usuário
 async function excluirUsuario(id) {
-    if (!confirm(`Tem certeza que deseja excluir o usuário #${id}?`)) return;
+    if (!confirm(`Tem certeza que deseja excluir o usuário #${id}? Esta ação não pode ser desfeita.`)) return;
     
     try {
         const response = await fetch(`${API_BASE}/admin/excluir_usuario/${id}`, {
@@ -414,7 +453,7 @@ async function excluirUsuario(id) {
 
 // Excluir motorista
 async function excluirMotorista(id) {
-    if (!confirm(`Tem certeza que deseja excluir o motorista #${id}?`)) return;
+    if (!confirm(`Tem certeza que deseja excluir o motorista #${id}? Esta ação não pode ser desfeita.`)) return;
     
     try {
         const response = await fetch(`${API_BASE}/admin/excluir_motorista/${id}`, {
@@ -436,7 +475,7 @@ async function excluirMotorista(id) {
 
 // Excluir passageiro
 async function excluirPassageiro(id) {
-    if (!confirm(`Tem certeza que deseja excluir o passageiro #${id}?`)) return;
+    if (!confirm(`Tem certeza que deseja excluir o passageiro #${id}? Esta ação não pode ser desfeita.`)) return;
     
     try {
         const response = await fetch(`${API_BASE}/admin/excluir_passageiro/${id}`, {
@@ -454,20 +493,6 @@ async function excluirPassageiro(id) {
         console.error('Erro ao excluir passageiro:', error);
         mostrarToast('Erro ao excluir passageiro', 'danger');
     }
-}
-
-// Ver usuário (modal)
-function verUsuario(id) {
-    // Implementar visualização de detalhes do usuário
-    alert(`Ver usuário #${id} - Funcionalidade em desenvolvimento`);
-}
-
-function verMotorista(id) {
-    alert(`Ver motorista #${id} - Funcionalidade em desenvolvimento`);
-}
-
-function verPassageiro(id) {
-    alert(`Ver passageiro #${id} - Funcionalidade em desenvolvimento`);
 }
 
 // ==================== TOAST NOTIFICATIONS ====================
@@ -523,7 +548,6 @@ function exportarCSV(tabelaId, nomeArquivo = 'dados.csv') {
         const rowData = [];
         cols.forEach(col => {
             let text = col.textContent.trim();
-            // Remover caracteres especiais
             text = text.replace(/,/g, ';');
             rowData.push(text);
         });
@@ -539,7 +563,7 @@ function exportarCSV(tabelaId, nomeArquivo = 'dados.csv') {
     window.URL.revokeObjectURL(url);
 }
 
-// Adicionar botões de exportação em cada seção
+// Adicionar botões de exportação
 document.querySelectorAll('.section-content').forEach(section => {
     const tabela = section.querySelector('.table');
     if (tabela) {
@@ -553,3 +577,47 @@ document.querySelectorAll('.section-content').forEach(section => {
         }
     }
 });
+
+// ==================== VERIFICAÇÃO DE CONEXÃO ====================
+async function verificarConexao() {
+    try {
+        const response = await fetch(`${API_BASE}/teste`, { 
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Conectado ao backend em:', API_BASE);
+            return true;
+        } else {
+            console.error('❌ Erro ao conectar ao backend:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Erro de conexão:', error);
+        mostrarToast('Erro de conexão com o servidor', 'danger');
+        return false;
+    }
+}
+
+// Verificar conexão ao carregar
+verificarConexao();
+
+// ==========================================
+// FUNÇÕES DE VISUALIZAÇÃO (EM DESENVOLVIMENTO)
+// ==========================================
+
+function verUsuario(id) {
+    // Implementar modal de visualização
+    mostrarToast(`Visualizando usuário #${id}`, 'info');
+}
+
+function verMotorista(id) {
+    mostrarToast(`Visualizando motorista #${id}`, 'info');
+}
+
+function verPassageiro(id) {
+    mostrarToast(`Visualizando passageiro #${id}`, 'info');
+}
