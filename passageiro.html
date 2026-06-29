@@ -130,7 +130,7 @@
     <div id="painelCarteira" class="modal-carteira"><h2>💰 Carteira</h2><p>Saldo: <strong id="saldoCarteira">R$ 0,00</strong></p><button class="btn-primario" onclick="adicionarSaldo()">💳 Adicionar</button><button class="btn-danger" onclick="fecharCarteira()">Fechar</button></div>
 
     <script>
-        const API = "http://192.168.15.132:5000";
+        const API = "https://rotabrasil-tobu.onrender.com";
         const GOOGLE_KEY = "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
         
         const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
