@@ -814,7 +814,7 @@ async function confirmarAdicionarSaldo() {
     }
     
     try {
-        const res = await fetch(`${API_BASE}/admin/adicionar_saldo/${usuarioSaldoId}`, {
+        const res = await fetch(`${API_BASE}/teste/adicionar_saldo/${usuarioSaldoId}`, {
             method: 'POST',
             headers: getHeaders(),
             body: JSON.stringify({ valor: valor })
