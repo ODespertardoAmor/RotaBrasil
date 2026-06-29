@@ -1044,7 +1044,58 @@ def home():
     })
 
 
+# Adicione no app.py
 
+@app.route('/dashboard', methods=['GET'])
+def admin_dashboard():
+    """Retorna dados para o painel de controle"""
+    conn = get_db()
+    
+    # Motoristas online (últimos 30 minutos ativos)
+    motoristas = conn.execute('''
+        SELECT DISTINCT u.id, u.nome, u.carro, u.placa, u.nota_media,
+               l.lat, l.lng, l.updated_at
+        FROM usuarios u
+        LEFT JOIN localizacoes l ON u.id = l.motorista_id
+        WHERE u.tipo = 'motorista' 
+        AND l.updated_at > datetime('now', '-30 minutes')
+        ORDER BY l.updated_at DESC
+    ''').fetchall()
+    
+    # Corridas ativas
+    corridas_ativas = conn.execute('''
+        SELECT c.*, 
+               p.nome as passageiro_nome,
+               m.nome as motorista_nome,
+               m.carro, m.placa
+        FROM corridas c
+        LEFT JOIN usuarios p ON c.passageiro_id = p.id
+        LEFT JOIN usuarios m ON c.motorista_id = m.id
+        WHERE c.status IN ('procurando', 'aceita', 'em_andamento')
+        ORDER BY c.created_at DESC
+    ''').fetchall()
+    
+    # Corridas finalizadas hoje
+    corridas_finalizadas = conn.execute('''
+        SELECT c.*, 
+               p.nome as passageiro_nome,
+               m.nome as motorista_nome
+        FROM corridas c
+        LEFT JOIN usuarios p ON c.passageiro_id = p.id
+        LEFT JOIN usuarios m ON c.motorista_id = m.id
+        WHERE c.status = 'finalizada'
+        AND date(c.created_at) = date('now')
+        ORDER BY c.created_at DESC
+        LIMIT 20
+    ''').fetchall()
+    
+    conn.close()
+    
+    return jsonify({
+        'motoristas_online': [dict(m) for m in motoristas],
+        'corridas_ativas': [dict(c) for c in corridas_ativas],
+        'corridas_finalizadas': [dict(c) for c in corridas_finalizadas]
+    })
 # ==========================================
 # INICIAR
 # ==========================================
