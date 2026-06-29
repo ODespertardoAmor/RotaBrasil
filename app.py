@@ -745,21 +745,6 @@ def admin_corridas_recentes():
         return jsonify({'erro': str(e)}), 500
 
 
-@app.route('/transacoes', methods=['GET'])
-def admin_transacoes():
-    """Lista todas as transações - SEM AUTENTICAÇÃO"""
-    try:
-        transacoes = Transacao.query.order_by(Transacao.id.desc()).all()
-        return jsonify([{
-            'id': t.id,
-            'usuario_id': t.usuario_id,
-            'tipo': t.tipo,
-            'valor': t.valor,
-            'descricao': t.descricao,
-            'data': t.data.strftime('%d/%m/%Y %H:%M') if hasattr(t, 'data') else None
-        } for t in transacoes])
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
 
 @app.route('/admin/excluir_motorista/<int:id>', methods=['DELETE'])
 def admin_excluir_motorista(id):
