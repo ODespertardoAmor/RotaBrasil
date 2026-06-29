@@ -1046,7 +1046,7 @@ def home():
 
 # Adicione no app.py
 
-@app.route('/dashboard', methods=['GET'])
+@app.route('/admin/dashboard', methods=['GET'])
 def admin_dashboard():
     """Retorna dados para o painel de controle"""
     conn = get_db()
