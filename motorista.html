@@ -1,1056 +1,1027 @@
-import os
-from flask import Flask, request, jsonify, render_template
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from werkzeug.security import generate_password_hash, check_password_hash
-import time
-import mercadopago
-from datetime import datetime
-MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN")
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🚗 Motorista | Rota Brasil</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primaria: #165DFF;
+            --sucesso: #00B42A;
+            --alerta: #FF7D00;
+            --perigo: #F53F3F;
+            --fundo: #0F1419;
+            --card: #1D2129;
+            --borda: #363E4D;
+            --texto: #F5F7FA;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow: hidden; user-select: none; }
 
-if not MP_ACCESS_TOKEN:
-    raise ValueError("MP_ACCESS_TOKEN não encontrado no ambiente.")
+        #loginScreen {
+            position: absolute; inset: 0; background: var(--fundo);
+            display: flex; flex-direction: column; justify-content: center; padding: 20px; z-index: 9999;
+        }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { font-size: 38px; font-weight: 900; background: linear-gradient(90deg, #165DFF, #7B2CFF); -webkit-background-clip: text; color: transparent; }
+        .card { background: var(--card); border-radius: 16px; padding: 25px; border: 1px solid var(--borda); box-shadow: 0 8px 32px #00000040; }
+        input {
+            width: 100%; padding: 14px 16px; margin-bottom: 12px;
+            background: #272E3B; border: 1.5px solid var(--borda);
+            border-radius: 10px; color: white; font-size: 15px; outline: none;
+        }
+        input:focus { border-color: var(--primaria); }
+        button {
+            width: 100%; padding: 14px; border: none; border-radius: 10px;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s ease; color: white;
+        }
+        button:active { transform: scale(0.97); }
+        .btn-primary { background: var(--primaria); margin: 8px 0; }
+        .btn-success { background: var(--sucesso); margin: 8px 0; }
+        .btn-danger { background: var(--perigo); }
+        .btn-warning { background: var(--alerta); }
+        .btn-purple { background: #7B2CFF; }
+        .status-text { font-size: 14px; text-align: center; margin-top: 8px; min-height: 20px; }
+        .erro { color: var(--perigo); font-weight: 600; }
+        .ok { color: var(--sucesso); font-weight: 600; }
 
-sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
+        #mapa { position: absolute; inset: 0; z-index: 1; }
+        iframe { width: 100%; height: 100%; border: none; }
 
-app = Flask(__name__)
-# ✅ CONFIGURAÇÃO CORRETA DO CORS
-CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
-
-#CORS(app)
-
-# 📌 CONFIGURAÇÃO PARA POSTGRESQL
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///rotabrasil.db")
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key-rota-brasil")
-
-
-db = SQLAlchemy(app)
-jwt = JWTManager(app)
-
-# 📡 SOCKET.IO COMPATÍVEL COM RENDER E NAVEGADORES
-socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'polling'])
-
-
-# ==========================================
-# MODELOS DO BANCO
-# ==========================================
-class Usuario(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    senha = db.Column(db.String(200), nullable=False)
-    telefone = db.Column(db.String(20))
-    tipo = db.Column(db.String(20), default="passageiro")
-    foto_perfil = db.Column(db.String(255), nullable=True)
-    carro = db.Column(db.String(50), nullable=True)
-    placa = db.Column(db.String(20), nullable=True)
-    online = db.Column(db.Boolean, default=False)
-    admin = db.Column(db.Boolean,default=False)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'nome': self.nome,
-            'email': self.email,
-            'telefone': self.telefone,
-            'tipo': self.tipo,
-            'foto_perfil': self.foto_perfil,
-            'carro': self.carro,
-            'placa': self.placa,
-            'online': self.online
+        .header {
+            position: absolute; top: 0; left: 0; right: 0; padding: 15px 20px;
+            background: linear-gradient(180deg, var(--fundo), transparent);
+            display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        
+        /* STATUS BOLINHA COM ONDINHAS */
+        .status-bolinha { 
+            display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;
+            position: relative; padding: 5px 10px; border-radius: 20px;
+        }
+        .status-bolinha.online { 
+            color: var(--sucesso);
+            animation: pulsarOnline 1.5s infinite;
+        }
+        .status-bolinha.online i { 
+            text-shadow: 0 0 10px #00B42A, 0 0 20px #00B42A;
+        }
+        .status-bolinha.offline { color: var(--perigo); }
+        
+        /* ONDINHAS NO ONLINE */
+        .status-bolinha.online::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            background: var(--sucesso);
+            border-radius: 50%;
+            transform: translateY(-50%);
+            animation: ondaOnline 1.5s infinite;
+            z-index: 0;
+            opacity: 0.6;
+        }
+        .status-bolinha.online::after {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            background: var(--sucesso);
+            border-radius: 50%;
+            transform: translateY(-50%);
+            animation: ondaOnline 1.5s infinite 0.5s;
+            z-index: 0;
+            opacity: 0.4;
+        }
+        .status-bolinha.online i,
+        .status-bolinha.online span {
+            position: relative;
+            z-index: 1;
+        }
+        
+        @keyframes pulsarOnline { 
+            0% { transform: scale(1); opacity: 1; } 
+            50% { transform: scale(1.05); opacity: 0.9; } 
+            100% { transform: scale(1); opacity: 1; } 
+        }
+        @keyframes ondaOnline { 
+            0% { transform: translateY(-50%) scale(1); opacity: 0.8; } 
+            100% { transform: translateY(-50%) scale(2.5); opacity: 0; } 
         }
 
-
-class Corrida(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    passageiro_id = db.Column(db.Integer, nullable=False)
-    motorista_id = db.Column(db.Integer, nullable=True)
-    origem = db.Column(db.String(255), nullable=False)
-    destino = db.Column(db.String(255), nullable=False)
-    valor = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default="pendente")
-
-
-class Avaliacao(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    corrida_id = db.Column(db.Integer)
-    avaliador_id = db.Column(db.Integer)
-    avaliado_id = db.Column(db.Integer)
-    nota = db.Column(db.Integer)
-    comentario = db.Column(db.String(255))
-
-class Carteira(db.Model):
-    __tablename__ = "carteiras"
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    usuario_id = db.Column(
-        db.Integer,
-        nullable=False,
-        unique=True
-    )
-
-    saldo = db.Column(
-        db.Float,
-        default=0.0
-    )
-
-    saldo_bloqueado = db.Column(
-        db.Float,
-        default=0.0
-    )
-
-    criado_em = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
-class Transacao(db.Model):
-    __tablename__ = "transacoes"
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    usuario_id = db.Column(
-        db.Integer,
-        nullable=False
-    )
-
-    tipo = db.Column(
-        db.String(50)
-    )
-
-    valor = db.Column(
-        db.Float
-    )
-
-    descricao = db.Column(
-        db.String(300)
-    )
-
-    data = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )    
-# ==========================================
-# ROTAS DE AUTENTICAÇÃO
-# ==========================================
-@app.route("/register", methods=["POST"])
-def register():
-    dados = request.get_json()
-    senha_cripto = generate_password_hash(dados.get("senha"))
-    
-    novo_usuario = Usuario(
-        nome=dados.get("nome"),
-        email=dados.get("email"),
-        senha=senha_cripto,
-        telefone=dados.get("telefone"),
-        tipo=dados.get("tipo", "passageiro"),
-        foto_perfil=dados.get("foto_perfil"),
-        carro=dados.get("carro"),
-        placa=dados.get("placa")
-    )
-    
-    db.session.add(novo_usuario)
-    db.session.commit()
-    #====criar a carteiro do usuario===
-    nova_carteira = Carteira(
-    usuario_id=novo_usuario.id
-    )
-
-    db.session.add(nova_carteira)
-    db.session.commit()
-    return jsonify({"status": "Conta criada com sucesso!"}), 201
-from functools import wraps
-from flask_jwt_extended import (
-    verify_jwt_in_request,
-    get_jwt_identity
-)
-
-def admin_required(func):
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-
-        # Verifica se existe JWT válido
-        verify_jwt_in_request()
-
-        usuario_id = get_jwt_identity()
-
-        usuario = Usuario.query.get(usuario_id)
-
-        # Verifica se é admin
-        if not usuario or not usuario.admin:
-            return jsonify({
-                "erro": "Acesso negado"
-            }), 403
-
-        return func(*args, **kwargs)
-
-    return wrapper    
-#========Consulta de saldo=====
-@app.route("/carteira/saldo")
-@jwt_required()
-def saldo():
-
-    usuario_id = get_jwt_identity()
-
-    carteira = Carteira.query.filter_by(
-        usuario_id=usuario_id
-    ).first()
-
-    return jsonify({
-        "saldo": carteira.saldo,
-        "bloqueado": carteira.saldo_bloqueado
-    })
-#=======acompanha toda transação ====   
-@app.route('/transacoes')
-def admin_transacoes():
-
-    transacoes = Transacao.query.all()
-
-    return jsonify([
-        {
-            "id": t.id,
-            "usuario_id": t.usuario_id,
-            "tipo": t.tipo,
-            "valor": t.valor,
-            "descricao": t.descricao
+        /* BOTÃO DESLIZAR */
+        .container-deslize {
+            position: relative;
+            width: 100%;
+            height: 60px;
+            background: #272E3B;
+            border-radius: 14px;
+            overflow: hidden;
+            margin: 10px 0;
+            border: 2px solid var(--borda);
+            user-select: none;
+            touch-action: none;
         }
-        for t in transacoes
-    ])    
-#=======Historico da carteira=========    
-@app.route('/carteira/historico')
-@jwt_required()
-def historico():
-
-    usuario_id = get_jwt_identity()
-
-    transacoes = Transacao.query.filter_by(
-        usuario_id=usuario_id
-    ).order_by(
-        Transacao.data.desc()
-    ).all()
-
-    return jsonify([
-        {
-            "tipo": t.tipo,
-            "valor": t.valor,
-            "descricao": t.descricao,
-            "data": t.data.strftime("%d/%m/%Y %H:%M")
+        .trilha-deslize {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #86909C;
+            font-weight: 700;
+            font-size: 15px;
+            pointer-events: none;
+            z-index: 1;
         }
-        for t in transacoes
-    ])    
-#=========bliquear valor =======    
-def bloquear_valor_corrida(
-    usuario_id,
-    valor
-):
-
-    carteira = Carteira.query.filter_by(
-        usuario_id=usuario_id
-    ).first()
-
-    if carteira.saldo < valor:
-        return False
-
-    carteira.saldo -= valor
-    carteira.saldo_bloqueado += valor
-
-    db.session.commit()
-
-    return True    
-@app.route("/login", methods=["POST"])
-def login():
-    dados = request.get_json()
-    usuario = Usuario.query.filter_by(email=dados.get("email")).first()
-    
-    if not usuario or not check_password_hash(usuario.senha, dados.get("senha")):
-        return jsonify({"erro": "E-mail ou senha incorretos"}), 401
-        
-    token = create_access_token(identity=str(usuario.id))
-    
-    dados_user = {
-        "id": usuario.id,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "tipo": usuario.tipo,
-        "foto_perfil": usuario.foto_perfil,
-        "carro": usuario.carro,
-        "placa": usuario.placa
-    }
-    
-    return jsonify({"token": token, "user": dados_user}), 200
-
-
-# ==========================================
-# STATUS MOTORISTA
-# ==========================================
-@app.route("/ficar_online/<int:id>", methods=["POST"])
-def ficar_online(id):
-    motorista = Usuario.query.get(id)
-    if motorista:
-        motorista.online = True
-        db.session.commit()
-    return jsonify({"status": "Motorista online"}), 200
-
-
-@app.route("/ficar_offline/<int:id>", methods=["POST"])
-def ficar_offline(id):
-    motorista = Usuario.query.get(id)
-    if motorista:
-        motorista.online = False
-        db.session.commit()
-    return jsonify({"status": "Motorista offline"}), 200
-
-
-@app.route("/motoristas_online", methods=["GET"])
-def motoristas_online():
-    motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
-    lista = []
-    for m in motoristas:
-        lista.append({
-            "id": m.id,
-            "nome": m.nome,
-            "foto_perfil": m.foto_perfil,
-            "carro": m.carro if m.carro else "Carro Particular",
-            "placa": m.placa if m.placa else ""
-        })
-    return jsonify(lista), 200
-
-#=====liberar pagamento=========
-def liberar_pagamento(
-    passageiro_id,
-    motorista_id,
-    valor
-):
-
-    plataforma = valor * 0.15
-
-    motorista_recebe = valor - plataforma
-
-    carteira_passageiro = Carteira.query.filter_by(
-        usuario_id=passageiro_id
-    ).first()
-
-    carteira_motorista = Carteira.query.filter_by(
-        usuario_id=motorista_id
-    ).first()
-
-    carteira_passageiro.saldo_bloqueado -= valor
-
-    carteira_motorista.saldo += motorista_recebe
-
-    db.session.commit()
-#= ======devolução de dinheiro ======
-def devolver_saldo(
-    usuario_id,
-    valor
-    ):
-
-    carteira = Carteira.query.filter_by(
-        usuario_id=usuario_id
-    ).first()
-
-    carteira.saldo += valor
-    carteira.saldo_bloqueado -= valor
-
-    db.session.commit()
-# ==========================================
-# CORRIDAS
-# ==========================================
-@app.route("/nova_corrida", methods=["POST"])
-@jwt_required()
-def nova_corrida():
-
-    passageiro_id = get_jwt_identity()
-    passageiro = Usuario.query.get(passageiro_id)
-    dados = request.get_json()
-
-    valor_corrida = float(dados.get("valor"))
-
-    if not bloquear_valor_corrida(
-        passageiro_id,
-        valor_corrida
-    ):
-        return jsonify({
-            "erro": "Saldo insuficiente"
-        }), 400
-
-    nova = Corrida(
-        passageiro_id=passageiro_id,
-        origem=dados.get("origem"),
-        destino=dados.get("destino"),
-        valor=float(dados.get("valor")),
-        status="pendente"
-    )
-
-    db.session.add(nova)
-    db.session.commit()
-
-    dados_chamada = {
-        "corrida_id": nova.id,
-        "passageiro_id": passageiro.id,
-        "passageiro_nome": passageiro.nome,
-        "foto_perfil": passageiro.foto_perfil,
-        "origem": nova.origem,
-        "destino": nova.destino,
-        "valor": nova.valor,
-        "distancia": dados.get("distancia", "Calculando...")
-    }
-
-    motoristas = Usuario.query.filter_by(
-        tipo="motorista",
-        online=True
-    ).all()
-
-    for motorista in motoristas:
-
-        socketio.emit(
-            "nova_corrida",
-            dados_chamada,
-            room=f"motorista_{motorista.id}"
-        )
-
-    return jsonify({
-        "status": "Procurando motoristas",
-        "corrida_id": nova.id
-    }), 201
-@app.route('/aceitar_corrida/<int:id>', methods=['POST'])
-@jwt_required()
-def aceitar_corrida(id):
-    motorista_id = get_jwt_identity()
-    motorista = Usuario.query.get(motorista_id)
-    corrida = Corrida.query.get(id)
-
-    if not corrida:
-        return jsonify({"erro": "Corrida não encontrada"}), 404
-    if corrida.status != "pendente":
-        return jsonify({"erro": "Corrida já aceita"}), 400
-
-    corrida.motorista_id = motorista.id
-    corrida.status = "aceita"
-    db.session.commit()
-
-    dados_socket = {
-        "corrida_id": corrida.id,
-        "motorista_id": motorista.id,
-        "motorista_nome": motorista.nome,
-        "foto_perfil": motorista.foto_perfil,
-        "carro": motorista.carro,
-        "placa": motorista.placa
-    }
-
-    socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
-    return jsonify({"sucesso": True, "corrida_id": corrida.id, "status":"aceita"}), 200
-
-
-@app.route("/cancelar_corrida/<int:id>", methods=["POST"])
-@jwt_required()
-def cancelar_corrida(id):
-    corrida = Corrida.query.get(id)
-    
-    # 1. Validações básicas
-    if not corrida:
-        return jsonify({"sucesso": False, "erro": "Corrida não encontrada"}), 404
-        
-    if corrida.status == "finalizada":
-        return jsonify({"sucesso": False, "erro": "Corrida já finalizada"}), 400
-        
-    if corrida.status == "cancelada":
-        return jsonify({"sucesso": False, "erro": "Corrida já estava cancelada"}), 400
-
-    try:
-        # 2. Atualiza o status da corrida
-        corrida.status = "cancelada"
-        
-        # 3. Executa a devolução do dinheiro usando os dados da própria corrida
-        # (Ajuste 'passageiro_id' e 'valor' de acordo com as colunas do seu modelo Corrida)
-        devolver_saldo(corrida.passageiro_id, corrida.valor)
-        
-        # 4. Salva todas as alterações no banco de dados de uma vez
-        db.session.commit()
-        
-    except Exception as e:
-        # Se der qualquer erro na devolução ou no banco, desfaz as alterações
-        db.session.rollback()
-        return jsonify({"sucesso": False, "erro": f"Erro ao processar cancelamento: {str(e)}"}), 500
-
-    # 5. Avisa os envolvidos via Socket e retorna o sucesso
-    socketio.emit("corrida_cancelada", {"corrida_id": id}, room=f"corrida_{id}")
-    
-    return jsonify({"sucesso": True, "corrida_id": corrida.id}), 200
-
-@app.route('/finalizar_corrida/<corrida_id>', methods=['POST'])
-def finalizar_corrida(corrida_id):
-
-    try:
-        corrida_id = int(corrida_id)
-    except:
-        return jsonify({
-            "sucesso": False,
-            "erro": "ID inválido"
-        }), 400
-
-    dados = request.get_json() or {}
-
-    corrida = Corrida.query.get(corrida_id)
-
-    if not corrida:
-        return jsonify({
-            "sucesso": False,
-            "erro": "Corrida não encontrada"
-        }), 404
-
-    corrida.status = "finalizada"
-
-    # Libera pagamento
-    liberar_pagamento(
-        corrida.passageiro_id,
-        corrida.motorista_id,
-        corrida.valor
-    )
-
-    # Registra no histórico
-    registro = Transacao(
-        usuario_id=corrida.passageiro_id,
-        tipo="corrida",
-        valor=corrida.valor,
-        descricao=f"Corrida concluída #{corrida.id}"
-    )
-
-    db.session.add(registro)
-
-    db.session.commit()
-
-    socketio.emit(
-        'viagem_finalizada',
-        {
-            "corrida_id": corrida_id,
-            "valor": corrida.valor,
-            "motorista_nome": dados.get(
-                'motorista_nome',
-                "Motorista"
-            ),
-            "motorista_id": corrida.motorista_id
-        },
-        room=f"corrida_{corrida_id}"
-    )
-
-    return jsonify({
-        "sucesso": True,
-        "valor": corrida.valor
-    })
-
-# ==========================================
-# SOCKETIO — SALAS E EVENTOS ALINHADOS
-# ==========================================
-@socketio.on("connect")
-def on_connect():
-    print(f"✅ Cliente conectado")
-
-
-@socketio.on('entrar_na_sala')
-def entrar_na_sala(dados):
-    cid = dados.get('corrida_id')
-    if cid:
-        join_room(f"corrida_{cid}")
-        print(f"✅ Entrou na sala corrida_{cid}")
-
-
-@socketio.on('iniciar_viagem')
-def repassar_inicio(dados):
-    corrida_id = dados.get('corrida_id')
-    if corrida_id:
-        socketio.emit('viagem_iniciada', {"corrida_id": corrida_id}, room=f"corrida_{corrida_id}")
-
-
-@app.route("/atualizar_localizacao", methods=["POST"])
-@jwt_required()
-def atualizar_localizacao():
-    motorista_id = get_jwt_identity()
-    dados = request.get_json()
-    latitude = dados.get("latitude")
-    longitude = dados.get("longitude")
-
-    if not latitude or not longitude:
-        return jsonify({"erro": "Coordenadas ausentes"}), 400
-
-    dados_gps = {
-        "motorista_id": motorista_id,
-        "latitude": float(latitude),
-        "longitude": float(longitude)
-    }
-    socketio.emit("atualizacao_localizacao", dados_gps, room=f"corrida_{dados.get('corrida_id')}")
-    return jsonify({"status": "Localização atualizada"}), 200
-
-
-# ==========================================
-# AVALIAÇÕES
-# ==========================================
-@app.route("/avaliar", methods=["POST"])
-@jwt_required()
-def avaliar():
-    user_id = get_jwt_identity()
-    dados = request.get_json()
-
-    avaliacao = Avaliacao(
-        corrida_id=dados.get("corrida_id"),
-        avaliador_id=user_id,
-        avaliado_id=dados.get("avaliado_id"),
-        nota=dados.get("nota"),
-        comentario=dados.get("comentario")
-    )
-    db.session.add(avaliacao)
-    db.session.commit()
-    return jsonify({"status":"avaliado"})
-
-
-@app.route("/admin/avaliacoes")
-def admin_avaliacoes():
-    avaliacoes = Avaliacao.query.all()
-    lista = []
-    for a in avaliacoes:
-        avaliador = Usuario.query.get(a.avaliador_id)
-        avaliado = Usuario.query.get(a.avaliado_id)
-        lista.append({
-            "id": a.id,
-            "corrida_id": a.corrida_id,
-            "avaliador": avaliador.nome if avaliador else "Usuário",
-            "avaliado": avaliado.nome if avaliado else "Usuário",
-            "nota": a.nota,
-            "comentario": a.comentario
-        })
-    return jsonify(lista)
-
-
-@app.route("/minhas_avaliacoes", methods=["GET"])
-@jwt_required()
-def minhas_avaliacoes():
-    usuario_id = get_jwt_identity()
-    avaliacoes = Avaliacao.query.filter_by(avaliado_id=usuario_id).all()
-    lista = []
-    for a in avaliacoes:
-        lista.append({
-            "nota": a.nota,
-            "comentario": a.comentario
-        })
-    return jsonify(lista)
-
-
-# ==========================================
-# ADMIN
-# ==========================================
-@app.route("/admin/motoristas")
-def admin_motoristas():
-    motoristas = Usuario.query.filter_by(tipo="motorista").all()
-    lista = []
-    for m in motoristas:
-        lista.append({
-            "id": m.id,
-            "nome": m.nome,
-            "email": m.email,
-            "carro": m.carro or "Carro Particular",
-            "foto_perfil": m.foto_perfil,
-            "placa": m.placa or "",
-            "online": m.online
-        })
-    return jsonify(lista), 200
-
-
-@app.route("/admin/excluir_motorista/<int:id>", methods=["DELETE"])
-def excluir_motorista(id):
-    motorista = Usuario.query.get(id)
-    if not motorista:
-        return jsonify({"erro":"motorista não encontrado"}), 404
-    db.session.delete(motorista)
-    db.session.commit()
-    return jsonify({"status":"motorista excluído"}), 200
-
-
-@app.route("/admin/passageiros")
-def admin_passageiros():
-    passageiros = Usuario.query.filter_by(tipo="passageiro").all()
-    lista = []
-    for p in passageiros:
-        lista.append({
-            "id": p.id,
-            "nome": p.nome,
-            "email": p.email,
-            "foto_perfil": p.foto_perfil,
-            "telefone": p.telefone or ""
-        })
-    return jsonify(lista), 200
-
-
-@app.route("/admin/excluir_passageiro/<int:id>", methods=["DELETE"])
-def excluir_passageiro(id):
-    passageiro = Usuario.query.get(id)
-    if not passageiro:
-        return jsonify({"erro":"passageiro não encontrado"}), 404
-    db.session.delete(passageiro)
-    db.session.commit()
-    return jsonify({"status":"passageiro excluído"}), 200
-
-
-# ==========================================
-# DEMAIS ROTAS
-# ==========================================
-@app.route("/atualizar_foto", methods=["POST"])
-@jwt_required()
-def atualizar_foto():
-    usuario_id = get_jwt_identity()
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario:
-        return jsonify({"erro": "Usuário não encontrado"}), 404
-    dados = request.get_json()
-    usuario.foto_perfil = dados.get("foto_perfil")
-    db.session.commit()
-    return jsonify({"status": "Foto atualizada com sucesso", "foto_perfil": usuario.foto_perfil}), 200
-
-
-@app.route("/teste")
-def teste():
-    return jsonify({"status": "online", "mensagem": "API Rota Brasil funcionando!"}), 200
-
-
-@app.route("/recriar")
-def recriar():
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-    return "Banco recriado"
-
-
-# 📄 ROTAS DE TELAS
-@app.route("/")
-def index(): return render_template("index.html")
-@app.route("/passageiro")
-def passageiro(): return render_template("passageiro.html")
-@app.route("/motorista")
-def motorista(): return render_template("motorista.html")
-@app.route("/cadastro")
-def cadastro(): return render_template("cadastro.html")
-@app.route('/teste/adicionar_saldo/<int:usuario_id>')
-def adicionar_saldo(usuario_id):
-
-    carteira = Carteira.query.filter_by(
-        usuario_id=usuario_id
-    ).first()
-
-    carteira.saldo += 100
-
-    db.session.commit()
-
-    return jsonify({
-        "saldo": carteira.saldo
-    })
-    
-@app.route('/criar_adms')
-def criar_adms():
-
-    adm1 = Usuario.query.filter_by(
-        email="rotabrasil@junior.com"
-    ).first()
-
-    adm2 = Usuario.query.filter_by(
-        email="rotabrasil@ferreira.com"
-    ).first()
-
-    if adm1:
-        adm1.admin = True
-
-    if adm2:
-        adm2.admin = True
-
-    db.session.commit()
-
-    return jsonify({
-        "sucesso": True
-    })
-    
-#=======≠=PAINEL DE CONTROLE ROTA BRASIL========
-
-@app.route('/admin')
-def admin():
-    return render_template('admin.html')
-@app.route('/admin/dashboard')
-@admin_required
-def admin_dashboard():
-
-    usuarios = Usuario.query.count()
-
-    corridas = Corrida.query.count()
-
-    motoristas_online = Usuario.query.filter_by(
-        online=True
-    ).count()
-
-    saldo_total = db.session.query(
-        db.func.sum(Carteira.saldo)
-    ).scalar() or 0
-
-    return jsonify({
-        "usuarios": usuarios,
-        "corridas": corridas,
-        "motoristas_online": motoristas_online,
-        "saldo_total": saldo_total
-    })
-
-
-@socketio.on("motorista_online")
-def motorista_online(dados):
-
-    motorista_id = dados["id"]
-
-    join_room(
-        f"motorista_{motorista_id}"
-    )
-
-    print(
-        f"Motorista {motorista_id} entrou na sala"
-    )
-#@app.route("/pix/criar", methods=["POST"])
-#@jwt_required()
-def criar_pix():
-
-    usuario_id = get_jwt_identity()
-
-    dados = request.get_json()
-
-    valor = float(
-        dados.get("valor", 0)
-    )
-
-    pagamento = sdk.payment().create({
-        "transaction_amount": valor,
-        "description": "Recarga carteira Rota Brasil",
-        "payment_method_id": "pix",
-        "payer": {
-            "email": "cliente@rotabrasil.com"
+        .trilha-deslize i { margin-right: 8px; }
+        .pino-deslize {
+            position: absolute;
+            left: 3px; top: 3px; bottom: 3px;
+            width: 54px; background: var(--primaria);
+            border-radius: 11px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white;
+            cursor: grab; z-index: 2;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-    })
+        .pino-deslize:active { cursor: grabbing; }
+        .pino-deslize.concluido {
+            background: var(--sucesso);
+            box-shadow: 0 0 20px rgba(0,180,42,0.5);
+        }
+        .container-deslize.concluido {
+            border-color: var(--sucesso);
+            background: #1a2e1d;
+        }
+        .container-deslize.concluido .trilha-deslize { color: var(--sucesso); }
+        .progresso-deslize {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(22,93,255,0.2));
+            z-index: 0; border-radius: 12px;
+        }
 
-    return jsonify(
-        pagamento["response"]
-    )    
+        .card-corrida {
+            position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 400px; background: var(--card);
+            border-radius: 16px; padding: 20px; border: 2px solid var(--sucesso);
+            z-index: 200; display: none;
+            animation: sobe 0.3s ease;
+        }
+        @keyframes sobe { from { opacity:0; transform: translateX(-50%) translateY(30px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+        .linha { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--borda); font-size: 15px; }
+        .valor-grande { font-size: 26px; font-weight: 800; color: var(--sucesso); }
+        .grupo-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.get_json()
+        .barra-inferior {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px 25px;
+            background: var(--card); border-top: 1px solid var(--borda); z-index: 300;
+        }
+        .etapa {
+            text-align: center; padding: 12px; border-radius: 10px; font-weight: 700; 
+            font-size: 14px; margin-bottom: 10px; border: 2px solid transparent;
+        }
+        .etapa1 { background: #FFF7E8; color: #BC6C00; border-color: #FFD591; }
+        .etapa2 { background: #E8F3FF; color: #0050B3; border-color: #91D2FF; }
+        .etapa3 { background: #E8FFEA; color: #007828; border-color: #97F0AE; }
 
-    print("WEBHOOK RECEBIDO:", data)
+        .card-chegada {
+            position: absolute; left: 50%; bottom: 260px; transform: translateX(-50%);
+            width: 90%; max-width: 350px; background: var(--card);
+            border: 2px solid var(--sucesso); border-radius: 16px;
+            padding: 20px; text-align: center; z-index: 300; display: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+        }
+        .card-chegada img {
+            width: 80px; height: 80px; object-fit: cover;
+            border-radius: 50%; border: 3px solid var(--sucesso); margin-bottom: 10px;
+        }
+        .card-chegada h3 { margin-bottom: 5px; font-size: 18px; }
 
-    payment_id = data.get("data", {}).get("id")
+        .alerta-cancelamento {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--perigo); color: white; padding: 25px; border-radius: 16px;
+            z-index: 99999; text-align: center; width: 85%; max-width: 320px;
+            box-shadow: 0 0 30px rgba(245,63,63,0.5); display: none;
+        }
 
-    if payment_id:
-        payment_info = sdk.payment().get(payment_id)
-        status = payment_info["response"]["status"]
+        .avaliacao-modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--card); border-radius: 16px; padding: 25px; border: 2px solid var(--primaria);
+            z-index: 99999; text-align: center; width: 85%; max-width: 350px;
+            box-shadow: 0 0 30px #165DFF50; display: none;
+        }
+        .estrelas { font-size: 45px; margin: 15px 0; }
+        .estrela { color: #666; cursor: pointer; transition: 0.2s; display: inline-block; padding: 0 5px; }
+        .estrela.ativa { color: #FFD700; text-shadow: 0 0 10px #FFD70080; transform: scale(1.1); }
 
-        print("STATUS:", status)
-
-    return "OK", 200
-@app.route("/checkout/criar", methods=["POST"])
-@jwt_required()
-def criar_checkout():
-
-    dados = request.get_json()
-    valor = float(dados["valor"])
-
-    preference_data = {
-        "items": [
-            {
-                "title": "Recarga Carteira",
-                "quantity": 1,
-                "unit_price": valor
-            }
-        ]
-    }
-
-    preference = sdk.preference().create(preference_data)
-
-    response = preference.get("response", {})
-
-    link = response.get("init_point") or response.get("sandbox_init_point")
-
-    return jsonify({"link": link}) 
-#π√%✓∆ Caucular corrida openRout $€÷=====
-#================={{{{{{{{{=====≠=========
-
-import math
-
-
-
-
-
-
-BANDEIRADA = 5.0
-VALOR_KM = 2.5
-
-# 🔑 COLOQUE SUA CHAVE AQUI
-ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjBkNzdmNzYyMzU3YzQxZThhODJjMDNlMmJlOTJlMTNiIiwiaCI6Im11cm11cjY0In0="
-
-@app.route("/calcular_corrida", methods=["POST", "OPTIONS"])
-def calcular_corrida():
-    # ✅ Responde a requisições OPTIONS (preflight)
-    if request.method == "OPTIONS":
-        response = jsonify({"status": "ok"})
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        return response
+        .erro-tela {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--perigo); color: white; padding: 12px 20px;
+            border-radius: 8px; z-index: 999999; display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600;
+        }
+    </style>
+</head>
     
-    try:
-        # ✅ Verifica se os dados foram recebidos
-        if not request.json:
-            return jsonify({"erro": "Dados não recebidos"}), 400
+<body>
+    <!-- MODAL CARTEIRA -->
+    <div id="painelCarteiraMotorista" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999;">
+        <h2>💵 Carteira do Motorista</h2>
+        <p>Saldo: <strong id="saldoMotorista">R$ 0,00</strong></p>
+        <button class="btn-warning" style="margin:5px 0;">🏦 Solicitar Saque</button>
+        <button class="btn-primary" style="margin:5px 0;">📜 Histórico</button>
+        <button class="btn-danger" onclick="document.getElementById('painelCarteiraMotorista').style.display='none'" style="margin:5px 0;">❌ Fechar</button>
+    </div>
+
+    <!-- CARD PASSAGEIRO -->
+    <div id="cardPassageiroChegada" class="card-chegada">
+        <img id="fotoChegada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E">
+        <h3 id="nomeChegada">Passageiro</h3>
+        <p style="color:#86909C; font-size:13px; margin-bottom:12px;">Confirme a identidade antes do embarque</p>
+        <div id="containerBtnEmbarque"></div>
+        <button id="btnLigarChegada" class="btn-purple" onclick="ligarCliente()" style="margin-top:8px;">
+            <i class="fas fa-phone-alt"></i> LIGAR / WHATSAPP
+        </button>
+    </div>
+
+    <div id="avisoErro" class="erro-tela"></div>
+
+    <div id="alertaCancel" class="alerta-cancelamento">
+        <h2><i class="fas fa-times-circle"></i> CORRIDA CANCELADA!</h2>
+        <p>O passageiro cancelou a corrida.</p>
+        <button onclick="document.getElementById('alertaCancel').style.display='none'" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border-radius:8px; font-weight:600;">OK</button>
+    </div>
+
+    <!-- MODAL AVALIAÇÃO -->
+    <div id="modalAvaliacao" class="avaliacao-modal">
+        <h2>🏁 CORRIDA FINALIZADA!</h2>
+        <p style="color:#86909C; margin:10px 0;">Avalie o passageiro:</p>
+        <div id="estrelasAvaliacao" class="estrelas">
+            <span class="estrela" data-valor="1">★</span>
+            <span class="estrela" data-valor="2">★</span>
+            <span class="estrela" data-valor="3">★</span>
+            <span class="estrela" data-valor="4">★</span>
+            <span class="estrela" data-valor="5">★</span>
+        </div>
+        <textarea id="comentarioAvaliacao" placeholder="Comentário (opcional)..." style="width:100%; background:#272E3B; border:1px solid var(--borda); border-radius:8px; padding:10px; color:white; min-height:60px; resize:none;"></textarea>
+        <button class="btn-success" onclick="enviarAvaliacao()">✅ ENVIAR AVALIAÇÃO</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginScreen">
+        <div class="logo">
+            <h1>ROTA BRASIL 🇧🇷</h1>
+            <p style="color:#86909C;">Painel do Motorista</p>
+        </div>
+        <div class="card">
+            <input type="text" id="nome" placeholder="👤 Nome Completo">
+            <input type="email" id="email" placeholder="📧 E-mail">
+            <input type="password" id="senha" placeholder="🔒 Senha">
+            <input type="tel" id="telefone" placeholder="📱 WhatsApp">
+            <input type="text" id="carro" placeholder="🚘 Modelo / Cor">
+            <input type="text" id="placa" placeholder="🔖 Placa">
+            <button class="btn-primary" onclick="cadastrar()"><i class="fas fa-user-plus"></i> Criar Conta</button>
+            <button class="btn-success" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+            <div id="statusLogin" class="status-text"></div>
+        </div>
+    </div>
+
+    <!-- MAPA -->
+    <div id="mapa">
+        <iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header" id="header" style="display:none;">
+        <div style="font-weight:800; font-size:18px;">ROTA BRASIL 🇧🇷</div>
+        <div id="statusMotorista" class="status-bolinha offline">
+            <i class="fas fa-circle"></i> <span>Offline</span>
+        </div>
+    </div>
+
+    <!-- CARD NOVA CORRIDA -->
+    <div id="cardCorrida" class="card-corrida">
+        <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
+        <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
+        <div class="linha"><span>Telefone</span> <span id="cTelefone">-</span></div>
+        <div class="linha"><span>Origem</span> <span id="cOrigem">-</span></div>
+        <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
+        <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
+        <div class="grupo-botoes">
+            <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
+            <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
+        </div>
+    </div>
+
+    <!-- BARRA INFERIOR -->
+    <div class="barra-inferior" id="barra" style="display:none;">
+        <div id="botoesFixos">
+            <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
+            <button id="btnOffline" class="btn-danger" onclick="ficarOffline()" style="display:none;"><i class="fas fa-power-off"></i> FICAR OFFLINE</button>
+            <button class="btn-warning" onclick="abrirCarteira()" style="margin-top:8px;">💵 Carteira</button>
+            <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()">
+                <i class="fas fa-door-open"></i> SAIR
+            </button>
+        </div>
+
+        <div id="areaAcoes" style="display:none;">
+            <div id="etapaTexto" class="etapa etapa1"></div>
+            <div id="containerAcoesCorrida"></div>
+            <button id="btnCancelarCorrida" class="btn-danger" onclick="cancelarCorrida()" style="margin-top:10px; display:none;">
+                <i class="fas fa-times"></i> ❌ CANCELAR CORRIDA
+            </button>
+        </div>
+    </div>
+
+    <!-- ÁUDIOS -->
+    <audio id="somAlerta" preload="auto" loop>
+        <source src="https://larissacamila.github.io/comandos/chamarRota.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="somAlto" preload="auto">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="somSucesso" preload="auto">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="somDinheiro" preload="auto">
+        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/dinheiro.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ==============================================
+        // 🔧 BOTÃO DESLIZAR
+        // ==============================================
+        function criarBotaoDeslizar(texto, icone, cor, callback) {
+            const container = document.createElement('div');
+            container.className = 'container-deslize';
             
-        dados = request.get_json()
-        print(f"📥 Dados recebidos: {dados}")
-        
-        # ✅ Verifica se as coordenadas existem
-        if not dados.get("lat_origem") or not dados.get("lon_origem") or not dados.get("lat_destino") or not dados.get("lon_destino"):
-            return jsonify({"erro": "Coordenadas incompletas"}), 400
-        
-        lat_origem = float(dados["lat_origem"])
-        lon_origem = float(dados["lon_origem"])
-        lat_destino = float(dados["lat_destino"])
-        lon_destino = float(dados["lon_destino"])
-        
-        # TENTA PRIMEIRO: OpenRouteService
-        try:
-            url = "https://api.openrouteservice.org/v2/directions/driving-car"
-            headers = {
-                "Authorization": ORS_API_KEY,
-                "Content-Type": "application/json"
-            }
-            body = {
-                "coordinates": [
-                    [lon_origem, lat_origem],
-                    [lon_destino, lat_destino]
-                ]
-            }
+            const progresso = document.createElement('div');
+            progresso.className = 'progresso-deslize';
             
-            print(f"📤 Enviando para ORS: {body}")
-            response = requests.post(url, json=body, headers=headers, timeout=10)
-            print(f"📊 Status ORS: {response.status_code}")
+            const trilha = document.createElement('div');
+            trilha.className = 'trilha-deslize';
+            trilha.innerHTML = `<i class="${icone}"></i> ${texto}`;
             
-            if response.status_code == 200:
-                dados_rota = response.json()
-                if dados_rota.get("routes") and len(dados_rota["routes"]) > 0:
-                    distancia_metros = dados_rota["routes"][0]["summary"]["distance"]
-                    distancia_km = distancia_metros / 1000
-                    tempo_segundos = dados_rota["routes"][0]["summary"]["duration"]
-                    tempo_minutos = tempo_segundos / 60
+            const pino = document.createElement('div');
+            pino.className = 'pino-deslize';
+            pino.innerHTML = '→';
+            pino.style.background = cor;
+            
+            container.appendChild(progresso);
+            container.appendChild(trilha);
+            container.appendChild(pino);
+            
+            let arrastando = false;
+            let concluido = false;
+            let callbackExecutado = false;
+            
+            const larguraMax = () => container.offsetWidth - pino.offsetWidth - 6;
+            
+            pino.addEventListener('pointerdown', (e) => {
+                if (concluido || callbackExecutado) return;
+                arrastando = true;
+                pino.setPointerCapture(e.pointerId);
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            pino.addEventListener('pointermove', (e) => {
+                if (!arrastando || concluido || callbackExecutado) return;
+                const rect = container.getBoundingClientRect();
+                let x = e.clientX - rect.left - (pino.offsetWidth / 2);
+                x = Math.max(3, Math.min(x, larguraMax()));
+                pino.style.left = x + 'px';
+                progresso.style.width = (x + pino.offsetWidth/2) + 'px';
+                
+                if (x >= larguraMax() - 10 && !callbackExecutado) {
+                    concluido = true;
+                    arrastando = false;
+                    callbackExecutado = true;
                     
-                    valor = BANDEIRADA + (distancia_km * VALOR_KM)
+                    pino.classList.add('concluido');
+                    container.classList.add('concluido');
+                    pino.style.left = larguraMax() + 'px';
+                    progresso.style.width = '100%';
+                    pino.innerHTML = '✓';
                     
-                    resultado = {
-                        "distancia": round(distancia_km, 2),
-                        "valor": round(valor, 2),
-                        "tempo": round(tempo_minutos, 0),
-                        "fonte": "ORS"
+                    if (callback) {
+                        setTimeout(() => callback(), 300);
                     }
-                    
-                    print(f"✅ Resposta: {resultado}")
-                    return jsonify(resultado)
-        except Exception as e:
-            print(f"⚠️ Erro no ORS: {e}")
-        
-        # SEGUNDA TENTATIVA: OSRM (gratuito, sem chave)
-        try:
-            url = f"http://router.project-osrm.org/route/v1/driving/{lon_origem},{lat_origem};{lon_destino},{lat_destino}?overview=false"
-            print(f"📤 Tentando OSRM: {url}")
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            });
             
-            response = requests.get(url, timeout=10)
-            print(f"📊 Status OSRM: {response.status_code}")
+            pino.addEventListener('pointerup', () => {
+                if (!arrastando) return;
+                arrastando = false;
+                if (!concluido && !callbackExecutado) {
+                    pino.style.transition = 'left 0.3s ease';
+                    pino.style.left = '3px';
+                    progresso.style.transition = 'width 0.3s ease';
+                    progresso.style.width = '0px';
+                    setTimeout(() => {
+                        pino.style.transition = 'left 0.1s ease';
+                        progresso.style.transition = 'width 0.1s ease';
+                    }, 300);
+                }
+            });
             
-            if response.status_code == 200:
-                dados_rota = response.json()
-                if dados_rota.get("routes") and len(dados_rota["routes"]) > 0:
-                    distancia_metros = dados_rota["routes"][0]["distance"]
-                    distancia_km = distancia_metros / 1000
-                    tempo_segundos = dados_rota["routes"][0]["duration"]
-                    tempo_minutos = tempo_segundos / 60
-                    
-                    valor = BANDEIRADA + (distancia_km * VALOR_KM)
-                    
-                    resultado = {
-                        "distancia": round(distancia_km, 2),
-                        "valor": round(valor, 2),
-                        "tempo": round(tempo_minutos, 0),
-                        "fonte": "OSRM"
+            container.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            return container;
+        }
+
+        // ==============================================
+        // ⚙️ CONFIGURAÇÕES
+        // ==============================================
+        const API_URL = "https://rotabrasil-tobu.onrender.com";
+        const socket = io(API_URL, { transports: ['websocket', 'polling'], reconnection: true, timeout: 10000, forceNew: true });
+
+        let usuario = null;
+        let token = null;
+        let corrida = null;
+        let estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
+        let posicaoAtual = { lat: -23.5645, lng: -46.6523 };
+        let envioLocalizacaoInterval = null;
+        let notaAvaliacao = 0;
+        let timerCorrida = null;
+        let segundosCorrida = 15;
+        let somAlertaInterval = null;
+
+        const somAlerta = document.getElementById('somAlerta');
+        const somAlto = document.getElementById('somAlto');
+        const somSucesso = document.getElementById('somSucesso');
+        const somDinheiro = document.getElementById('somDinheiro');
+
+        function falar(texto) {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const voz = new SpeechSynthesisUtterance(texto);
+            voz.lang = 'pt-BR'; voz.rate = 1.0; voz.volume = 1;
+            window.speechSynthesis.speak(voz);
+        }
+
+        function mostrarErro(texto) {
+            const el = document.getElementById('avisoErro');
+            el.textContent = "❌ " + texto;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        // ==============================================
+        // 📍 GPS (COMO ESTAVA)
+        // ==============================================
+        function iniciarGPS() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    posicaoAtual.lat = pos.coords.latitude;
+                    posicaoAtual.lng = pos.coords.longitude;
+                    document.getElementById('mapaFrame').src = 
+                        `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
+                    if (estado.aceito && corrida) {
+                        socket.emit('localizacao_motorista', {
+                            corrida_id: corrida.corrida_id || corrida.id,
+                            lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id
+                        });
                     }
-                    
-                    print(f"✅ Resposta: {resultado}")
-                    return jsonify(resultado)
-        except Exception as e:
-            print(f"⚠️ Erro no OSRM: {e}")
-        
-        # ÚLTIMO RECURSO: Calcular distância aproximada
-        print("🔄 Usando cálculo aproximado (Haversine)")
-        
-        R = 6371
-        lat1 = math.radians(lat_origem)
-        lon1 = math.radians(lon_origem)
-        lat2 = math.radians(lat_destino)
-        lon2 = math.radians(lon_destino)
-        
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        
-        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-        c = 2 * math.asin(math.sqrt(a))
-        distancia_km = R * c
-        
-        tempo_minutos = (distancia_km / 30) * 60
-        valor = BANDEIRADA + (distancia_km * VALOR_KM)
-        
-        resultado = {
-            "distancia": round(distancia_km, 2),
-            "valor": round(valor, 2),
-            "tempo": round(tempo_minutos, 0),
-            "fonte": "Haversine (aproximado)"
+                },
+                (erro) => { console.warn("Erro GPS:", erro); },
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+            );
+        }
+
+        // ==============================================
+        // 🔊 SOM TOCANDO MAIS VEZES (REPETIÇÃO)
+        // ==============================================
+        function iniciarSomAlertaRepetido() {
+            // Para qualquer som anterior
+            pararSomAlerta();
+            
+            // Configura o áudio para loop
+            somAlerta.loop = true;
+            somAlerta.currentTime = 0;
+            
+            // Tenta tocar
+            const tocar = () => {
+                somAlerta.play().catch(() => {
+                    // Se falhar, tenta novamente em 500ms
+                    setTimeout(tocar, 500);
+                });
+            };
+            tocar();
+            
+            // Backup: se o loop não funcionar, reinicia manualmente
+            somAlertaInterval = setInterval(() => {
+                if (somAlerta.paused || somAlerta.ended) {
+                    somAlerta.currentTime = 0;
+                    somAlerta.play().catch(() => {});
+                }
+            }, 1000);
+            
+            console.log("🔊 Som de alerta iniciado (repetindo)");
         }
         
-        print(f"✅ Resposta: {resultado}")
-        return jsonify(resultado)
-        
-    except Exception as e:
-        print(f"❌ ERRO: {e}")
-        return jsonify({"erro": str(e)}), 500
+        function pararSomAlerta() {
+            somAlerta.pause();
+            somAlerta.currentTime = 0;
+            somAlerta.loop = false;
+            
+            if (somAlertaInterval) {
+                clearInterval(somAlertaInterval);
+                somAlertaInterval = null;
+            }
+            
+            console.log("🔇 Som de alerta parado");
+        }
 
-@app.route("/teste2", methods=["GET"])
-def teste2():
-    return jsonify({
-        "status": "online",
-        "mensagem": "API de cálculo de corrida funcionando! 🚗"
-    })
+        // ==============================================
+        // 🔐 LOGIN
+        // ==============================================
+        function statusLogin(texto, tipo) {
+            const el = document.getElementById('statusLogin');
+            el.textContent = texto;
+            el.className = `status-text ${tipo}`;
+        }
 
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "online",
-        "endpoints": [
-            "GET  /teste",
-            "GET  /",
-            "POST /calcular_corrida"
-        ]
-    })
+        async function cadastrar() {
+            const dados = {
+                nome: document.getElementById('nome').value.trim(),
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                senha: document.getElementById('senha').value.trim(),
+                telefone: document.getElementById('telefone').value.trim(),
+                carro: document.getElementById('carro').value.trim(),
+                placa: document.getElementById('placa').value.trim().toUpperCase(),
+                tipo: "motorista"
+            };
+            if (Object.values(dados).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro");
+            if (dados.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro");
+            statusLogin("⏳ Cadastrando...", "");
+            try {
+                const res = await fetch(`${API_URL}/register`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+                });
+                const retorno = await res.json();
+                if (!res.ok) throw new Error(retorno.erro || "Falha");
+                statusLogin("✅ Criada! Entrando...", "ok");
+                setTimeout(() => entrar(dados.email, dados.senha), 1000);
+            } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
+        }
 
+        async function entrar(emailTxt = null, senhaTxt = null) {
+            const email = emailTxt || document.getElementById('email').value.trim().toLowerCase();
+            const senha = senhaTxt || document.getElementById('senha').value.trim();
+            if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro");
+            statusLogin("⏳ Entrando...", "");
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha })
+                });
+                const retorno = await res.json();
+                if (!res.ok) throw new Error(retorno.erro || "Falha");
+                if (retorno.user.tipo !== "motorista") throw new Error("Conta não é de motorista");
+                token = retorno.token;
+                usuario = retorno.user;
+                localStorage.setItem("token_motorista", token);
+                localStorage.setItem("dados_motorista", JSON.stringify(usuario));
+                telaPrincipal();
+                iniciarGPS();
+            } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
+        }
 
+        function telaPrincipal() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('header').style.display = 'flex';
+            document.getElementById('barra').style.display = 'block';
+            document.getElementById('botoesFixos').style.display = 'block';
+            document.getElementById('areaAcoes').style.display = 'none';
+        }
 
-# ==========================================
-# INICIAR
-# ==========================================
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+        function sair() {
+            if (estado.aceito && !confirm('Corrida em andamento! Sair mesmo assim?')) return;
+            localStorage.clear();
+            limparTudo();
+            window.location.reload();
+        }
 
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+        // ==============================================
+        // 🟢 ONLINE / OFFLINE - COM ONDINHAS
+        // ==============================================
+        async function ficarOnline() {
+            if (!usuario || !token) return mostrarErro("Faça login!");
+            try {
+                await fetch(`${API_URL}/ficar_online/${usuario.id}`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                document.getElementById('btnOnline').style.display = 'none';
+                document.getElementById('btnOffline').style.display = 'block';
+                
+                const statusEl = document.getElementById('statusMotorista');
+                statusEl.className = 'status-bolinha online';
+                statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>';
+                
+                socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
+                falar("Você está online!");
+            } catch (e) { mostrarErro("Erro de conexão"); }
+        }
+
+        async function ficarOffline() {
+            try {
+                await fetch(`${API_URL}/ficar_offline/${usuario.id}`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+                });
+                document.getElementById('btnOnline').style.display = 'block';
+                document.getElementById('btnOffline').style.display = 'none';
+                
+                const statusEl = document.getElementById('statusMotorista');
+                statusEl.className = 'status-bolinha offline';
+                statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>';
+                
+                socket.emit('motorista_offline', { id: usuario.id });
+                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
+            } catch (e) {}
+        }
+
+        // ==============================================
+        // 🚨 NOVA CORRIDA
+        // ==============================================
+        socket.on('nova_corrida', (dados) => {
+            if (estado.aceito) return;
+            corrida = dados;
+            estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
+            
+            // 🔊 SOM TOCANDO MAIS VEZES
+            iniciarSomAlertaRepetido();
+            
+            document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
+            document.getElementById('cTelefone').textContent = dados.passageiro_telefone || "Não informado";
+            document.getElementById('cOrigem').textContent = dados.origem;
+            document.getElementById('cDestino').textContent = dados.destino;
+            document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
+            document.getElementById('cardCorrida').style.display = 'block';
+            document.getElementById('botoesFixos').style.display = 'none';
+            
+            clearInterval(timerCorrida);
+            iniciarTemporizador();
+        });
+
+        function iniciarTemporizador() {
+            segundosCorrida = 15;
+            atualizarBtnRecusar();
+            timerCorrida = setInterval(() => {
+                segundosCorrida--;
+                atualizarBtnRecusar();
+                if (segundosCorrida <= 0) {
+                    clearInterval(timerCorrida);
+                    recusarCorrida();
+                }
+            }, 1000);
+        }
+
+        function atualizarBtnRecusar() {
+            document.getElementById('btnRecusar').textContent = `❌ RECUSAR (${segundosCorrida}s)`;
+        }
+
+        function recusarCorrida() {
+            document.getElementById('cardCorrida').style.display = 'none';
+            corrida = null;
+            clearInterval(timerCorrida);
+            pararSomAlerta();
+            document.getElementById('botoesFixos').style.display = 'block';
+        }
+
+        // ==============================================
+        // ✅ ACEITAR
+        // ==============================================
+        async function aceitarCorrida() {
+            clearInterval(timerCorrida);
+            pararSomAlerta();
+            
+            if (!corrida || !token || !usuario) return mostrarErro("Erro ao aceitar");
+            
+            const corridaId = corrida.corrida_id || corrida.id;
+            try {
+                const res = await fetch(`${API_URL}/aceitar_corrida/${corridaId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motorista_id: String(usuario.id), nome_motorista: usuario.nome, status: "aceito" })
+                });
+                
+                if (res.ok || res.status === 200 || res.status === 201) {
+                    estado.aceito = true;
+                    estado.pegouPassageiro = false;
+                    estado.viagemIniciada = false;
+                    
+                    document.getElementById('cardCorrida').style.display = 'none';
+                    document.getElementById('areaAcoes').style.display = 'block';
+                    document.getElementById('btnCancelarCorrida').style.display = 'flex';
+                    
+                    document.getElementById('etapaTexto').className = 'etapa etapa1';
+                    document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro';
+                    
+                    const container = document.getElementById('containerAcoesCorrida');
+                    container.innerHTML = '';
+                    container.appendChild(
+                        criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)
+                    );
+                    
+                    socket.emit('corrida_aceita', { corrida_id: corridaId, motorista: usuario });
+                    socket.emit("entrar_na_sala", { corrida_id: corridaId });
+                    
+                    envioLocalizacaoInterval = setInterval(() => {
+                        socket.emit('localizacao_motorista', {
+                            corrida_id: corridaId, lat: posicaoAtual.lat, lng: posicaoAtual.lng,
+                            motorista_id: usuario.id, status: estado
+                        });
+                    }, 1500);
+                    
+                    somSucesso.play().catch(() => {});
+                    falar("Corrida aceita! Deslize para ir ao passageiro.");
+                }
+            } catch (e) { mostrarErro(e.message); }
+        }
+
+        // ==============================================
+        // 📍 IR ATÉ PASSAGEIRO
+        // ==============================================
+        function executarIrAtePassageiro() {
+            if (!estado.aceito) return;
+            if (estado.pegouPassageiro) return;
+            
+            estado.pegouPassageiro = true;
+            
+            const destino = (corrida.origem_lat && corrida.origem_lng) 
+                ? `${corrida.origem_lat},${corrida.origem_lng}` : corrida.origem;
+            
+            document.getElementById('mapaFrame').src = 
+                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
+            
+            document.getElementById('containerAcoesCorrida').innerHTML = '';
+            mostrarCardPassageiro();
+        }
+
+        function mostrarCardPassageiro() {
+            if (!corrida) return;
+            
+            document.getElementById('fotoChegada').src = corrida.foto_passageiro || 
+                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
+            document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
+            document.getElementById('cardPassageiroChegada').style.display = 'block';
+            
+            const container = document.getElementById('containerBtnEmbarque');
+            container.innerHTML = '';
+            container.appendChild(
+                criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)
+            );
+            
+            document.getElementById('btnLigarChegada').style.display = 'flex';
+        }
+
+        // ==============================================
+        // 🟢 INICIAR VIAGEM
+        // ==============================================
+        function executarIniciarViagem() {
+            if (!estado.pegouPassageiro) return;
+            if (estado.viagemIniciada) return;
+            
+            estado.viagemIniciada = true;
+            document.getElementById('cardPassageiroChegada').style.display = 'none';
+            
+            const destino = (corrida.destino_lat && corrida.destino_lng) 
+                ? `${corrida.destino_lat},${corrida.destino_lng}` : corrida.destino;
+            
+            document.getElementById('mapaFrame').src = 
+                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
+            
+            document.getElementById('etapaTexto').className = 'etapa etapa3';
+            document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO! Deslize para finalizar';
+            
+            const container = document.getElementById('containerAcoesCorrida');
+            container.innerHTML = '';
+            container.appendChild(
+                criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)
+            );
+            
+            socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id });
+            falar("Viagem iniciada! Siga até o destino.");
+        }
+
+        // ==============================================
+        // 🏁 FINALIZAR
+        // ==============================================
+        async function executarFinalizar() {
+            if (!estado.viagemIniciada) return;
+            if (!corrida) return;
+            
+            const valorFinal = parseFloat(corrida.valor || 0);
+            const corridaId = corrida.corrida_id || corrida.id;
+            
+            try {
+                const res = await fetch(`${API_URL}/finalizar_corrida/${corridaId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: "finalizada", valor_final: valorFinal,
+                        distancia_total: parseFloat(corrida.distancia || 0),
+                        motorista_id: String(usuario.id), finalizado_em: new Date().toISOString()
+                    })
+                });
+                
+                if (res.ok || res.status === 200 || res.status === 201) {
+                    somDinheiro.play().catch(() => {});
+                    falar("Corrida finalizada! R$ " + valorFinal.toFixed(2).replace('.', ','));
+                    
+                    socket.emit('viagem_finalizada', { 
+                        corrida_id: corridaId, valor: valorFinal, motorista_nome: usuario.nome 
+                    });
+                    
+                    if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
+                    
+                    document.getElementById('areaAcoes').style.display = 'none';
+                    document.getElementById('btnCancelarCorrida').style.display = 'none';
+                    document.getElementById('modalAvaliacao').style.display = 'block';
+                    
+                    notaAvaliacao = 0;
+                    document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
+                    document.getElementById('comentarioAvaliacao').value = '';
+                }
+            } catch (e) { 
+                mostrarErro("Erro ao finalizar: " + e.message); 
+            }
+        }
+
+        // ==============================================
+        // 📞 LIGAR
+        // ==============================================
+        function ligarCliente() {
+            if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone");
+            const tel = corrida.passageiro_telefone.replace(/\D/g, '');
+            if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) {
+                window.location.href = `tel:${tel}`;
+            } else {
+                window.open(`https://wa.me/${tel}?text=Olá, sou seu motorista Rota Brasil!`, '_blank');
+            }
+        }
+
+        // ==============================================
+        // ⭐ AVALIAÇÃO
+        // ==============================================
+        async function enviarAvaliacao() {
+            if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; }
+            
+            const comentario = document.getElementById('comentarioAvaliacao').value.trim();
+            const corridaId = corrida?.corrida_id || corrida?.id;
+            
+            try {
+                if (corridaId) {
+                    await fetch(`${API_URL}/avaliar`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            corrida_id: corridaId, passageiro_id: String(corrida?.passageiro_id),
+                            motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: comentario
+                        })
+                    });
+                }
+                document.getElementById('modalAvaliacao').style.display = 'none';
+                limparTudo();
+            } catch (e) { 
+                document.getElementById('modalAvaliacao').style.display = 'none';
+                limparTudo();
+            }
+        }
+
+        // ==============================================
+        // 🔴 CANCELAMENTO
+        // ==============================================
+        socket.on("corrida_cancelada", (dados) => {
+            if (corrida && (dados?.corrida_id == (corrida.corrida_id || corrida.id))) {
+                somAlto.play().catch(() => {});
+                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
+                limparTudo();
+                document.getElementById('alertaCancel').style.display = 'block';
+                falar("Passageiro cancelou a corrida!");
+            }
+        });
+
+        socket.on("cliente_desconectado", (dados) => {
+            if (corrida && (dados?.corrida_id == (corrida.corrida_id || corrida.id))) {
+                somAlto.play().catch(() => {});
+                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
+                limparTudo();
+                document.getElementById('alertaCancel').style.display = 'block';
+                falar("Passageiro desconectado!");
+            }
+        });
+
+        // ==============================================
+        // 🧹 LIMPEZA
+        // ==============================================
+        function limparTudo() {
+            corrida = null;
+            estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
+            notaAvaliacao = 0;
+            
+            document.getElementById('cardCorrida').style.display = 'none';
+            document.getElementById('areaAcoes').style.display = 'none';
+            document.getElementById('modalAvaliacao').style.display = 'none';
+            document.getElementById('alertaCancel').style.display = 'none';
+            document.getElementById('cardPassageiroChegada').style.display = 'none';
+            document.getElementById('btnCancelarCorrida').style.display = 'none';
+            document.getElementById('containerAcoesCorrida').innerHTML = '';
+            document.getElementById('containerBtnEmbarque').innerHTML = '';
+            
+            document.getElementById('botoesFixos').style.display = 'block';
+            
+            document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
+            document.getElementById('comentarioAvaliacao').value = '';
+            
+            // Para todos os sons
+            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+            pararSomAlerta();
+            
+            clearInterval(timerCorrida);
+        }
+
+        async function cancelarCorrida() {
+            if (!corrida) return;
+            if (!confirm("Cancelar esta corrida?")) return;
+            
+            const corridaId = corrida.corrida_id || corrida.id;
+            try {
+                await fetch(`${API_URL}/cancelar_corrida_motorista/${corridaId}`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                socket.emit('corrida_cancelada_motorista', { corrida_id: corridaId });
+                limparTudo();
+            } catch (e) { mostrarErro("Erro ao cancelar."); }
+        }
+
+        async function abrirCarteira() {
+            document.getElementById('painelCarteiraMotorista').style.display = 'block';
+            try {
+                const res = await fetch(`${API_URL}/carteira/saldo`, { 
+                    headers: { Authorization: `Bearer ${token}` } 
+                });
+                const dados = await res.json();
+                document.getElementById('saldoMotorista').textContent = `R$ ${(dados.saldo || 0).toFixed(2)}`;
+            } catch (e) {}
+        }
+
+        // ==============================================
+        // 🔌 SOCKET
+        // ==============================================
+        socket.on('connect', () => {
+            console.log("✅ Conectado:", socket.id);
+            if (usuario?.id && document.getElementById('statusMotorista').classList.contains('online')) {
+                socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
+            }
+        });
+
+        socket.on('disconnect', () => mostrarErro("Conexão perdida!"));
+        socket.on('connect_error', () => mostrarErro("Servidor indisponível"));
+
+        // ==============================================
+        // 🚀 INICIALIZAÇÃO
+        // ==============================================
+        window.onload = () => {
+            const t = localStorage.getItem("token_motorista");
+            const d = localStorage.getItem("dados_motorista");
+            if (t && d) {
+                try {
+                    usuario = JSON.parse(d);
+                    token = t;
+                    telaPrincipal();
+                    iniciarGPS();
+                } catch { localStorage.clear(); }
+            }
+            
+            document.querySelectorAll('.estrela').forEach(estrela => {
+                estrela.addEventListener('click', function() {
+                    notaAvaliacao = parseInt(this.dataset.valor);
+                    document.querySelectorAll('.estrela').forEach((e, i) => {
+                        e.classList.toggle('ativa', i < notaAvaliacao);
+                    });
+                });
+            });
+        };
+    </script>
+</body>
+</html>
