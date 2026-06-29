@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Painel de Controle | Rota Brasil</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --card: #111827;
+            --card2: #1a2235;
+            --border: #1e2d45;
+            --text: #e2e8f0;
+            --text2: #94a3b8;
+            --green: #10b981;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --yellow: #f59e0b;
+            --purple: #8b5cf6;
+            --cyan: #06b6d4;
+            --pink: #ec4899;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--green);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--green);
+        }
+        .header-status .pulse {
+            width: 10px;
+            height: 10px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* Cards de estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+        .stat-icon.yellow { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
+        .stat-icon.cyan { background: rgba(6, 182, 212, 0.2); color: var(--cyan); }
+        .stat-icon.pink { background: rgba(236, 72, 153, 0.2); color: var(--pink); }
+        .stat-info h3 { font-size: 28px; font-weight: 800; }
+        .stat-info p { font-size: 13px; color: var(--text2); }
+
+        /* Grid principal */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .panel-body {
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .panel-body::-webkit-scrollbar { width: 6px; }
+        .panel-body::-webkit-scrollbar-track { background: transparent; }
+        .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Lista de itens */
+        .item-list { list-style: none; }
+        .item-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--card2);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .item-card:hover { border-color: var(--border); }
+        .item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .item-avatar.online { border: 2px solid var(--green); }
+        .item-info { flex: 1; min-width: 0; }
+        .item-info .name { font-weight: 600; font-size: 14px; }
+        .item-info .detail { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .status-online { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+        .status-offline { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+        .status-running { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+        .status-waiting { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
+        .status-done { background: rgba(139, 92, 246, 0.2); color: var(--purple); }
+
+        /* Corridas em tempo real */
+        .corrida-card {
+            background: var(--card2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--blue);
+        }
+        .corrida-card.waiting { border-left-color: var(--yellow); }
+        .corrida-card.active { border-left-color: var(--blue); }
+        .corrida-card.done { border-left-color: var(--purple); }
+        .corrida-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .corrida-id { font-weight: 700; font-size: 14px; }
+        .corrida-route {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text2);
+            margin-bottom: 8px;
+        }
+        .corrida-route i { color: var(--blue); font-size: 10px; }
+        .corrida-details {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: var(--text2);
+            flex-wrap: wrap;
+        }
+        .corrida-details span { display: flex; align-items: center; gap: 4px; }
+
+        /* Mapa */
+        .map-container {
+            grid-column: 1 / -1;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .map-container iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+        }
+
+        /* Badge contador */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 0 8px;
+        }
+        .badge-green { background: var(--green); color: #000; }
+        .badge-blue { background: var(--blue); color: #fff; }
+        .badge-yellow { background: var(--yellow); color: #000; }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text2);
+        }
+        .empty-state i { font-size: 40px; margin-bottom: 10px; display: block; opacity: 0.5; }
+
+        /* Logs */
+        .log-container {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #0f0;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-line { padding: 2px 0; border-bottom: 1px solid rgba(0,255,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>📊 Painel de Controle Rota Brasil</h1>
+        <div class="header-status">
+            <div class="pulse"></div>
+            <span id="serverStatus">Conectado</span>
+        </div>
+    </div>
+
+    <!-- ESTATÍSTICAS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-car"></i></div>
+            <div class="stat-info">
+                <h3 id="countMotoristasOnline">0</h3>
+                <p>Motoristas Online</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-user"></i></div>
+            <div class="stat-info">
+                <h3 id="countPassageirosOnline">0</h3>
+                <p>Passageiros Online</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+            <div class="stat-info">
+                <h3 id="countCorridasAtivas">0</h3>
+                <p>Corridas em Andamento</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info">
+                <h3 id="countCorridasFinalizadas">0</h3>
+                <p>Finalizadas Hoje</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="fas fa-dollar-sign"></i></div>
+            <div class="stat-info">
+                <h3 id="totalFaturamento">R$ 0</h3>
+                <p>Faturamento Hoje</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon pink"><i class="fas fa-star"></i></div>
+            <div class="stat-info">
+                <h3 id="mediaAvaliacoes">5.0</h3>
+                <p>Média de Avaliações</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRID PRINCIPAL -->
+    <div class="main-grid">
+        <!-- Motoristas Online -->
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-car-side"></i> Motoristas Online</span>
+                <span class="badge badge-green" id="badgeMotoristas">0</span>
+            </div>
+            <div class="panel-body" id="listaMotoristas">
+                <div class="empty-state"><i class="fas fa-car"></i><p>Nenhum motorista online</p></div>
+            </div>
+        </div>
+
+        <!-- Passageiros Online -->
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-users"></i> Passageiros Online</span>
+                <span class="badge badge-blue" id="badgePassageiros">0</span>
+            </div>
+            <div class="panel-body" id="listaPassageiros">
+                <div class="empty-state"><i class="fas fa-user"></i><p>Nenhum passageiro online</p></div>
+            </div>
+        </div>
+
+        <!-- Corridas em Andamento -->
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-route"></i> Corridas em Andamento</span>
+                <span class="badge badge-yellow" id="badgeCorridas">0</span>
+            </div>
+            <div class="panel-body" id="listaCorridas">
+                <div class="empty-state"><i class="fas fa-road"></i><p>Nenhuma corrida ativa</p></div>
+            </div>
+        </div>
+
+        <!-- Últimas Corridas Finalizadas -->
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-history"></i> Últimas Finalizadas</span>
+            </div>
+            <div class="panel-body" id="listaFinalizadas">
+                <div class="empty-state"><i class="fas fa-check"></i><p>Nenhuma corrida finalizada</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAPA -->
+    <div class="map-container">
+        <div class="panel-header">
+            <span><i class="fas fa-map-marked-alt"></i> Mapa de Calor - Motoristas Ativos</span>
+        </div>
+        <iframe id="mapaIframe" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5505,-46.6333&zoom=12"></iframe>
+    </div>
+
+    <!-- LOGS -->
+    <div class="log-container" id="logContainer">
+        <div class="log-line">🟢 Painel iniciado - Aguardando eventos...</div>
+    </div>
+
+    <script>
+        const API = "http://192.168.15.132:5000";
+        const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true });
+
+        // Contadores
+        let motoristasOnline = [];
+        let passageirosOnline = [];
+        let corridasAtivas = [];
+        let corridasFinalizadas = [];
+
+        // ========== LOG ==========
+        function addLog(msg, color = '#0f0') {
+            const el = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            el.innerHTML += `<div class="log-line" style="color:${color}">[${time}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+            if (el.children.length > 100) el.removeChild(el.firstChild);
+        }
+
+        // ========== SOCKET ==========
+        socket.on('connect', () => {
+            addLog('✅ Conectado ao servidor', '#0f0');
+            document.getElementById('serverStatus').textContent = 'Conectado';
+            document.querySelector('.header-status').style.borderColor = '#10b981';
+            document.querySelector('.header-status').style.color = '#10b981';
+            carregarDadosIniciais();
+        });
+
+        socket.on('disconnect', () => {
+            addLog('❌ Desconectado do servidor', '#f00');
+            document.getElementById('serverStatus').textContent = 'Desconectado';
+            document.querySelector('.header-status').style.borderColor = '#ef4444';
+            document.querySelector('.header-status').style.color = '#ef4444';
+        });
+
+        // Motorista ficou online
+        socket.on('motorista_online', (data) => {
+            addLog(`🟢 Motorista online: ${data.nome || 'ID:' + data.id}`, '#10b981');
+            if (!motoristasOnline.find(m => m.id === data.id)) {
+                motoristasOnline.push(data);
+            }
+            atualizarListaMotoristas();
+            atualizarEstatisticas();
+        });
+
+        // Motorista ficou offline
+        socket.on('motorista_offline', (data) => {
+            addLog(`🔴 Motorista offline: ID ${data.id}`, '#ef4444');
+            motoristasOnline = motoristasOnline.filter(m => m.id !== data.id);
+            atualizarListaMotoristas();
+            atualizarEstatisticas();
+        });
+
+        // Nova corrida solicitada
+        socket.on('nova_corrida', (data) => {
+            addLog(`🆕 Nova corrida #${data.corrida_id}: ${data.origem} → ${data.destino}`, '#f59e0b');
+            corridasAtivas.push({
+                ...data,
+                status: 'procurando',
+                created_at: new Date().toISOString()
+            });
+            atualizarListaCorridas();
+            atualizarEstatisticas();
+        });
+
+        // Corrida aceita
+        socket.on('corrida_aceita', (data) => {
+            addLog(`✅ Corrida #${data.corrida_id} aceita por ${data.motorista_nome}`, '#3b82f6');
+            const idx = corridasAtivas.findIndex(c => c.corrida_id === data.corrida_id);
+            if (idx >= 0) {
+                corridasAtivas[idx] = { ...corridasAtivas[idx], ...data, status: 'aceita' };
+            }
+            atualizarListaCorridas();
+        });
+
+        // Localização do motorista
+        socket.on('localizacao_motorista', (data) => {
+            const idx = corridasAtivas.findIndex(c => c.corrida_id === data.corrida_id);
+            if (idx >= 0) {
+                corridasAtivas[idx].lat_motorista = data.lat;
+                corridasAtivas[idx].lng_motorista = data.lng;
+            }
+        });
+
+        // Viagem iniciada
+        socket.on('viagem_iniciada', (data) => {
+            addLog(`🚗 Viagem iniciada - Corrida #${data.corrida_id}`, '#06b6d4');
+            const idx = corridasAtivas.findIndex(c => c.corrida_id === data.corrida_id);
+            if (idx >= 0) {
+                corridasAtivas[idx].status = 'em_andamento';
+            }
+            atualizarListaCorridas();
+        });
+
+        // Viagem finalizada
+        socket.on('viagem_finalizada', (data) => {
+            addLog(`🏁 Corrida #${data.corrida_id} finalizada - R$ ${data.valor}`, '#8b5cf6');
+            const idx = corridasAtivas.findIndex(c => c.corrida_id === data.corrida_id);
+            if (idx >= 0) {
+                const finalizada = { ...corridasAtivas[idx], ...data, status: 'finalizada' };
+                corridasFinalizadas.unshift(finalizada);
+                if (corridasFinalizadas.length > 20) corridasFinalizadas.pop();
+                corridasAtivas.splice(idx, 1);
+            }
+            atualizarListaCorridas();
+            atualizarListaFinalizadas();
+            atualizarEstatisticas();
+        });
+
+        // Corrida cancelada
+        socket.on('corrida_cancelada', (data) => {
+            addLog(`❌ Corrida #${data.corrida_id} cancelada`, '#ef4444');
+            corridasAtivas = corridasAtivas.filter(c => c.corrida_id !== data.corrida_id);
+            atualizarListaCorridas();
+            atualizarEstatisticas();
+        });
+
+        // ========== ATUALIZAR LISTAS ==========
+        function atualizarListaMotoristas() {
+            const el = document.getElementById('listaMotoristas');
+            const badge = document.getElementById('badgeMotoristas');
+            badge.textContent = motoristasOnline.length;
+
+            if (motoristasOnline.length === 0) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-car"></i><p>Nenhum motorista online</p></div>';
+                return;
+            }
+
+            el.innerHTML = motoristasOnline.map(m => `
+                <div class="item-card">
+                    <div class="item-avatar online">🚗</div>
+                    <div class="item-info">
+                        <div class="name">${m.nome || 'Motorista ' + m.id}</div>
+                        <div class="detail">ID: ${m.id} | Pronto para corridas</div>
+                    </div>
+                    <span class="item-status status-online">ONLINE</span>
+                </div>
+            `).join('');
+        }
+
+        function atualizarListaCorridas() {
+            const el = document.getElementById('listaCorridas');
+            const badge = document.getElementById('badgeCorridas');
+            badge.textContent = corridasAtivas.length;
+
+            if (corridasAtivas.length === 0) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-road"></i><p>Nenhuma corrida ativa</p></div>';
+                return;
+            }
+
+            el.innerHTML = corridasAtivas.map(c => {
+                const statusClass = c.status === 'procurando' ? 'waiting' : 
+                                   c.status === 'aceita' ? 'active' : 'done';
+                const statusLabel = c.status === 'procurando' ? '🔍 Procurando' :
+                                   c.status === 'aceita' ? '🚗 Motorista a caminho' :
+                                   c.status === 'em_andamento' ? '🏃 Em andamento' : c.status;
+                
+                return `
+                    <div class="corrida-card ${statusClass}">
+                        <div class="corrida-header">
+                            <span class="corrida-id">🏷️ Corrida #${c.corrida_id}</span>
+                            <span class="item-status status-${c.status === 'procurando' ? 'waiting' : c.status === 'aceita' ? 'running' : 'running'}">${statusLabel}</span>
+                        </div>
+                        <div class="corrida-route">
+                            <span>📍 ${c.origem?.substring(0, 30) || 'Origem'}...</span>
+                            <i class="fas fa-arrow-right"></i>
+                            <span>🏁 ${c.destino?.substring(0, 30) || 'Destino'}...</span>
+                        </div>
+                        <div class="corrida-details">
+                            <span>👤 ${c.passageiro_nome || 'Passageiro'}</span>
+                            <span>💰 R$ ${parseFloat(c.valor || 0).toFixed(2)}</span>
+                            ${c.motorista_nome ? `<span>🚗 ${c.motorista_nome}</span>` : ''}
+                            ${c.lat_motorista ? `<span>📍 ${c.lat_motorista?.toFixed(4)}, ${c.lng_motorista?.toFixed(4)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function atualizarListaFinalizadas() {
+            const el = document.getElementById('listaFinalizadas');
+            
+            if (corridasFinalizadas.length === 0) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-check"></i><p>Nenhuma finalizada</p></div>';
+                return;
+            }
+
+            el.innerHTML = corridasFinalizadas.slice(0, 10).map(c => `
+                <div class="corrida-card done">
+                    <div class="corrida-header">
+                        <span class="corrida-id">🏁 Corrida #${c.corrida_id}</span>
+                        <span class="item-status status-done">FINALIZADA</span>
+                    </div>
+                    <div class="corrida-route">
+                        <span>📍 ${c.origem?.substring(0, 25) || '...'}</span>
+                        <i class="fas fa-arrow-right"></i>
+                        <span>🏁 ${c.destino?.substring(0, 25) || '...'}</span>
+                    </div>
+                    <div class="corrida-details">
+                        <span>💵 R$ ${parseFloat(c.valor || 0).toFixed(2)}</span>
+                        ${c.motorista_nome ? `<span>🚗 ${c.motorista_nome}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function atualizarEstatisticas() {
+            document.getElementById('countMotoristasOnline').textContent = motoristasOnline.length;
+            document.getElementById('countPassageirosOnline').textContent = passageirosOnline.length;
+            document.getElementById('countCorridasAtivas').textContent = corridasAtivas.length;
+            document.getElementById('countCorridasFinalizadas').textContent = corridasFinalizadas.length;
+            
+            const total = corridasFinalizadas.reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
+            document.getElementById('totalFaturamento').textContent = `R$ ${total.toFixed(2)}`;
+        }
+
+        // ========== CARREGAR DADOS INICIAIS ==========
+        async function carregarDadosIniciais() {
+            try {
+                const res = await fetch(`${API}/admin/dashboard`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    motoristasOnline = data.motoristas_online || [];
+                    corridasAtivas = data.corridas_ativas || [];
+                    corridasFinalizadas = data.corridas_finalizadas || [];
+                    
+                    atualizarListaMotoristas();
+                    atualizarListaCorridas();
+                    atualizarListaFinalizadas();
+                    atualizarEstatisticas();
+                    
+                    addLog(`📊 Dados carregados: ${motoristasOnline.length} motoristas, ${corridasAtivas.length} corridas ativas`, '#06b6d4');
+                }
+            } catch (e) {
+                addLog('⚠️ Não foi possível carregar dados iniciais', '#f59e0b');
+            }
+        }
+
+        // ========== ATUALIZAR MAPA ==========
+        setInterval(() => {
+            if (motoristasOnline.length > 0) {
+                // Centraliza no primeiro motorista (idealmente seria a média de todos)
+                const mot = motoristasOnline[0];
+                if (mot.lat && mot.lng) {
+                    document.getElementById('mapaIframe').src = 
+                        `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${mot.lat},${mot.lng}&zoom=13`;
+                }
+            }
+        }, 30000);
+
+        // ========== INICIALIZAR ==========
+        addLog('🟢 Painel de Controle iniciado', '#0f0');
+        addLog('🔌 Conectando ao servidor...', '#f59e0b');
+    </script>
+</body>
+</html>
