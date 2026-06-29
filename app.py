@@ -781,7 +781,7 @@ def admin():
     return render_template('admin.html')
 @app.route('/admin/dashboard')
 @admin_required
-def admin_dashboard2():
+def admin_dashboard3():
 
     usuarios = Usuario.query.count()
 
@@ -1096,6 +1096,101 @@ def admin_dashboard():
         'corridas_ativas': [dict(c) for c in corridas_ativas],
         'corridas_finalizadas': [dict(c) for c in corridas_finalizadas]
     })
+# Adicione estes endpoints ao seu app.py para funcionar com o Render
+
+@app.route('/admin/dashboard2')
+@admin_required
+def admin_dashboard2():
+    """Retorna dados do dashboard"""
+    try:
+        usuarios = Usuario.query.count()
+        corridas = Corrida.query.count()
+        motoristas_online = Usuario.query.filter_by(tipo='motorista', online=True).count()
+        
+        # Calcular saldo total
+        saldo_total = db.session.query(db.func.sum(Carteira.saldo)).scalar() or 0
+        
+        return jsonify({
+            'usuarios': usuarios,
+            'corridas': corridas,
+            'motoristas_online': motoristas_online,
+            'saldo_total': float(saldo_total)
+        })
+    except Exception as e:
+        print(f"Erro no dashboard: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/usuarios')
+@admin_required
+def admin_usuarios():
+    """Lista todos os usuários"""
+    try:
+        usuarios = Usuario.query.all()
+        return jsonify([u.to_dict() for u in usuarios])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/corridas')
+@admin_required
+def admin_corridas():
+    """Lista todas as corridas"""
+    try:
+        corridas = Corrida.query.order_by(Corrida.id.desc()).all()
+        lista = []
+        for c in corridas:
+            passageiro = Usuario.query.get(c.passageiro_id)
+            motorista = Usuario.query.get(c.motorista_id) if c.motorista_id else None
+            lista.append({
+                'id': c.id,
+                'passageiro_nome': passageiro.nome if passageiro else 'N/A',
+                'motorista_nome': motorista.nome if motorista else 'N/A',
+                'origem': c.origem,
+                'destino': c.destino,
+                'valor': c.valor,
+                'status': c.status,
+                'data_criacao': getattr(c, 'data_criacao', None)
+            })
+        return jsonify(lista)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/carteiras')
+@admin_required
+def admin_carteiras():
+    """Lista todas as carteiras"""
+    try:
+        carteiras = Carteira.query.all()
+        return jsonify([{
+            'id': c.id,
+            'usuario_id': c.usuario_id,
+            'saldo': c.saldo,
+            'saldo_bloqueado': c.saldo_bloqueado,
+            'criado_em': c.criado_em.strftime('%Y-%m-%d %H:%M') if c.criado_em else None
+        } for c in carteiras])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/excluir_usuario/<int:id>', methods=['DELETE'])
+@admin_required
+def admin_excluir_usuario(id):
+    """Exclui um usuário e todos os dados relacionados"""
+    try:
+        usuario = Usuario.query.get(id)
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+        
+        # Excluir dependências
+        Carteira.query.filter_by(usuario_id=id).delete()
+        Transacao.query.filter_by(usuario_id=id).delete()
+        Avaliacao.query.filter((Avaliacao.avaliador_id == id) | (Avaliacao.avaliado_id == id)).delete()
+        
+        db.session.delete(usuario)
+        db.session.commit()
+        
+        return jsonify({'status': 'Usuário excluído com sucesso'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500    
 # ==========================================
 # INICIAR
 # ==========================================
