@@ -9,3 +9,4 @@ werkzeug
 python-dotenv
 gunicorn
 redis
+mercadopago
