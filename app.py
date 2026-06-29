@@ -744,26 +744,6 @@ def admin_corridas_recentes():
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-@app.route('/admin/avaliacoes', methods=['GET'])
-def admin_avaliacoes():
-    """Lista todas as avaliações - SEM AUTENTICAÇÃO"""
-    try:
-        avaliacoes = Avaliacao.query.all()
-        lista = []
-        for a in avaliacoes:
-            avaliador = Usuario.query.get(a.avaliador_id)
-            avaliado = Usuario.query.get(a.avaliado_id)
-            lista.append({
-                'id': a.id,
-                'corrida_id': a.corrida_id,
-                'avaliador': avaliador.nome if avaliador else 'N/A',
-                'avaliado': avaliado.nome if avaliado else 'N/A',
-                'nota': a.nota,
-                'comentario': a.comentario
-            })
-        return jsonify(lista)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
 
 @app.route('/transacoes', methods=['GET'])
 def admin_transacoes():
