@@ -781,7 +781,7 @@ def admin():
     return render_template('admin.html')
 @app.route('/admin/dashboard')
 @admin_required
-def admin_dashboard():
+def admin_dashboard2():
 
     usuarios = Usuario.query.count()
 
