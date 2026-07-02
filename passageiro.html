@@ -106,6 +106,12 @@
             <div class="detalhes-preco"><p>Distância: <strong id="txtDistancia">--</strong></p><p>Tempo: <strong id="txtTempo">--</strong></p><p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span></p></div>
             <button id="btnChamar" class="btn-sucesso-grande" onclick="chamarCorrida()">🚀 CHAMAR ROTA BRASIL</button>
         </div>
+        <div id="cardMapa" style="display:none;">
+    <h3>🚗 Acompanhe seu motorista</h3>
+
+    <div id="mapa" style="width:100%; height:400px; border-radius:10px;"></div>
+
+</div>
         <div id="cardMapa" class="card-mapa-container" style="display:none;">
             <div class="indicador-mapa" id="indicadorMapa">🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min</div>
             <iframe id="mapaIframe" src="" style="width:100%; height:350px; border:none;"></iframe>
@@ -139,7 +145,68 @@
         let latOrigem, lonOrigem, latDestino, lonDestino, latMotorista, lonMotorista;
         let distancia, valorFinal, notaAvaliacao = 0;
         let corridaIdAvaliacao, motoristaIdAvaliacao;
+        //teste marcadores no mapa======
+        // Variáveis globais
+let mapa;
+let markerOrigem;
+let markerDestino;
+let markerMotorista;
 
+// Ícone do carro
+const iconeMotorista = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/744/744465.png",
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+});
+
+function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
+
+    // Se já existir um mapa, remove
+    if (mapa) {
+        mapa.remove();
+    }
+
+    mapa = L.map("mapa").setView([latOrigem, lonOrigem], 14);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+    }).addTo(mapa);
+
+    // Origem
+    markerOrigem = L.marker([latOrigem, lonOrigem])
+        .addTo(mapa)
+        .bindPopup("Origem");
+
+    // Destino
+    markerDestino = L.marker([latDestino, lonDestino])
+        .addTo(mapa)
+        .bindPopup("Destino");
+
+    // Carro começa na origem
+    markerMotorista = L.marker([latOrigem, lonOrigem], {
+        icon: iconeMotorista
+    }).addTo(mapa);
+
+    // Ajusta o zoom para mostrar tudo
+    const grupo = L.featureGroup([
+        markerOrigem,
+        markerDestino,
+        markerMotorista
+    ]);
+
+    mapa.fitBounds(grupo.getBounds().pad(0.2));
+}
+        //======funcao para chamar o mapa
+        function atualizarMotorista(lat, lng) {
+
+    if (!markerMotorista) return;
+
+    markerMotorista.setLatLng([lat, lng]);
+
+    // Centraliza o mapa acompanhando o carro
+    mapa.panTo([lat, lng]);
+}
         // ========== DEBUG ==========
         function debug(msg) {
             const el = document.getElementById('debugInfo');
@@ -186,17 +253,9 @@
     const lat = dados.lat ?? dados.latitude;
     const lng = dados.lng ?? dados.longitude;
 
-    debug(`📍 Localização [${evento}] Lat:${lat} Lng:${lng}`);
-
     if (lat == null || lng == null) return;
 
-    if (!markerMotorista) {
-        markerMotorista = L.marker([lat, lng], {
-            icon: iconeMotorista
-        }).addTo(mapa);
-    } else {
-        markerMotorista.setLatLng([lat, lng]);
-    }
+    atualizarMotorista(lat, lng);
 }
 
         socket.on("corrida_aceita", (dados) => {
