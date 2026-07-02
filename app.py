@@ -1071,8 +1071,9 @@ def criar_checkout():
             }
         ],
         "external_reference": str(usuario_id),
-        "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
-        "auto_return": "approved"
+        "notification_url": "https://rotabrasil-tobu.onrender.com/webhook"
+        
+        
     }
 
     preference = sdk.preference().create(preference_data)
