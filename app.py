@@ -1022,6 +1022,7 @@ def webhook():
         print("STATUS:", status)
 
     return "OK", 200
+
 @app.route("/checkout/criar", methods=["POST"])
 @jwt_required()
 def criar_checkout():
@@ -1036,16 +1037,25 @@ def criar_checkout():
                 "quantity": 1,
                 "unit_price": valor
             }
-        ]
+        ],
+        "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
+        "back_urls": {
+            "success": "https://rotabrasil-tobu.onrender.com",
+            "failure": "https://rotabrasil-tobu.onrender.com",
+            "pending": "https://rotabrasil-tobu.onrender.com"
+        },
+        "auto_return": "approved"
     }
 
     preference = sdk.preference().create(preference_data)
+
+    print(preference)  # Para depuração
 
     response = preference.get("response", {})
 
     link = response.get("init_point") or response.get("sandbox_init_point")
 
-    return jsonify({"link": link}) 
+    return jsonify({"link": link})     
 #π√%✓∆ Caucular corrida openRout $€÷=====
 #================={{{{{{{{{=====≠=========
 
