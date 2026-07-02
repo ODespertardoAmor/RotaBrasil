@@ -181,22 +181,23 @@
             }
         });
 
-        function processarLocalizacao(dados, origem) {
-            if (!dados || !corridaAtual) return;
-            
-            const cid = corridaAtual.id || corridaAtual.corrida_id;
-            const dadosCid = dados.corrida_id || dados.corridaId || dados.ride_id || dados.id;
-            
-            debug(`📍 Localização [${origem}] | Corrida dados: ${dadosCid} | Minha: ${cid} | Lat: ${dados.lat} Lng: ${dados.lng}`);
-            
-            // Aceita se o ID bater OU se for a primeira localização
-            if (dadosCid == cid || (!latMotorista && dados.lat && dados.lng)) {
-                latMotorista = dados.lat;
-                lonMotorista = dados.lng;
-                atualizarDistancias();
-                atualizarMapaIframe();
-            }
-        }
+        function processarLocalizacao(dados, evento) {
+
+    const lat = dados.lat ?? dados.latitude;
+    const lng = dados.lng ?? dados.longitude;
+
+    debug(`📍 Localização [${evento}] Lat:${lat} Lng:${lng}`);
+
+    if (lat == null || lng == null) return;
+
+    if (!markerMotorista) {
+        markerMotorista = L.marker([lat, lng], {
+            icon: iconeMotorista
+        }).addTo(mapa);
+    } else {
+        markerMotorista.setLatLng([lat, lng]);
+    }
+}
 
         socket.on("corrida_aceita", (dados) => {
             debug("🚗 Corrida aceita! Dados: " + JSON.stringify(dados));
