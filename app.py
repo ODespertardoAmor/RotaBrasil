@@ -1032,7 +1032,8 @@ def webhook():
 
         usuario_id = int(info["external_reference"])
         valor = float(info["transaction_amount"])
-
+        if Transacao.query.filter_by(payment_id=str(payment_id)).first():
+           return "OK", 200
         carteira = Carteira.query.filter_by(usuario_id=usuario_id).first()
 
         if carteira:
