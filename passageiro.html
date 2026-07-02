@@ -169,6 +169,9 @@
         socket.on("motorista_localizacao", (d) => processarLocalizacao(d, "motorista_localizacao"));
         socket.on("location_update", (d) => processarLocalizacao(d, "location_update"));
         socket.on("motorista_posicao", (d) => processarLocalizacao(d, "motorista_posicao"));
+        socket.on("atualizacao_localizacao", (d) =>
+        processarLocalizacao(d, "atualizacao_localizacao")
+        );
         
         // Escuta qualquer evento (debug)
         socket.onAny((eventName, ...args) => {
