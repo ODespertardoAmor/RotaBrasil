@@ -1038,12 +1038,12 @@ def webhook():
         if carteira:
 
             carteira.saldo += valor
-
             transacao = Transacao(
-                usuario_id=usuario_id,
-                tipo="recarga",
-                valor=valor,
-                descricao=f"Recarga Mercado Pago ({payment_id})"
+            usuario_id=usuario_id,
+            tipo="recarga",
+            valor=valor,
+            descricao=f"Recarga Mercado Pago ({payment_id})",
+            payment_id=str(payment_id)
             )
 
             db.session.add(transacao)
