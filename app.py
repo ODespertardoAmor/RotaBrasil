@@ -896,15 +896,15 @@ def recriar():
 
 
 # 📄 ROTAS DE TELAS
-@app.route("/")
-def index(): return render_template("index.html")
+#@app.route("/")
+#def index(): return render_template("index.html")
 @app.route("/passageiro")
-def passageiro(): return render_template("passageiro.html")
+#def passageiro(): return render_template("passageiro.html")
 @app.route("/motorista")
-def motorista(): return render_template("motorista.html")
+#def motorista(): return render_template("motorista.html")
 @app.route("/cadastro")
-def cadastro(): return render_template("cadastro.html")
-@app.route('/teste/adicionar_saldo/<int:usuario_id>')
+#def cadastro(): return render_template("cadastro.html")
+#@app.route('/teste/adicionar_saldo/<int:usuario_id>')
 def adicionar_saldo(usuario_id):
 
     carteira = Carteira.query.filter_by(
