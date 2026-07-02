@@ -136,7 +136,8 @@ class Transacao(db.Model):
     data = db.Column(
         db.DateTime,
         default=datetime.utcnow
-    )    
+    )  
+    payment_id = db.Column(db.String(100), unique=True)
 # ==========================================
 # ROTAS DE AUTENTICAÇÃO
 # ==========================================
@@ -1009,26 +1010,56 @@ def criar_pix():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+
     data = request.get_json()
 
     print("WEBHOOK RECEBIDO:", data)
 
     payment_id = data.get("data", {}).get("id")
 
-    if payment_id:
-        payment_info = sdk.payment().get(payment_id)
-        status = payment_info["response"]["status"]
+    if not payment_id:
+        return "OK", 200
 
-        print("STATUS:", status)
+    payment = sdk.payment().get(payment_id)
+
+    info = payment["response"]
+
+    print(info)
+
+    status = info.get("status")
+
+    if status == "approved":
+
+        usuario_id = int(info["external_reference"])
+        valor = float(info["transaction_amount"])
+
+        carteira = Carteira.query.filter_by(usuario_id=usuario_id).first()
+
+        if carteira:
+
+            carteira.saldo += valor
+
+            transacao = Transacao(
+                usuario_id=usuario_id,
+                tipo="recarga",
+                valor=valor,
+                descricao=f"Recarga Mercado Pago ({payment_id})"
+            )
+
+            db.session.add(transacao)
+            db.session.commit()
+
+            print(f"Recarga realizada: usuário {usuario_id} + R$ {valor}")
 
     return "OK", 200
-
 @app.route("/checkout/criar", methods=["POST"])
 @jwt_required()
 def criar_checkout():
 
     dados = request.get_json()
     valor = float(dados["valor"])
+
+    usuario_id = get_jwt_identity()
 
     preference_data = {
         "items": [
@@ -1038,18 +1069,14 @@ def criar_checkout():
                 "unit_price": valor
             }
         ],
+        "external_reference": str(usuario_id),
         "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
-        "back_urls": {
-            "success": "https://rotabrasil-tobu.onrender.com",
-            "failure": "https://rotabrasil-tobu.onrender.com",
-            "pending": "https://rotabrasil-tobu.onrender.com"
-        },
         "auto_return": "approved"
     }
 
     preference = sdk.preference().create(preference_data)
 
-    print(preference)  # Para depuração
+    print(preference)
 
     response = preference.get("response", {})
 
