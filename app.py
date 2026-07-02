@@ -590,7 +590,21 @@ def atualizar_localizacao():
     socketio.emit("atualizacao_localizacao", dados_gps, room=f"corrida_{dados.get('corrida_id')}")
     return jsonify({"status": "Localização atualizada"}), 200
 
+@socketio.on("localizacao_motorista")
+def receber_localizacao(dados):
 
+    socketio.emit(
+        "atualizacao_localizacao",
+        {
+            "motorista_id": dados["motorista_id"],
+            "latitude": dados["lat"],
+            "longitude": dados["lng"],
+            "status": dados.get("status")
+        },
+        room=f"corrida_{dados['corrida_id']}"
+    )
+
+    print("📍 Localização enviada:", dados)
 # ==========================================
 # AVALIAÇÕES
 # ==========================================
