@@ -58,7 +58,6 @@
             display: flex; justify-content: space-between; align-items: center; z-index: 100;
         }
         
-        /* STATUS BOLINHA COM ONDINHAS */
         .status-bolinha { 
             display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;
             position: relative; padding: 5px 10px; border-radius: 20px;
@@ -67,12 +66,9 @@
             color: var(--sucesso);
             animation: pulsarOnline 1.5s infinite;
         }
-        .status-bolinha.online i { 
-            text-shadow: 0 0 10px #00B42A, 0 0 20px #00B42A;
-        }
+        .status-bolinha.online i { text-shadow: 0 0 10px #00B42A, 0 0 20px #00B42A; }
         .status-bolinha.offline { color: var(--perigo); }
         
-        /* ONDINHAS NO ONLINE */
         .status-bolinha.online::before {
             content: '';
             position: absolute;
@@ -102,10 +98,7 @@
             opacity: 0.4;
         }
         .status-bolinha.online i,
-        .status-bolinha.online span {
-            position: relative;
-            z-index: 1;
-        }
+        .status-bolinha.online span { position: relative; z-index: 1; }
         
         @keyframes pulsarOnline { 
             0% { transform: scale(1); opacity: 1; } 
@@ -117,7 +110,6 @@
             100% { transform: translateY(-50%) scale(2.5); opacity: 0; } 
         }
 
-        /* BOTÃO DESLIZAR */
         .container-deslize {
             position: relative;
             width: 100%;
@@ -230,6 +222,33 @@
             border-radius: 8px; z-index: 999999; display: none;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600;
         }
+
+        /* Foto do passageiro no card de corrida */
+        .foto-passageiro-card {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--sucesso);
+            margin-right: 10px;
+        }
+        .passageiro-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Badge pagamento */
+        .badge-pagamento {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-pix { background: var(--primaria); color: white; }
+        .badge-dinheiro { background: var(--alerta); color: #000; }
     </style>
 </head>
     
@@ -243,7 +262,7 @@
         <button class="btn-danger" onclick="document.getElementById('painelCarteiraMotorista').style.display='none'" style="margin:5px 0;">❌ Fechar</button>
     </div>
 
-    <!-- CARD PASSAGEIRO -->
+    <!-- CARD PASSAGEIRO CHEGADA -->
     <div id="cardPassageiroChegada" class="card-chegada">
         <img id="fotoChegada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E">
         <h3 id="nomeChegada">Passageiro</h3>
@@ -262,7 +281,6 @@
         <button onclick="document.getElementById('alertaCancel').style.display='none'" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border-radius:8px; font-weight:600;">OK</button>
     </div>
 
-    <!-- MODAL AVALIAÇÃO -->
     <div id="modalAvaliacao" class="avaliacao-modal">
         <h2>🏁 CORRIDA FINALIZADA!</h2>
         <p style="color:#86909C; margin:10px 0;">Avalie o passageiro:</p>
@@ -312,11 +330,17 @@
     <!-- CARD NOVA CORRIDA -->
     <div id="cardCorrida" class="card-corrida">
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
-        <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
+        <div class="passageiro-header">
+            <img id="fotoPassageiroCard" src="" class="foto-passageiro-card" style="display:none;" onerror="this.style.display='none'">
+            <div>
+                <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
+            </div>
+        </div>
         <div class="linha"><span>Telefone</span> <span id="cTelefone">-</span></div>
         <div class="linha"><span>Origem</span> <span id="cOrigem">-</span></div>
         <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
         <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
+        <div class="linha" id="linhaPagamento" style="display:none;"><span>Pagamento</span> <span id="cPagamento">-</span></div>
         <div class="grupo-botoes">
             <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
             <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
@@ -347,15 +371,9 @@
     <audio id="somAlerta" preload="auto" loop>
         <source src="https://larissacamila.github.io/comandos/chamarRota.mp3" type="audio/mpeg">
     </audio>
-    <audio id="somAlto" preload="auto">
-        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="somSucesso" preload="auto">
-        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="somDinheiro" preload="auto">
-        <source src="https://rotabrasil-v1cf.onrender.com/static/sounds/dinheiro.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="somAlto" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3"></audio>
+    <audio id="somSucesso" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3"></audio>
+    <audio id="somDinheiro" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/dinheiro.mp3"></audio>
 
     <script>
         // ==============================================
@@ -364,84 +382,43 @@
         function criarBotaoDeslizar(texto, icone, cor, callback) {
             const container = document.createElement('div');
             container.className = 'container-deslize';
-            
-            const progresso = document.createElement('div');
-            progresso.className = 'progresso-deslize';
-            
-            const trilha = document.createElement('div');
-            trilha.className = 'trilha-deslize';
+            const progresso = document.createElement('div'); progresso.className = 'progresso-deslize';
+            const trilha = document.createElement('div'); trilha.className = 'trilha-deslize';
             trilha.innerHTML = `<i class="${icone}"></i> ${texto}`;
+            const pino = document.createElement('div'); pino.className = 'pino-deslize';
+            pino.innerHTML = '→'; pino.style.background = cor;
+            container.appendChild(progresso); container.appendChild(trilha); container.appendChild(pino);
             
-            const pino = document.createElement('div');
-            pino.className = 'pino-deslize';
-            pino.innerHTML = '→';
-            pino.style.background = cor;
-            
-            container.appendChild(progresso);
-            container.appendChild(trilha);
-            container.appendChild(pino);
-            
-            let arrastando = false;
-            let concluido = false;
-            let callbackExecutado = false;
-            
+            let arrastando = false, concluido = false, callbackExecutado = false;
             const larguraMax = () => container.offsetWidth - pino.offsetWidth - 6;
             
             pino.addEventListener('pointerdown', (e) => {
                 if (concluido || callbackExecutado) return;
-                arrastando = true;
-                pino.setPointerCapture(e.pointerId);
-                e.preventDefault();
-                e.stopPropagation();
+                arrastando = true; pino.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
             });
-            
             pino.addEventListener('pointermove', (e) => {
                 if (!arrastando || concluido || callbackExecutado) return;
                 const rect = container.getBoundingClientRect();
                 let x = e.clientX - rect.left - (pino.offsetWidth / 2);
                 x = Math.max(3, Math.min(x, larguraMax()));
-                pino.style.left = x + 'px';
-                progresso.style.width = (x + pino.offsetWidth/2) + 'px';
-                
+                pino.style.left = x + 'px'; progresso.style.width = (x + pino.offsetWidth/2) + 'px';
                 if (x >= larguraMax() - 10 && !callbackExecutado) {
-                    concluido = true;
-                    arrastando = false;
-                    callbackExecutado = true;
-                    
-                    pino.classList.add('concluido');
-                    container.classList.add('concluido');
-                    pino.style.left = larguraMax() + 'px';
-                    progresso.style.width = '100%';
-                    pino.innerHTML = '✓';
-                    
-                    if (callback) {
-                        setTimeout(() => callback(), 300);
-                    }
+                    concluido = true; arrastando = false; callbackExecutado = true;
+                    pino.classList.add('concluido'); container.classList.add('concluido');
+                    pino.style.left = larguraMax() + 'px'; progresso.style.width = '100%'; pino.innerHTML = '✓';
+                    if (callback) setTimeout(() => callback(), 300);
                 }
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
             });
-            
             pino.addEventListener('pointerup', () => {
-                if (!arrastando) return;
-                arrastando = false;
+                if (!arrastando) return; arrastando = false;
                 if (!concluido && !callbackExecutado) {
-                    pino.style.transition = 'left 0.3s ease';
-                    pino.style.left = '3px';
-                    progresso.style.transition = 'width 0.3s ease';
-                    progresso.style.width = '0px';
-                    setTimeout(() => {
-                        pino.style.transition = 'left 0.1s ease';
-                        progresso.style.transition = 'width 0.1s ease';
-                    }, 300);
+                    pino.style.transition = 'left 0.3s ease'; pino.style.left = '3px';
+                    progresso.style.transition = 'width 0.3s ease'; progresso.style.width = '0px';
+                    setTimeout(() => { pino.style.transition = 'left 0.1s ease'; progresso.style.transition = 'width 0.1s ease'; }, 300);
                 }
             });
-            
-            container.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            
+            container.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
             return container;
         }
 
@@ -460,7 +437,6 @@
         let notaAvaliacao = 0;
         let timerCorrida = null;
         let segundosCorrida = 15;
-        let somAlertaInterval = null;
 
         const somAlerta = document.getElementById('somAlerta');
         const somAlto = document.getElementById('somAlto');
@@ -483,7 +459,7 @@
         }
 
         // ==============================================
-        // 📍 GPS (COMO ESTAVA)
+        // 📍 GPS
         // ==============================================
         function iniciarGPS() {
             if (!navigator.geolocation) return;
@@ -494,9 +470,14 @@
                     document.getElementById('mapaFrame').src = 
                         `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
                     if (estado.aceito && corrida) {
+                        // 🔥 ENVIA LOCALIZAÇÃO + FOTO DO MOTORISTA
                         socket.emit('localizacao_motorista', {
                             corrida_id: corrida.corrida_id || corrida.id,
-                            lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id
+                            lat: posicaoAtual.lat,
+                            lng: posicaoAtual.lng,
+                            motorista_id: usuario.id,
+                            motorista_nome: usuario.nome,
+                            motorista_foto: usuario.foto_perfil || ''
                         });
                     }
                 },
@@ -506,47 +487,18 @@
         }
 
         // ==============================================
-        // 🔊 SOM TOCANDO MAIS VEZES (REPETIÇÃO)
+        // 🔊 SOM
         // ==============================================
         function iniciarSomAlertaRepetido() {
-            // Para qualquer som anterior
-            pararSomAlerta();
-            
-            // Configura o áudio para loop
             somAlerta.loop = true;
             somAlerta.currentTime = 0;
-            
-            // Tenta tocar
-            const tocar = () => {
-                somAlerta.play().catch(() => {
-                    // Se falhar, tenta novamente em 500ms
-                    setTimeout(tocar, 500);
-                });
-            };
-            tocar();
-            
-            // Backup: se o loop não funcionar, reinicia manualmente
-            somAlertaInterval = setInterval(() => {
-                if (somAlerta.paused || somAlerta.ended) {
-                    somAlerta.currentTime = 0;
-                    somAlerta.play().catch(() => {});
-                }
-            }, 1000);
-            
-            console.log("🔊 Som de alerta iniciado (repetindo)");
+            somAlerta.play().catch(() => setTimeout(() => somAlerta.play(), 500));
+            console.log("🔊 Som de alerta iniciado");
         }
-        
         function pararSomAlerta() {
             somAlerta.pause();
             somAlerta.currentTime = 0;
             somAlerta.loop = false;
-            
-            if (somAlertaInterval) {
-                clearInterval(somAlertaInterval);
-                somAlertaInterval = null;
-            }
-            
-            console.log("🔇 Som de alerta parado");
         }
 
         // ==============================================
@@ -554,8 +506,7 @@
         // ==============================================
         function statusLogin(texto, tipo) {
             const el = document.getElementById('statusLogin');
-            el.textContent = texto;
-            el.className = `status-text ${tipo}`;
+            el.textContent = texto; el.className = `status-text ${tipo}`;
         }
 
         async function cadastrar() {
@@ -613,13 +564,11 @@
 
         function sair() {
             if (estado.aceito && !confirm('Corrida em andamento! Sair mesmo assim?')) return;
-            localStorage.clear();
-            limparTudo();
-            window.location.reload();
+            localStorage.clear(); limparTudo(); window.location.reload();
         }
 
         // ==============================================
-        // 🟢 ONLINE / OFFLINE - COM ONDINHAS
+        // 🟢 ONLINE / OFFLINE
         // ==============================================
         async function ficarOnline() {
             if (!usuario || !token) return mostrarErro("Faça login!");
@@ -629,13 +578,10 @@
                 });
                 document.getElementById('btnOnline').style.display = 'none';
                 document.getElementById('btnOffline').style.display = 'block';
-                
                 const statusEl = document.getElementById('statusMotorista');
                 statusEl.className = 'status-bolinha online';
                 statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>';
-                
                 socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
-                falar("Você está online!");
             } catch (e) { mostrarErro("Erro de conexão"); }
         }
 
@@ -646,32 +592,55 @@
                 });
                 document.getElementById('btnOnline').style.display = 'block';
                 document.getElementById('btnOffline').style.display = 'none';
-                
                 const statusEl = document.getElementById('statusMotorista');
                 statusEl.className = 'status-bolinha offline';
                 statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>';
-                
                 socket.emit('motorista_offline', { id: usuario.id });
                 if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
             } catch (e) {}
         }
 
         // ==============================================
-        // 🚨 NOVA CORRIDA
+        // 🚨 NOVA CORRIDA (RECEBENDO FOTO DO PASSAGEIRO)
         // ==============================================
         socket.on('nova_corrida', (dados) => {
             if (estado.aceito) return;
+            
+            console.log("📥 NOVA CORRIDA RECEBIDA:", dados);
+            
             corrida = dados;
             estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
             
-            // 🔊 SOM TOCANDO MAIS VEZES
             iniciarSomAlertaRepetido();
+            
+            // 🔥 EXIBE FOTO DO PASSAGEIRO
+            const fotoPassageiro = dados.foto_passageiro || dados.foto_perfil || '';
+            const fotoEl = document.getElementById('fotoPassageiroCard');
+            if (fotoPassageiro) {
+                fotoEl.src = fotoPassageiro;
+                fotoEl.style.display = 'block';
+            } else {
+                fotoEl.style.display = 'none';
+            }
             
             document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
             document.getElementById('cTelefone').textContent = dados.passageiro_telefone || "Não informado";
-            document.getElementById('cOrigem').textContent = dados.origem;
-            document.getElementById('cDestino').textContent = dados.destino;
+            document.getElementById('cOrigem').textContent = dados.origem || '-';
+            document.getElementById('cDestino').textContent = dados.destino || '-';
             document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
+            
+            // 🔥 EXIBE FORMA DE PAGAMENTO
+            const formaPgto = dados.forma_pagamento || 'pix';
+            const linhaPgto = document.getElementById('linhaPagamento');
+            const cPagamento = document.getElementById('cPagamento');
+            if (formaPgto === 'dinheiro') {
+                linhaPgto.style.display = 'flex';
+                cPagamento.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>';
+            } else {
+                linhaPgto.style.display = 'flex';
+                cPagamento.innerHTML = '<span class="badge-pagamento badge-pix">💳 Pix/Carteira</span>';
+            }
+            
             document.getElementById('cardCorrida').style.display = 'block';
             document.getElementById('botoesFixos').style.display = 'none';
             
@@ -685,10 +654,7 @@
             timerCorrida = setInterval(() => {
                 segundosCorrida--;
                 atualizarBtnRecusar();
-                if (segundosCorrida <= 0) {
-                    clearInterval(timerCorrida);
-                    recusarCorrida();
-                }
+                if (segundosCorrida <= 0) { clearInterval(timerCorrida); recusarCorrida(); }
             }, 1000);
         }
 
@@ -705,7 +671,7 @@
         }
 
         // ==============================================
-        // ✅ ACEITAR
+        // ✅ ACEITAR CORRIDA (ENVIA FOTO DO MOTORISTA)
         // ==============================================
         async function aceitarCorrida() {
             clearInterval(timerCorrida);
@@ -714,11 +680,22 @@
             if (!corrida || !token || !usuario) return mostrarErro("Erro ao aceitar");
             
             const corridaId = corrida.corrida_id || corrida.id;
+            
+            // 🔥 DADOS COMPLETOS DO MOTORISTA (incluindo foto)
+            const dadosMotorista = {
+                motorista_id: String(usuario.id),
+                nome_motorista: usuario.nome,
+                motorista_foto: usuario.foto_perfil || '',
+                carro: usuario.carro || '',
+                placa: usuario.placa || '',
+                status: "aceito"
+            };
+            
             try {
                 const res = await fetch(`${API_URL}/aceitar_corrida/${corridaId}`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ motorista_id: String(usuario.id), nome_motorista: usuario.nome, status: "aceito" })
+                    body: JSON.stringify(dadosMotorista)
                 });
                 
                 if (res.ok || res.status === 200 || res.status === 201) {
@@ -739,13 +716,22 @@
                         criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)
                     );
                     
-                    socket.emit('corrida_aceita', { corrida_id: corridaId, motorista: usuario });
+                    // 🔥 EMITE CORRIDA ACEITA COM DADOS COMPLETOS
+                    socket.emit('corrida_aceita', {
+                        ...dadosMotorista,
+                        corrida_id: corridaId
+                    });
                     socket.emit("entrar_na_sala", { corrida_id: corridaId });
                     
+                    // 🔥 INICIA ENVIO DE LOCALIZAÇÃO COM FOTO
                     envioLocalizacaoInterval = setInterval(() => {
                         socket.emit('localizacao_motorista', {
-                            corrida_id: corridaId, lat: posicaoAtual.lat, lng: posicaoAtual.lng,
-                            motorista_id: usuario.id, status: estado
+                            corrida_id: corridaId,
+                            lat: posicaoAtual.lat,
+                            lng: posicaoAtual.lng,
+                            motorista_id: usuario.id,
+                            motorista_nome: usuario.nome,
+                            motorista_foto: usuario.foto_perfil || ''
                         });
                     }, 1500);
                     
@@ -764,8 +750,11 @@
             
             estado.pegouPassageiro = true;
             
-            const destino = (corrida.origem_lat && corrida.origem_lng) 
-                ? `${corrida.origem_lat},${corrida.origem_lng}` : corrida.origem;
+            const destino = (corrida.lat_origem && corrida.lon_origem) 
+                ? `${corrida.lat_origem},${corrida.lon_origem}` 
+                : (corrida.origem_lat && corrida.origem_lng 
+                    ? `${corrida.origem_lat},${corrida.origem_lng}` 
+                    : corrida.origem);
             
             document.getElementById('mapaFrame').src = 
                 `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
@@ -778,8 +767,11 @@
         function mostrarCardPassageiro() {
             if (!corrida) return;
             
-            document.getElementById('fotoChegada').src = corrida.foto_passageiro || 
+            // 🔥 USA A FOTO DO PASSAGEIRO RECEBIDA
+            const fotoPassageiro = corrida.foto_passageiro || corrida.foto_perfil || 
                 "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
+            
+            document.getElementById('fotoChegada').src = fotoPassageiro;
             document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
             document.getElementById('cardPassageiroChegada').style.display = 'block';
             
@@ -802,8 +794,11 @@
             estado.viagemIniciada = true;
             document.getElementById('cardPassageiroChegada').style.display = 'none';
             
-            const destino = (corrida.destino_lat && corrida.destino_lng) 
-                ? `${corrida.destino_lat},${corrida.destino_lng}` : corrida.destino;
+            const destino = (corrida.lat_destino && corrida.lon_destino) 
+                ? `${corrida.lat_destino},${corrida.lon_destino}` 
+                : (corrida.destino_lat && corrida.destino_lng 
+                    ? `${corrida.destino_lat},${corrida.destino_lng}` 
+                    : corrida.destino);
             
             document.getElementById('mapaFrame').src = 
                 `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
@@ -839,7 +834,9 @@
                     body: JSON.stringify({
                         status: "finalizada", valor_final: valorFinal,
                         distancia_total: parseFloat(corrida.distancia || 0),
-                        motorista_id: String(usuario.id), finalizado_em: new Date().toISOString()
+                        motorista_id: String(usuario.id),
+                        motorista_nome: usuario.nome,
+                        finalizado_em: new Date().toISOString()
                     })
                 });
                 
@@ -848,7 +845,8 @@
                     falar("Corrida finalizada! R$ " + valorFinal.toFixed(2).replace('.', ','));
                     
                     socket.emit('viagem_finalizada', { 
-                        corrida_id: corridaId, valor: valorFinal, motorista_nome: usuario.nome 
+                        corrida_id: corridaId, valor: valorFinal, 
+                        motorista_nome: usuario.nome, motorista_id: usuario.id 
                     });
                     
                     if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
@@ -861,9 +859,7 @@
                     document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
                     document.getElementById('comentarioAvaliacao').value = '';
                 }
-            } catch (e) { 
-                mostrarErro("Erro ao finalizar: " + e.message); 
-            }
+            } catch (e) { mostrarErro("Erro ao finalizar: " + e.message); }
         }
 
         // ==============================================
@@ -884,18 +880,19 @@
         // ==============================================
         async function enviarAvaliacao() {
             if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; }
-            
             const comentario = document.getElementById('comentarioAvaliacao').value.trim();
             const corridaId = corrida?.corrida_id || corrida?.id;
-            
             try {
                 if (corridaId) {
                     await fetch(`${API_URL}/avaliar`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            corrida_id: corridaId, passageiro_id: String(corrida?.passageiro_id),
-                            motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: comentario
+                            corrida_id: corridaId, 
+                            passageiro_id: String(corrida?.passageiro_id),
+                            motorista_id: String(usuario.id), 
+                            nota: notaAvaliacao, 
+                            comentario: comentario
                         })
                     });
                 }
@@ -920,16 +917,6 @@
             }
         });
 
-        socket.on("cliente_desconectado", (dados) => {
-            if (corrida && (dados?.corrida_id == (corrida.corrida_id || corrida.id))) {
-                somAlto.play().catch(() => {});
-                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-                limparTudo();
-                document.getElementById('alertaCancel').style.display = 'block';
-                falar("Passageiro desconectado!");
-            }
-        });
-
         // ==============================================
         // 🧹 LIMPEZA
         // ==============================================
@@ -946,23 +933,24 @@
             document.getElementById('btnCancelarCorrida').style.display = 'none';
             document.getElementById('containerAcoesCorrida').innerHTML = '';
             document.getElementById('containerBtnEmbarque').innerHTML = '';
+            document.getElementById('fotoPassageiroCard').style.display = 'none';
+            document.getElementById('linhaPagamento').style.display = 'none';
             
             document.getElementById('botoesFixos').style.display = 'block';
             
             document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
             document.getElementById('comentarioAvaliacao').value = '';
             
-            // Para todos os sons
             document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
             pararSomAlerta();
             
             clearInterval(timerCorrida);
+            if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
         }
 
         async function cancelarCorrida() {
             if (!corrida) return;
             if (!confirm("Cancelar esta corrida?")) return;
-            
             const corridaId = corrida.corrida_id || corrida.id;
             try {
                 await fetch(`${API_URL}/cancelar_corrida_motorista/${corridaId}`, {
@@ -994,7 +982,6 @@
                 socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
             }
         });
-
         socket.on('disconnect', () => mostrarErro("Conexão perdida!"));
         socket.on('connect_error', () => mostrarErro("Servidor indisponível"));
 
