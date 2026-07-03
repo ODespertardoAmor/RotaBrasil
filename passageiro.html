@@ -64,7 +64,6 @@
         }
         .indicador-mapa.visivel { display: block; }
 
-        /* PAGAMENTO */
         .opcoes-pagamento {
             display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0;
         }
@@ -84,14 +83,13 @@
         .btn-pix.selecionado { background: var(--cor-info); border-color: white; }
         .btn-dinheiro.selecionado { background: var(--cor-alerta); border-color: white; color: #000; }
 
-        /* AVISO SALDO */
         .aviso-saldo {
             background: rgba(239,68,68,0.15); border: 1px solid var(--cor-perigo);
             border-radius: 8px; padding: 10px; margin-top: 10px; text-align: center;
             font-size: 13px; color: var(--cor-perigo); display: none;
         }
 
-        .debug-info { background: #000; color: #0f0; font-size: 10px; padding: 5px; font-family: monospace; display: none; margin-top: 5px; border-radius: 4px; max-height: 120px; overflow-y: auto; }
+        .debug-info { background: #000; color: #0f0; font-size: 10px; padding: 5px; font-family: monospace; display: block; margin-top: 5px; border-radius: 4px; max-height: 150px; overflow-y: auto; }
         .janela-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:999; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .conteudo-modal { background: var(--cor-card); width: 100%; max-width: 400px; padding: 24px; border-radius: 16px; text-align: center; border: 1px solid var(--cor-borda); }
         .estrelas-selecao { margin: 15px 0; font-size: 30px; cursor: pointer; color: var(--cor-card-claro); }
@@ -158,7 +156,6 @@
                 <p>Tempo: <strong id="txtTempo">--</strong></p>
                 <p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span></p>
             </div>
-            <!-- OPÇÃO DE PAGAMENTO -->
             <div class="opcoes-pagamento" id="opcoesPagamento">
                 <div class="btn-pagamento btn-pix selecionado" onclick="selecionarPagamento('pix')" id="btnPix">
                     💳 Pix / Carteira
@@ -169,14 +166,12 @@
                     <small>Pagar ao motorista</small>
                 </div>
             </div>
-            <!-- AVISO DE SALDO INSUFICIENTE -->
             <div class="aviso-saldo" id="avisoSaldo">
                 ⚠️ Saldo insuficiente! <a href="#" onclick="abrirCarteira()" style="color:white;text-decoration:underline;">Adicionar saldo</a> ou escolha 💵 Dinheiro
             </div>
             <button id="btnChamar" class="btn-sucesso-grande" onclick="chamarCorrida()">🚀 CHAMAR ROTA BRASIL</button>
         </div>
         
-        <!-- MAPA -->
         <div id="cardMapa" class="card-mapa-container">
             <div class="indicador-mapa" id="indicadorMapa">
                 🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min
@@ -209,15 +204,24 @@
     </div>
 
     <script>
+        // ============================================================
+        // CONFIGURAÇÕES
+        // ============================================================
         const API = "https://rotabrasil-tobu.onrender.com";
-        const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
+        const socket = io(API, { 
+            transports: ['websocket', 'polling'], 
+            reconnection: true, 
+            timeout: 20000,
+            forceNew: true
+        });
 
         let token, passageiro, corridaAtual;
-        let latOrigem, lonOrigem, latDestino, lonDestino, latMotorista, lonMotorista;
+        let latOrigem, lonOrigem, latDestino, lonDestino;
         let distancia, valorFinal, notaAvaliacao = 0;
         let corridaIdAvaliacao, motoristaIdAvaliacao;
         let formaPagamento = 'pix';
         let saldoCarteira = 0;
+        let pollingInterval = null;
 
         // ========== MAPA ==========
         let mapaLeaflet = null;
@@ -227,164 +231,289 @@
         let linhaRota = null;
 
         const iconeCarro = L.divIcon({
-            html: '<div style="font-size: 35px; transform: translate(-50%, -50%);">🚗</div>',
-            className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+            html: '<div style="font-size: 38px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));">🚗</div>',
+            className: '', iconSize: [45, 45], iconAnchor: [22, 22]
         });
         const iconePassageiro = L.divIcon({
-            html: '<div style="font-size: 30px; transform: translate(-50%, -50%);">📍</div>',
+            html: '<div style="font-size: 32px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));">📍</div>',
             className: '', iconSize: [35, 35], iconAnchor: [17, 35]
         });
         const iconeDestino = L.divIcon({
-            html: '<div style="font-size: 30px; transform: translate(-50%, -50%);">🏁</div>',
+            html: '<div style="font-size: 32px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));">🏁</div>',
             className: '', iconSize: [35, 35], iconAnchor: [17, 35]
         });
 
         function inicializarMapaLeaflet() {
+            debug("🗺️ Inicializando mapa...");
             document.getElementById('cardMapa').style.display = 'block';
-            if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
             
+            if (mapaLeaflet) { 
+                mapaLeaflet.remove(); 
+                mapaLeaflet = null;
+                markerPassageiro = null;
+                markerMotorista = null;
+                markerDestino = null;
+                linhaRota = null;
+            }
+
             const centroLat = latOrigem || -23.5505;
             const centroLng = lonOrigem || -46.6333;
-            
-            mapaLeaflet = L.map('mapaLeaflet', { zoomControl: true, attributionControl: false })
-                .setView([centroLat, centroLng], 15);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
-            
+
+            mapaLeaflet = L.map('mapaLeaflet', { 
+                zoomControl: true, 
+                attributionControl: false 
+            }).setView([centroLat, centroLng], 15);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                maxZoom: 19 
+            }).addTo(mapaLeaflet);
+
+            // Marcador do passageiro
             if (latOrigem && lonOrigem) {
                 markerPassageiro = L.marker([latOrigem, lonOrigem], { icon: iconePassageiro })
-                    .addTo(mapaLeaflet).bindPopup('📍 Você está aqui');
+                    .addTo(mapaLeaflet)
+                    .bindPopup('📍 Você está aqui');
+                debug("📍 Marcador passageiro: " + latOrigem + ", " + lonOrigem);
             }
+
+            // Marcador do destino
             if (latDestino && lonDestino) {
                 markerDestino = L.marker([latDestino, lonDestino], { icon: iconeDestino })
-                    .addTo(mapaLeaflet).bindPopup('🏁 Destino');
+                    .addTo(mapaLeaflet)
+                    .bindPopup('🏁 Destino');
             }
-            markerMotorista = L.marker([centroLat, centroLng], { icon: iconeCarro })
-                .addTo(mapaLeaflet).bindPopup('🚗 Motorista');
+
+            // Marcador do motorista (carrinho) - começa em SP se não tiver localização
+            const motLat = latMotorista || centroLat;
+            const motLng = lonMotorista || centroLng;
+            
+            markerMotorista = L.marker([motLat, motLng], { icon: iconeCarro })
+                .addTo(mapaLeaflet)
+                .bindPopup('🚗 Motorista');
+            
+            debug("🚗 Carrinho inicial: " + motLat + ", " + motLng);
         }
 
         function atualizarPosicaoMotorista(lat, lng) {
-            if (!markerMotorista || !mapaLeaflet) return;
+            if (!mapaLeaflet) {
+                debug("⚠️ Mapa não inicializado! Criando...");
+                latMotorista = lat;
+                lonMotorista = lng;
+                inicializarMapaLeaflet();
+                return;
+            }
+
+            if (!markerMotorista) {
+                debug("⚠️ Marcador do motorista não existe! Recriando...");
+                markerMotorista = L.marker([lat, lng], { icon: iconeCarro })
+                    .addTo(mapaLeaflet)
+                    .bindPopup('🚗 Motorista');
+            }
+
+            // Atualiza posição do carrinho
             markerMotorista.setLatLng([lat, lng]);
+            
+            // Atualiza linha de rota
             if (markerPassageiro) {
                 const posPassageiro = markerPassageiro.getLatLng();
                 if (linhaRota) {
                     linhaRota.setLatLngs([posPassageiro, [lat, lng]]);
                 } else {
                     linhaRota = L.polyline([posPassageiro, [lat, lng]], {
-                        color: '#FF007F', weight: 3, dashArray: '10, 10', opacity: 0.8
+                        color: '#FF007F',
+                        weight: 3,
+                        dashArray: '10, 10',
+                        opacity: 0.8
                     }).addTo(mapaLeaflet);
                 }
             }
-            if (markerPassageiro) {
+
+            // Centraliza mapa
+            if (markerPassageiro && markerMotorista) {
                 const grupo = L.featureGroup([markerPassageiro, markerMotorista]);
                 mapaLeaflet.fitBounds(grupo.getBounds().pad(0.3), { animate: true });
             } else {
-                mapaLeaflet.panTo([lat, lng], { animate: true });
+                mapaLeaflet.setView([lat, lng], 15, { animate: true });
             }
+
+            debug(`🚗 Carrinho atualizado: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
         }
 
-        // ========== PAGAMENTO ==========
-        function selecionarPagamento(tipo) {
-            formaPagamento = tipo;
-            document.getElementById('btnPix').classList.toggle('selecionado', tipo === 'pix');
-            document.getElementById('btnDinheiro').classList.toggle('selecionado', tipo === 'dinheiro');
-            
-            // Se escolheu dinheiro, esconde aviso de saldo
-            if (tipo === 'dinheiro') {
-                document.getElementById('avisoSaldo').style.display = 'none';
-            } else if (tipo === 'pix' && saldoCarteira < valorFinal) {
-                // Se escolheu pix e não tem saldo, mostra aviso
-                document.getElementById('avisoSaldo').style.display = 'block';
-            }
-            
-            debug(`💳 Pagamento: ${tipo === 'pix' ? 'Pix/Carteira' : 'Dinheiro'}`);
-        }
-
-        async function verificarSaldo() {
-            try {
-                const r = await fetch(`${API}/carteira/saldo`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const d = await r.json();
-                saldoCarteira = d.saldo || 0;
-                return saldoCarteira;
-            } catch (e) {
-                saldoCarteira = 0;
-                return 0;
-            }
-        }
-
-        // ========== DEBUG ==========
+        // ========== DEBUG (SEMPRE VISÍVEL) ==========
         function debug(msg) {
             const el = document.getElementById('debugInfo');
-            el.style.display = 'block';
             const time = new Date().toLocaleTimeString();
             el.innerHTML += `[${time}] ${msg}<br>`;
             el.scrollTop = el.scrollHeight;
             console.log("🐛", msg);
+            
+            // Mantém apenas últimas 50 linhas
+            const lines = el.innerHTML.split('<br>');
+            if (lines.length > 50) {
+                el.innerHTML = lines.slice(-50).join('<br>');
+            }
         }
+        
         function toggleDebug() { 
             const el = document.getElementById('debugInfo'); 
             el.style.display = el.style.display === 'block' ? 'none' : 'block'; 
         }
 
-        // ========== SOCKET ==========
+        // ============================================================
+        // 🔥 SOCKET - ESCUTA TUDO!
+        // ============================================================
         socket.on("connect", () => {
             debug("✅ Socket conectado! ID: " + socket.id);
-            if (corridaAtual?.id) {
-                socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id });
+            if (corridaAtual?.id || corridaAtual?.corrida_id) {
+                const cid = corridaAtual.id || corridaAtual.corrida_id;
+                socket.emit("entrar_na_sala", { corrida_id: cid });
+                debug("🔗 Reconectado à sala: " + cid);
             }
         });
+
         socket.on("disconnect", (r) => debug("❌ Desconectado: " + r));
-        socket.on("connect_error", (e) => debug("⚠️ Erro: " + e.message));
+        socket.on("connect_error", (e) => debug("⚠️ Erro socket: " + e.message));
 
-        socket.on("localizacao_motorista", (d) => processarLocalizacao(d));
-        socket.on("motorista_localizacao", (d) => processarLocalizacao(d));
-        socket.on("location_update", (d) => processarLocalizacao(d));
-        socket.on("motorista_posicao", (d) => processarLocalizacao(d));
-        socket.on("atualizacao_localizacao", (d) => processarLocalizacao(d));
+        // 🔥 ESCUTA TODOS OS EVENTOS POSSÍVEIS DE LOCALIZAÇÃO
+        const eventosLocalizacao = [
+            "localizacao_motorista",
+            "motorista_localizacao", 
+            "location_update",
+            "motorista_posicao",
+            "atualizacao_localizacao",
+            "driver_location",
+            "driver_position",
+            "tracking_update"
+        ];
 
+        eventosLocalizacao.forEach(evento => {
+            socket.on(evento, (dados) => {
+                debug(`📍 Evento "${evento}" recebido: ${JSON.stringify(dados)}`);
+                processarDadosLocalizacao(dados);
+            });
+        });
+
+        // 🔥 ESCUTA QUALQUER EVENTO (captura eventos não listados)
         socket.onAny((eventName, ...args) => {
-            if (eventName.includes('localizacao') || eventName.includes('location') || eventName.includes('posicao')) {
-                processarLocalizacao(args[0]);
+            // Verifica se o nome do evento ou os dados contêm localização
+            const dados = args[0];
+            if (dados && (
+                eventName.includes('local') || 
+                eventName.includes('loc') || 
+                eventName.includes('pos') ||
+                eventName.includes('track') ||
+                eventName.includes('driver') ||
+                eventName.includes('motorista')
+            )) {
+                debug(`📡 Evento capturado: "${eventName}" -> ${JSON.stringify(dados)}`);
+                processarDadosLocalizacao(dados);
             }
         });
 
-        function processarLocalizacao(dados) {
+        function processarDadosLocalizacao(dados) {
             if (!dados) return;
-            const lat = dados.lat ?? dados.latitude;
-            const lng = dados.lng ?? dados.longitude;
-            if (lat == null || lng == null) return;
             
-            latMotorista = lat; lonMotorista = lng;
-            atualizarPosicaoMotorista(lat, lng);
-            atualizarDistancias();
+            // Tenta extrair lat/lng de qualquer formato
+            const lat = dados.lat || dados.latitude || dados.lat_motorista || dados.latitude_motorista;
+            const lng = dados.lng || dados.longitude || dados.lng_motorista || dados.longitude_motorista;
             
-            if (latOrigem && lonOrigem) {
-                const distKm = calcularDistancia(latOrigem, lonOrigem, lat, lng);
-                const tempoMin = Math.round(distKm * 2.5);
-                document.getElementById('distanciaMapa').textContent = distKm.toFixed(1);
-                document.getElementById('tempoMapa').textContent = tempoMin;
-                document.getElementById('indicadorMapa').classList.add('visivel');
+            if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+                latMotorista = lat;
+                lonMotorista = lng;
+                
+                // Atualiza carrinho no mapa
+                atualizarPosicaoMotorista(lat, lng);
+                
+                // Atualiza distâncias
+                if (latOrigem && lonOrigem) {
+                    const distKm = calcularDistancia(latOrigem, lonOrigem, lat, lng);
+                    const tempoMin = Math.round(distKm * 2.5);
+                    
+                    document.getElementById('distanciaMapa').textContent = distKm.toFixed(1);
+                    document.getElementById('tempoMapa').textContent = tempoMin;
+                    document.getElementById('indicadorMapa').classList.add('visivel');
+                    
+                    // Atualiza status
+                    const st = document.getElementById('conteudoStatus');
+                    if (st) {
+                        const dEl = st.querySelector('.distancia-atual');
+                        const tEl = st.querySelector('.tempo-atual');
+                        if (dEl) dEl.textContent = `${distKm.toFixed(1)} km`;
+                        if (tEl) tEl.textContent = `~${tempoMin} min`;
+                        
+                        if (distKm < 0.3) {
+                            const txt = st.querySelector('.status-texto');
+                            if (txt && !txt.innerHTML.includes('CHEGOU')) {
+                                txt.innerHTML = '✅ MOTORISTA CHEGOU! 🛑';
+                                const foto = st.querySelector('.foto-motorista-card');
+                                if (foto) foto.classList.add('chegou');
+                                falar("Motorista chegou!");
+                            }
+                        }
+                    }
+                }
+            } else {
+                debug(`⚠️ Dados de localização inválidos: ${JSON.stringify(dados)}`);
             }
         }
 
+        // ============================================================
+        // 🔥 POLLING - BUSCA LOCALIZAÇÃO SE SOCKET FALHAR
+        // ============================================================
+        function iniciarPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            const corridaId = corridaAtual?.id || corridaAtual?.corrida_id;
+            if (!corridaId) return;
+            
+            debug("🔄 Iniciando polling para corrida: " + corridaId);
+            
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API}/localizacao_motorista/${corridaId}`);
+                    if (res.ok) {
+                        const dados = await res.json();
+                        if (dados.lat && dados.lng) {
+                            debug(`📍 Polling: ${dados.lat}, ${dados.lng}`);
+                            processarDadosLocalizacao(dados);
+                        }
+                    }
+                } catch (e) {
+                    // Silencioso - tenta de novo
+                }
+            }, 2000); // A cada 2 segundos
+        }
+
+        function pararPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                debug("⏹️ Polling parado");
+            }
+        }
+
+        // ============================================================
+        // OUTROS EVENTOS SOCKET
+        // ============================================================
         socket.on("corrida_aceita", (dados) => {
-            debug("🚗 Corrida aceita! Dados: " + JSON.stringify(dados));
+            debug("🚗 Corrida aceita! " + JSON.stringify(dados));
             corridaAtual = { ...corridaAtual, ...dados };
             const cid = corridaAtual.id || corridaAtual.corrida_id || dados.corrida_id;
+            
             if (cid) {
                 socket.emit("entrar_na_sala", { corrida_id: cid });
-                debug("🔗 Entrou na sala: " + cid);
+                debug("🔗 Sala: " + cid);
+                iniciarPolling(); // Inicia polling como backup
             }
+            
             mostrarStatusAceito(dados);
             inicializarMapaLeaflet();
             falar(`${dados.motorista_nome || 'Motorista'} aceitou!`);
         });
 
         socket.on("viagem_finalizada", (d) => {
-            debug("🏁 Viagem finalizada!");
+            debug("🏁 Finalizada! " + JSON.stringify(d));
+            pararPolling();
             corridaIdAvaliacao = corridaAtual?.id || d.corrida_id;
             motoristaIdAvaliacao = d.motorista_id || corridaAtual?.motorista_id;
             document.getElementById('modalAvaliacao').style.display = 'flex';
@@ -392,29 +521,15 @@
         });
 
         socket.on("corrida_cancelada", () => { 
-            debug("❌ Cancelada"); resetarInterface(); alert("Corrida cancelada."); 
+            debug("❌ Cancelada"); 
+            pararPolling();
+            resetarInterface(); 
+            alert("Corrida cancelada."); 
         });
 
-        // ========== DISTÂNCIAS ==========
-        function atualizarDistancias() {
-            if (!latOrigem || !lonOrigem || !latMotorista || !lonMotorista) return;
-            const distKm = calcularDistancia(latOrigem, lonOrigem, latMotorista, lonMotorista);
-            const tempoMin = Math.round(distKm * 2.5);
-            const st = document.getElementById('conteudoStatus');
-            if (st) {
-                const dEl = st.querySelector('.distancia-atual');
-                const tEl = st.querySelector('.tempo-atual');
-                if (dEl) dEl.textContent = `${distKm.toFixed(1)} km`;
-                if (tEl) tEl.textContent = `~${tempoMin} min`;
-                if (distKm < 0.3) {
-                    const txt = st.querySelector('.status-texto');
-                    if (txt) txt.innerHTML = '✅ MOTORISTA CHEGOU!';
-                    const foto = st.querySelector('.foto-motorista-card');
-                    if (foto) foto.classList.add('chegou');
-                }
-            }
-        }
-
+        // ============================================================
+        // FUNÇÕES AUXILIARES
+        // ============================================================
         function calcularDistancia(lat1, lon1, lat2, lon2) {
             const R = 6371;
             const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
@@ -422,7 +537,15 @@
             return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // ========== UI ==========
+        function falar(t) { 
+            if(window.speechSynthesis){
+                window.speechSynthesis.cancel();
+                const m=new SpeechSynthesisUtterance(t);
+                m.lang='pt-BR'; m.rate=1.1;
+                speechSynthesis.speak(m);
+            } 
+        }
+
         function mostrarStatusAceito(dados) {
             document.getElementById('cardValor').style.display = 'none';
             document.getElementById('cardStatus').style.display = 'block';
@@ -447,32 +570,44 @@
                 </div>`;
         }
 
-        // ========== CORRIDA ==========
-        async function chamarCorrida() {
-            if (!latOrigem || !latDestino || valorFinal <= 0) {
-                return alert("⚠️ Calcule o valor primeiro!");
+        function selecionarPagamento(tipo) {
+            formaPagamento = tipo;
+            document.getElementById('btnPix').classList.toggle('selecionado', tipo === 'pix');
+            document.getElementById('btnDinheiro').classList.toggle('selecionado', tipo === 'dinheiro');
+            if (tipo === 'dinheiro') {
+                document.getElementById('avisoSaldo').style.display = 'none';
             }
+        }
 
-            // 🔥 VERIFICA SALDO APENAS SE FOR PIX
+        function resetarInterface() {
+            pararPolling();
+            corridaAtual=null;
+            document.getElementById('cardStatus').style.display='none'; 
+            document.getElementById('cardMapa').style.display='none';
+            document.getElementById('indicadorMapa').classList.remove('visivel');
+            document.getElementById('avisoSaldo').style.display = 'none';
+            
+            if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
+            markerPassageiro = null; markerMotorista = null; markerDestino = null; linhaRota = null;
+            
+            const btn=document.getElementById('btnChamar'); 
+            if(btn){btn.disabled=false;btn.classList.remove('btn-blocked');btn.innerHTML='🚀 CHAMAR ROTA BRASIL';}
+        }
+
+        // ============================================================
+        // CORRIDA E CÁLCULO
+        // ============================================================
+        async function chamarCorrida() {
+            if (!latOrigem || !latDestino || valorFinal <= 0) return alert("⚠️ Calcule o valor primeiro!");
+
             if (formaPagamento === 'pix') {
                 await verificarSaldo();
-                
                 if (saldoCarteira < valorFinal) {
                     document.getElementById('avisoSaldo').style.display = 'block';
                     document.getElementById('avisoSaldo').innerHTML = 
-                        `⚠️ Saldo insuficiente! Você tem R$ ${saldoCarteira.toFixed(2)} e a corrida custa R$ ${valorFinal.toFixed(2)}.<br>
-                         <a href="#" onclick="abrirCarteira()" style="color:white;text-decoration:underline;">💳 Adicionar saldo</a> 
-                         ou <a href="#" onclick="selecionarPagamento('dinheiro')" style="color:#EAB308;text-decoration:underline;">💵 pagar em dinheiro</a>`;
-                    return;
-                }
-                
-                // Confirma se quer pagar com saldo
-                if (!confirm(`💳 Pagar R$ ${valorFinal.toFixed(2)} com saldo da carteira?\n\nSeu saldo: R$ ${saldoCarteira.toFixed(2)}`)) {
-                    return;
-                }
-            } else {
-                // 🔥 DINHEIRO: Não verifica saldo, só confirma
-                if (!confirm(`💵 Confirmar corrida em DINHEIRO?\n\nValor: R$ ${valorFinal.toFixed(2)}\n\nVocê pagará diretamente ao motorista.`)) {
+                        `⚠️ Saldo insuficiente! R$ ${saldoCarteira.toFixed(2)} de R$ ${valorFinal.toFixed(2)}.<br>
+                         <a href="#" onclick="abrirCarteira()" style="color:white;">Adicionar saldo</a> ou 
+                         <a href="#" onclick="selecionarPagamento('dinheiro')" style="color:#EAB308;">pagar em dinheiro</a>`;
                     return;
                 }
             }
@@ -480,7 +615,6 @@
             const btn = document.getElementById('btnChamar'); 
             btn.disabled = true; btn.classList.add('btn-blocked'); 
             btn.innerHTML = '⏳ Buscando...';
-            document.getElementById('avisoSaldo').style.display = 'none';
             
             try {
                 const res = await fetch(`${API}/nova_corrida`, {
@@ -547,17 +681,6 @@
             document.getElementById('txtDistancia').textContent=`${distancia.toFixed(1)} km`;
             document.getElementById('txtTempo').textContent=`${Math.round(distancia*3)} min`;
             document.getElementById('txtValor').textContent=`R$ ${valorFinal.toFixed(2)}`;
-            
-            // Verifica saldo se estiver no modo Pix
-            if (formaPagamento === 'pix') {
-                await verificarSaldo();
-                if (saldoCarteira < valorFinal) {
-                    document.getElementById('avisoSaldo').style.display = 'block';
-                    document.getElementById('avisoSaldo').innerHTML = 
-                        `⚠️ Saldo insuficiente! Você tem R$ ${saldoCarteira.toFixed(2)}.<br>
-                         <a href="#" onclick="abrirCarteira()" style="color:white;text-decoration:underline;">Adicionar saldo</a> ou escolha 💵 Dinheiro`;
-                }
-            }
         }
 
         async function geocodificar(endereco, tipo) {
@@ -594,23 +717,20 @@
             resetarInterface();
         }
 
-        function resetarInterface() {
-            corridaAtual=null; latMotorista=lonMotorista=null;
-            document.getElementById('cardStatus').style.display='none'; 
-            document.getElementById('cardMapa').style.display='none';
-            document.getElementById('indicadorMapa').classList.remove('visivel');
-            document.getElementById('avisoSaldo').style.display = 'none';
-            
-            if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
-            markerPassageiro = null; markerMotorista = null; markerDestino = null; linhaRota = null;
-            
-            const btn=document.getElementById('btnChamar'); 
-            if(btn){btn.disabled=false;btn.classList.remove('btn-blocked');btn.innerHTML='🚀 CHAMAR ROTA BRASIL';}
+        async function verificarSaldo() {
+            try {
+                const r = await fetch(`${API}/carteira/saldo`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const d = await r.json();
+                saldoCarteira = d.saldo || 0;
+                return saldoCarteira;
+            } catch (e) { return 0; }
         }
 
-        // ========== AUTENTICAÇÃO ==========
-        function falar(t) { if(window.speechSynthesis){const m=new SpeechSynthesisUtterance(t);m.lang='pt-BR';speechSynthesis.speak(m);} }
-        
+        // ============================================================
+        // AUTENTICAÇÃO
+        // ============================================================
         async function login() {
             const e=document.getElementById('email').value.trim(), s=document.getElementById('senha').value.trim();
             if(!e||!s) return alert("Preencha todos os campos!");
@@ -624,7 +744,7 @@
                     document.getElementById('loginCard').style.display='none';
                     document.getElementById('dashboard').style.display='block';
                     await verificarSaldo();
-                    debug("✅ Logado: "+passageiro.nome+" | Saldo: R$ "+saldoCarteira.toFixed(2));
+                    debug("✅ Logado: "+passageiro.nome);
                 } else alert(data.erro||"Erro");
             } catch(e) { alert("Erro de conexão"); }
         }
@@ -686,21 +806,26 @@
             }catch(e){}
         }
 
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
         document.addEventListener('DOMContentLoaded',()=>{
+            debug("🟢 App iniciado");
+            
             document.querySelectorAll('#estrelasContainer .estrela').forEach(e=>{
                 e.addEventListener('click',function(){
                     notaAvaliacao=parseInt(this.dataset.nota);
                     document.querySelectorAll('#estrelasContainer .estrela').forEach((el,i)=>{el.classList.toggle('ativa',i<notaAvaliacao);});
                 });
             });
+            
             const t=localStorage.getItem("token_passageiro"),u=localStorage.getItem("user_passageiro");
             if(t&&u){
                 token=t;passageiro=JSON.parse(u);
                 document.getElementById('loginCard').style.display='none';
                 document.getElementById('dashboard').style.display='block';
-                verificarSaldo().then(() => {
-                    debug("✅ Auto-login: "+passageiro.nome+" | Saldo: R$ "+saldoCarteira.toFixed(2));
-                });
+                verificarSaldo();
+                debug("✅ Auto-login: "+passageiro.nome);
             }
         });
     </script>
