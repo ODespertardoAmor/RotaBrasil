@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Leaflet CSS + JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         :root {
@@ -47,10 +50,35 @@
         .placa-badge { background: #000; color: #FFF; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
         .foto-motorista-card { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--cor-sucesso); margin: 10px auto; display: block; box-shadow: 0 0 20px rgba(34,197,94,0.3); }
         .foto-motorista-card.chegou { border-color: var(--cor-primaria); box-shadow: 0 0 20px rgba(255,0,127,0.3); animation: pulse 1.5s infinite; }
-        .card-mapa-container { margin-top: 20px; border-radius: 12px; overflow: hidden; border: 2px solid var(--cor-primaria); position: relative; background: #000; }
-        #mapaIframe { width: 100%; height: 350px; border: none; }
-        .indicador-mapa { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(30,41,59,0.95); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 10; border: 1px solid var(--cor-primaria); display: none; color: white; white-space: nowrap; }
+
+        /* MAPA LEAFLET */
+        .card-mapa-container { 
+            margin-top: 20px; border-radius: 12px; overflow: hidden; 
+            border: 2px solid var(--cor-primaria); position: relative; background: #000; 
+            display: none;
+        }
+        #mapaLeaflet { width: 100%; height: 350px; z-index: 1; }
+        .indicador-mapa {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(30,41,59,0.95); padding: 8px 16px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; z-index: 10; border: 1px solid var(--cor-primaria);
+            display: none; color: white; white-space: nowrap;
+        }
         .indicador-mapa.visivel { display: block; }
+
+        /* PAGAMENTO */
+        .opcoes-pagamento {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;
+        }
+        .btn-pagamento {
+            padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px;
+            cursor: pointer; border: 2px solid transparent; text-align: center;
+            transition: all 0.2s;
+        }
+        .btn-pix { background: var(--cor-info); color: white; border-color: var(--cor-info); }
+        .btn-dinheiro { background: transparent; color: var(--cor-alerta); border-color: var(--cor-alerta); }
+        .btn-pagamento.selecionado { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+
         .debug-info { background: #000; color: #0f0; font-size: 10px; padding: 5px; font-family: monospace; display: none; margin-top: 5px; border-radius: 4px; max-height: 120px; overflow-y: auto; }
         .janela-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:999; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .conteudo-modal { background: var(--cor-card); width: 100%; max-width: 400px; padding: 24px; border-radius: 16px; text-align: center; border: 1px solid var(--cor-borda); }
@@ -68,6 +96,14 @@
         .btn-carteira { background:#16a34a; border:none; padding:12px 18px; border-radius:10px; cursor:pointer; font-weight:bold; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         .modal-carteira { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999; }
+
+        /* Badge pagamento */
+        .badge-pagamento {
+            display: inline-block; padding: 3px 10px; border-radius: 10px;
+            font-size: 11px; font-weight: 700; margin-left: 5px;
+        }
+        .badge-pix { background: var(--cor-info); color: white; }
+        .badge-dinheiro { background: var(--cor-alerta); color: #000; }
     </style>
 </head>
 <body>
@@ -104,18 +140,26 @@
         <div id="cardValor" class="card-preco" style="display:none;">
             <h4>Resumo da Viagem</h4>
             <div class="detalhes-preco"><p>Distância: <strong id="txtDistancia">--</strong></p><p>Tempo: <strong id="txtTempo">--</strong></p><p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span></p></div>
+            <!-- OPÇÃO DE PAGAMENTO -->
+            <div class="opcoes-pagamento" id="opcoesPagamento">
+                <div class="btn-pagamento btn-pix selecionado" onclick="selecionarPagamento('pix')" id="btnPix">
+                    💳 Pix / Carteira
+                </div>
+                <div class="btn-pagamento btn-dinheiro" onclick="selecionarPagamento('dinheiro')" id="btnDinheiro">
+                    💵 Dinheiro
+                </div>
+            </div>
             <button id="btnChamar" class="btn-sucesso-grande" onclick="chamarCorrida()">🚀 CHAMAR ROTA BRASIL</button>
         </div>
-        <div id="cardMapa" style="display:none;">
-    <h3>🚗 Acompanhe seu motorista</h3>
-
-    <div id="mapa" style="width:100%; height:400px; border-radius:10px;"></div>
-
-</div>
-        <div id="cardMapa" class="card-mapa-container" style="display:none;">
-            <div class="indicador-mapa" id="indicadorMapa">🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min</div>
-            <iframe id="mapaIframe" src="" style="width:100%; height:350px; border:none;"></iframe>
+        
+        <!-- MAPA LEAFLET COM CARRINHO -->
+        <div id="cardMapa" class="card-mapa-container">
+            <div class="indicador-mapa" id="indicadorMapa">
+                🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min
+            </div>
+            <div id="mapaLeaflet"></div>
         </div>
+        
         <div id="cardStatus" class="card-status-corrida" style="display:none;"><div id="conteudoStatus"></div></div>
         <div class="debug-info" id="debugInfo"></div>
         <button onclick="toggleDebug()" style="background:#333; font-size:10px; padding:4px; margin-top:5px;">🔍 Debug</button>
@@ -137,7 +181,6 @@
 
     <script>
         const API = "https://rotabrasil-tobu.onrender.com";
-        const GOOGLE_KEY = "AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8";
         
         const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
 
@@ -145,68 +188,115 @@
         let latOrigem, lonOrigem, latDestino, lonDestino, latMotorista, lonMotorista;
         let distancia, valorFinal, notaAvaliacao = 0;
         let corridaIdAvaliacao, motoristaIdAvaliacao;
-        //teste marcadores no mapa======
-        // Variáveis globais
-let mapa;
-let markerOrigem;
-let markerDestino;
-let markerMotorista;
+        let formaPagamento = 'pix'; // 'pix' ou 'dinheiro'
 
-// Ícone do carro
-const iconeMotorista = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/744/744465.png",
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
-});
+        // ========== MAPA LEAFLET ==========
+        let mapaLeaflet = null;
+        let markerPassageiro = null;
+        let markerMotorista = null;
+        let markerDestino = null;
+        let linhaRota = null;
 
-function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
+        // Ícone do carrinho (emoji como marcador)
+        const iconeCarro = L.divIcon({
+            html: '<div style="font-size: 35px; transform: translate(-50%, -50%);">🚗</div>',
+            className: '',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
 
-    // Se já existir um mapa, remove
-    if (mapa) {
-        mapa.remove();
-    }
+        const iconePassageiro = L.divIcon({
+            html: '<div style="font-size: 30px; transform: translate(-50%, -50%);">📍</div>',
+            className: '',
+            iconSize: [35, 35],
+            iconAnchor: [17, 35]
+        });
 
-    mapa = L.map("mapa").setView([latOrigem, lonOrigem], 14);
+        const iconeDestino = L.divIcon({
+            html: '<div style="font-size: 30px; transform: translate(-50%, -50%);">🏁</div>',
+            className: '',
+            iconSize: [35, 35],
+            iconAnchor: [17, 35]
+        });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap"
-    }).addTo(mapa);
+        function inicializarMapaLeaflet() {
+            document.getElementById('cardMapa').style.display = 'block';
+            
+            if (mapaLeaflet) {
+                mapaLeaflet.remove();
+                mapaLeaflet = null;
+            }
 
-    // Origem
-    markerOrigem = L.marker([latOrigem, lonOrigem])
-        .addTo(mapa)
-        .bindPopup("Origem");
+            const centroLat = latOrigem || -23.5505;
+            const centroLng = lonOrigem || -46.6333;
 
-    // Destino
-    markerDestino = L.marker([latDestino, lonDestino])
-        .addTo(mapa)
-        .bindPopup("Destino");
+            mapaLeaflet = L.map('mapaLeaflet', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([centroLat, centroLng], 15);
 
-    // Carro começa na origem
-    markerMotorista = L.marker([latOrigem, lonOrigem], {
-        icon: iconeMotorista
-    }).addTo(mapa);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(mapaLeaflet);
 
-    // Ajusta o zoom para mostrar tudo
-    const grupo = L.featureGroup([
-        markerOrigem,
-        markerDestino,
-        markerMotorista
-    ]);
+            // Marcador do passageiro (origem)
+            if (latOrigem && lonOrigem) {
+                markerPassageiro = L.marker([latOrigem, lonOrigem], { icon: iconePassageiro })
+                    .addTo(mapaLeaflet)
+                    .bindPopup('📍 Você está aqui');
+            }
 
-    mapa.fitBounds(grupo.getBounds().pad(0.2));
-}
-        //======funcao para chamar o mapa
-        function atualizarMotorista(lat, lng) {
+            // Marcador do destino
+            if (latDestino && lonDestino) {
+                markerDestino = L.marker([latDestino, lonDestino], { icon: iconeDestino })
+                    .addTo(mapaLeaflet)
+                    .bindPopup('🏁 Destino');
+            }
 
-    if (!markerMotorista) return;
+            // Marcador do motorista (carrinho)
+            markerMotorista = L.marker([centroLat, centroLng], { icon: iconeCarro })
+                .addTo(mapaLeaflet)
+                .bindPopup('🚗 Motorista');
+        }
 
-    markerMotorista.setLatLng([lat, lng]);
+        function atualizarPosicaoMotorista(lat, lng) {
+            if (!markerMotorista || !mapaLeaflet) return;
+            
+            // Move o carrinho suavemente
+            markerMotorista.setLatLng([lat, lng]);
+            
+            // Atualiza linha de rota
+            if (markerPassageiro) {
+                const posPassageiro = markerPassageiro.getLatLng();
+                if (linhaRota) {
+                    linhaRota.setLatLngs([posPassageiro, [lat, lng]]);
+                } else {
+                    linhaRota = L.polyline([posPassageiro, [lat, lng]], {
+                        color: '#FF007F',
+                        weight: 3,
+                        dashArray: '10, 10',
+                        opacity: 0.8
+                    }).addTo(mapaLeaflet);
+                }
+            }
 
-    // Centraliza o mapa acompanhando o carro
-    mapa.panTo([lat, lng]);
-}
+            // Centraliza mapa nos dois pontos
+            if (markerPassageiro) {
+                const grupo = L.featureGroup([markerPassageiro, markerMotorista]);
+                mapaLeaflet.fitBounds(grupo.getBounds().pad(0.3), { animate: true });
+            } else {
+                mapaLeaflet.panTo([lat, lng], { animate: true });
+            }
+        }
+
+        // ========== SELEÇÃO DE PAGAMENTO ==========
+        function selecionarPagamento(tipo) {
+            formaPagamento = tipo;
+            document.getElementById('btnPix').classList.toggle('selecionado', tipo === 'pix');
+            document.getElementById('btnDinheiro').classList.toggle('selecionado', tipo === 'dinheiro');
+            debug(`💳 Forma de pagamento: ${tipo === 'pix' ? 'Pix/Carteira' : 'Dinheiro'}`);
+        }
+
         // ========== DEBUG ==========
         function debug(msg) {
             const el = document.getElementById('debugInfo');
@@ -218,45 +308,54 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
         }
         function toggleDebug() { const el = document.getElementById('debugInfo'); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
 
-        // ========== SOCKET - ESCUTANDO TODOS OS EVENTOS POSSÍVEIS ==========
+        // ========== SOCKET ==========
         socket.on("connect", () => {
             debug("✅ Socket conectado! ID: " + socket.id);
-            // Reconectar à sala se tiver corrida ativa
             if (corridaAtual?.id) {
                 socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id });
-                debug("🔗 Reconectado à sala: " + corridaAtual.id);
             }
         });
 
         socket.on("disconnect", (r) => debug("❌ Desconectado: " + r));
         socket.on("connect_error", (e) => debug("⚠️ Erro: " + e.message));
 
-        // Escuta TODOS os formatos possíveis de localização
-        socket.on("localizacao_motorista", (d) => processarLocalizacao(d, "localizacao_motorista"));
-        socket.on("motorista_localizacao", (d) => processarLocalizacao(d, "motorista_localizacao"));
-        socket.on("location_update", (d) => processarLocalizacao(d, "location_update"));
-        socket.on("motorista_posicao", (d) => processarLocalizacao(d, "motorista_posicao"));
-        socket.on("atualizacao_localizacao", (d) =>
-        processarLocalizacao(d, "atualizacao_localizacao")
-        );
-        
-        // Escuta qualquer evento (debug)
+        // Localização do motorista
+        socket.on("localizacao_motorista", (d) => processarLocalizacao(d));
+        socket.on("motorista_localizacao", (d) => processarLocalizacao(d));
+        socket.on("location_update", (d) => processarLocalizacao(d));
+        socket.on("motorista_posicao", (d) => processarLocalizacao(d));
+        socket.on("atualizacao_localizacao", (d) => processarLocalizacao(d));
+
         socket.onAny((eventName, ...args) => {
-            if (eventName.includes('localizacao') || eventName.includes('location') || eventName.includes('posicao') || eventName.includes('position')) {
-                debug(`📡 Evento capturado: "${eventName}" | Dados: ${JSON.stringify(args[0])}`);
-                processarLocalizacao(args[0], eventName);
+            if (eventName.includes('localizacao') || eventName.includes('location') || eventName.includes('posicao')) {
+                processarLocalizacao(args[0]);
             }
         });
 
-        function processarLocalizacao(dados, evento) {
+        function processarLocalizacao(dados) {
+            if (!dados) return;
+            const lat = dados.lat ?? dados.latitude;
+            const lng = dados.lng ?? dados.longitude;
+            if (lat == null || lng == null) return;
 
-    const lat = dados.lat ?? dados.latitude;
-    const lng = dados.lng ?? dados.longitude;
+            latMotorista = lat;
+            lonMotorista = lng;
 
-    if (lat == null || lng == null) return;
-
-    atualizarMotorista(lat, lng);
-}
+            // Atualiza carrinho no mapa
+            atualizarPosicaoMotorista(lat, lng);
+            
+            // Atualiza distâncias
+            atualizarDistancias();
+            
+            // Atualiza indicador
+            if (latOrigem && lonOrigem) {
+                const distKm = calcularDistancia(latOrigem, lonOrigem, lat, lng);
+                const tempoMin = Math.round(distKm * 2.5);
+                document.getElementById('distanciaMapa').textContent = distKm.toFixed(1);
+                document.getElementById('tempoMapa').textContent = tempoMin;
+                document.getElementById('indicadorMapa').classList.add('visivel');
+            }
+        }
 
         socket.on("corrida_aceita", (dados) => {
             debug("🚗 Corrida aceita! Dados: " + JSON.stringify(dados));
@@ -267,7 +366,7 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
                 debug("🔗 Entrou na sala: " + cid);
             }
             mostrarStatusAceito(dados);
-            inicializarMapa();
+            inicializarMapaLeaflet();
             falar(`${dados.motorista_nome || 'Motorista'} aceitou!`);
         });
 
@@ -279,19 +378,17 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
             resetarInterface();
         });
 
-        socket.on("corrida_cancelada", () => { debug("❌ Cancelada"); resetarInterface(); alert("Corrida cancelada."); });
+        socket.on("corrida_cancelada", () => { 
+            debug("❌ Cancelada"); 
+            resetarInterface(); 
+            alert("Corrida cancelada."); 
+        });
 
         // ========== DISTÂNCIAS ==========
         function atualizarDistancias() {
             if (!latOrigem || !lonOrigem || !latMotorista || !lonMotorista) return;
             const distKm = calcularDistancia(latOrigem, lonOrigem, latMotorista, lonMotorista);
             const tempoMin = Math.round(distKm * 2.5);
-            
-            debug(`📏 ${distKm.toFixed(2)} km | 🕒 ${tempoMin} min`);
-            
-            document.getElementById('distanciaMapa').textContent = distKm.toFixed(1);
-            document.getElementById('tempoMapa').textContent = tempoMin;
-            document.getElementById('indicadorMapa').classList.add('visivel');
 
             const st = document.getElementById('conteudoStatus');
             if (st) {
@@ -315,30 +412,24 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
             return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // ========== MAPA ==========
-        function inicializarMapa() { document.getElementById('cardMapa').style.display = 'block'; atualizarMapaIframe(); }
-        function atualizarMapaIframe() {
-            const iframe = document.getElementById('mapaIframe');
-            if (latOrigem && latMotorista) {
-                iframe.src = `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_KEY}&origin=${latOrigem},${lonOrigem}&destination=${latMotorista},${lonMotorista}&mode=driving&zoom=15`;
-            } else if (latOrigem) {
-                iframe.src = `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_KEY}&center=${latOrigem},${lonOrigem}&zoom=16`;
-            }
-        }
-
         // ========== UI ==========
         function mostrarStatusAceito(dados) {
             document.getElementById('cardValor').style.display = 'none';
             document.getElementById('cardStatus').style.display = 'block';
             const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+            const badgePgto = formaPagamento === 'dinheiro' ? 
+                '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>' : 
+                '<span class="badge-pagamento badge-pix">💳 Pix</span>';
+            
             document.getElementById('conteudoStatus').innerHTML = `
                 <div class="status-container">
-                    <div class="status-texto">🚗 Motorista a Caminho!</div>
+                    <div class="status-texto">🚗 Motorista a Caminho! ${badgePgto}</div>
                     <img src="${foto}" class="foto-motorista-card" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
                     <div style="background:var(--cor-card-claro);padding:15px;border-radius:8px;width:100%;margin:10px 0;text-align:left;">
                         <p class="linha-info"><strong>Nome:</strong> ${dados.motorista_nome||'---'}</p>
                         <p class="linha-info"><strong>Carro:</strong> ${dados.carro||'---'}</p>
                         <p class="linha-info"><strong>Placa:</strong> <span class="placa-badge">${dados.placa||'---'}</span></p>
+                        <p class="linha-info"><strong>Pagamento:</strong> ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix/Carteira'}</p>
                         <p class="linha-info"><strong>Distância:</strong> <span class="distancia-atual">Aguardando...</span></p>
                         <p class="linha-info"><strong>Chegada:</strong> <span class="tempo-atual">Calculando...</span></p>
                     </div>
@@ -349,21 +440,49 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
         // ========== CORRIDA ==========
         async function chamarCorrida() {
             if (!latOrigem || !latDestino || valorFinal <= 0) return alert("Calcule o valor primeiro!");
-            const btn = document.getElementById('btnChamar'); btn.disabled = true; btn.classList.add('btn-blocked'); btn.innerHTML = '⏳ Buscando...';
+            const btn = document.getElementById('btnChamar'); 
+            btn.disabled = true; 
+            btn.classList.add('btn-blocked'); 
+            btn.innerHTML = '⏳ Buscando...';
+            
             try {
                 const res = await fetch(`${API}/nova_corrida`, {
-                    method: "POST", headers: { "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
-                    body: JSON.stringify({ origem: document.getElementById('origem').value, destino: document.getElementById('destino').value, valor: valorFinal, distancia: `${distancia.toFixed(1)} km`, lat_origem: latOrigem, lon_origem: lonOrigem, lat_destino: latDestino, lon_destino: lonDestino })
+                    method: "POST", 
+                    headers: { "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+                    body: JSON.stringify({ 
+                        origem: document.getElementById('origem').value, 
+                        destino: document.getElementById('destino').value, 
+                        valor: valorFinal, 
+                        distancia: `${distancia.toFixed(1)} km`, 
+                        lat_origem: latOrigem, 
+                        lon_origem: lonOrigem, 
+                        lat_destino: latDestino, 
+                        lon_destino: lonDestino,
+                        forma_pagamento: formaPagamento // 🆕 Envia forma de pagamento
+                    })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.erro);
-                corridaAtual = { id: data.corrida_id };
+                corridaAtual = { id: data.corrida_id, forma_pagamento: formaPagamento };
                 socket.emit("entrar_na_sala", { corrida_id: data.corrida_id });
-                debug("🚀 Corrida solicitada! ID: " + data.corrida_id);
+                debug("🚀 Corrida #" + data.corrida_id + " | Pagamento: " + formaPagamento);
+                
                 document.getElementById('cardValor').style.display = 'none';
                 document.getElementById('cardStatus').style.display = 'block';
-                document.getElementById('conteudoStatus').innerHTML = `<div class="status-container"><i class="fas fa-car-side status-icon status-buscando"></i><div class="status-texto">Procurando Motoristas...</div><br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button></div>`;
-            } catch(e) { alert(e.message); btn.disabled=false; btn.classList.remove('btn-blocked'); btn.innerHTML='🚀 CHAMAR ROTA BRASIL'; }
+                document.getElementById('conteudoStatus').innerHTML = `
+                    <div class="status-container">
+                        <i class="fas fa-car-side status-icon status-buscando"></i>
+                        <div class="status-texto">Procurando Motoristas...</div>
+                        <div class="status-subtexto">Pagamento: ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix'}</div>
+                        <br>
+                        <button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>
+                    </div>`;
+            } catch(e) { 
+                alert(e.message); 
+                btn.disabled=false; 
+                btn.classList.remove('btn-blocked'); 
+                btn.innerHTML='🚀 CHAMAR ROTA BRASIL'; 
+            }
         }
 
         async function calcularValor() {
@@ -374,7 +493,11 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
             if (!latDestino) await geocodificar(d, 'destino');
             if (!latOrigem||!latDestino) return alert("Endereços não encontrados.");
             try {
-                const res = await fetch(`${API}/calcular_corrida`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({lat_origem:latOrigem,lon_origem:lonOrigem,lat_destino:latDestino,lon_destino:lonDestino}) });
+                const res = await fetch(`${API}/calcular_corrida`, { 
+                    method:"POST", 
+                    headers:{"Content-Type":"application/json"}, 
+                    body:JSON.stringify({lat_origem:latOrigem,lon_origem:lonOrigem,lat_destino:latDestino,lon_destino:lonDestino}) 
+                });
                 const data = await res.json();
                 if (data.erro) throw new Error(data.erro);
                 distancia=data.distancia; valorFinal=data.valor;
@@ -382,7 +505,8 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
                 document.getElementById('txtTempo').textContent=`${data.tempo||Math.round(distancia*3)} min`;
                 document.getElementById('txtValor').textContent=`R$ ${valorFinal.toFixed(2)}`;
             } catch(e) {
-                distancia=calcularDistancia(latOrigem,lonOrigem,latDestino,lonDestino); valorFinal=distancia*3.5+5;
+                distancia=calcularDistancia(latOrigem,lonOrigem,latDestino,lonDestino); 
+                valorFinal=distancia*3.5+5;
                 document.getElementById('txtDistancia').textContent=`${distancia.toFixed(1)} km`;
                 document.getElementById('txtTempo').textContent=`${Math.round(distancia*3)} min (estimado)`;
                 document.getElementById('txtValor').textContent=`R$ ${valorFinal.toFixed(2)}`;
@@ -391,7 +515,9 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
 
         async function geocodificar(endereco, tipo) {
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json&limit=1&countrycodes=br`, { headers:{'User-Agent':'RotaBrasil/1.0'} });
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json&limit=1&countrycodes=br`, { 
+                    headers:{'User-Agent':'RotaBrasil/1.0'} 
+                });
                 const data = await res.json();
                 if (data.length>0) {
                     if (tipo==='origem') { latOrigem=parseFloat(data[0].lat); lonOrigem=parseFloat(data[0].lon); }
@@ -402,50 +528,141 @@ function criarMapa(latOrigem, lonOrigem, latDestino, lonDestino) {
 
         function usarLocalizacao() {
             if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition(p => { latOrigem=p.coords.latitude; lonOrigem=p.coords.longitude; document.getElementById('origem').value=`${latOrigem.toFixed(6)}, ${lonOrigem.toFixed(6)}`; });
+            navigator.geolocation.getCurrentPosition(p => { 
+                latOrigem=p.coords.latitude; 
+                lonOrigem=p.coords.longitude; 
+                document.getElementById('origem').value=`${latOrigem.toFixed(6)}, ${lonOrigem.toFixed(6)}`; 
+            });
         }
 
         async function cancelarCorrida() {
             const cid = corridaAtual?.id || corridaAtual?.corrida_id;
-            if (cid) { try { await fetch(`${API}/cancelar_corrida/${cid}`, { method:"POST", headers:{"Authorization":`Bearer ${token}`} }); socket.emit("cancelar_corrida",{corrida_id:cid}); } catch(e) {} }
+            if (cid) { 
+                try { 
+                    await fetch(`${API}/cancelar_corrida/${cid}`, { 
+                        method:"POST", 
+                        headers:{"Authorization":`Bearer ${token}`} 
+                    }); 
+                    socket.emit("cancelar_corrida",{corrida_id:cid}); 
+                } catch(e) {} 
+            }
             resetarInterface();
         }
 
         function resetarInterface() {
-            corridaAtual=null; latMotorista=lonMotorista=null;
-            document.getElementById('cardStatus').style.display='none'; document.getElementById('cardMapa').style.display='none';
-            document.getElementById('indicadorMapa').classList.remove('visivel'); document.getElementById('mapaIframe').src='';
-            const btn=document.getElementById('btnChamar'); if(btn){btn.disabled=false;btn.classList.remove('btn-blocked');btn.innerHTML='🚀 CHAMAR ROTA BRASIL';}
+            corridaAtual=null; 
+            latMotorista=lonMotorista=null;
+            document.getElementById('cardStatus').style.display='none'; 
+            document.getElementById('cardMapa').style.display='none';
+            document.getElementById('indicadorMapa').classList.remove('visivel');
+            
+            // Limpa mapa
+            if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
+            markerPassageiro = null;
+            markerMotorista = null;
+            markerDestino = null;
+            linhaRota = null;
+            
+            const btn=document.getElementById('btnChamar'); 
+            if(btn){btn.disabled=false;btn.classList.remove('btn-blocked');btn.innerHTML='🚀 CHAMAR ROTA BRASIL';}
         }
 
         // ========== AUTENTICAÇÃO ==========
         function falar(t) { if(window.speechSynthesis){const m=new SpeechSynthesisUtterance(t);m.lang='pt-BR';speechSynthesis.speak(m);} }
+        
         async function login() {
             const e=document.getElementById('email').value.trim(), s=document.getElementById('senha').value.trim();
             if(!e||!s) return alert("Preencha todos os campos!");
             try {
                 const res=await fetch(`${API}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:e,senha:s})});
                 const data=await res.json();
-                if(res.ok&&data.token){token=data.token;passageiro=data.user;localStorage.setItem("token_passageiro",token);localStorage.setItem("user_passageiro",JSON.stringify(passageiro));document.getElementById('loginCard').style.display='none';document.getElementById('dashboard').style.display='block';debug("✅ Logado: "+passageiro.nome);}
-                else alert(data.erro||"Erro");
+                if(res.ok&&data.token){
+                    token=data.token;passageiro=data.user;
+                    localStorage.setItem("token_passageiro",token);
+                    localStorage.setItem("user_passageiro",JSON.stringify(passageiro));
+                    document.getElementById('loginCard').style.display='none';
+                    document.getElementById('dashboard').style.display='block';
+                    debug("✅ Logado: "+passageiro.nome);
+                } else alert(data.erro||"Erro");
             } catch(e) { alert("Erro de conexão"); }
         }
+        
         function alternarTela(c) {
-            if(c){document.getElementById('tituloAutenticacao').textContent='Criar Conta';document.getElementById('btnAcaoPrincipal').textContent='Cadastrar';document.getElementById('btnAcaoPrincipal').onclick=register;document.getElementById('textoAlternar').innerHTML='Já tem conta? <a href="#" onclick="alternarTela(false)">Entrar</a>';['grupoFoto','grupoNome','grupoTelefone'].forEach(id=>document.getElementById(id).style.display='block');}
-            else{document.getElementById('tituloAutenticacao').textContent='🇧🇷 Rota Brasil';document.getElementById('btnAcaoPrincipal').textContent='Entrar';document.getElementById('btnAcaoPrincipal').onclick=login;document.getElementById('textoAlternar').innerHTML='Não tem conta? <a href="#" onclick="alternarTela(true)">Cadastre-se</a>';['grupoFoto','grupoNome','grupoTelefone'].forEach(id=>document.getElementById(id).style.display='none');}
+            if(c){
+                document.getElementById('tituloAutenticacao').textContent='Criar Conta';
+                document.getElementById('btnAcaoPrincipal').textContent='Cadastrar';
+                document.getElementById('btnAcaoPrincipal').onclick=register;
+                document.getElementById('textoAlternar').innerHTML='Já tem conta? <a href="#" onclick="alternarTela(false)">Entrar</a>';
+                ['grupoFoto','grupoNome','grupoTelefone'].forEach(id=>document.getElementById(id).style.display='block');
+            } else {
+                document.getElementById('tituloAutenticacao').textContent='🇧🇷 Rota Brasil';
+                document.getElementById('btnAcaoPrincipal').textContent='Entrar';
+                document.getElementById('btnAcaoPrincipal').onclick=login;
+                document.getElementById('textoAlternar').innerHTML='Não tem conta? <a href="#" onclick="alternarTela(true)">Cadastre-se</a>';
+                ['grupoFoto','grupoNome','grupoTelefone'].forEach(id=>document.getElementById(id).style.display='none');
+            }
         }
-        async function register(){try{const r=await fetch(`${API}/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nome:document.getElementById('nome').value,email:document.getElementById('email').value,senha:document.getElementById('senha').value,telefone:document.getElementById('telefone').value,foto_perfil:document.getElementById('foto_perfil').value,tipo:"passageiro"})});const d=await r.json();if(r.ok){alert("✅ Cadastro feito!");alternarTela(false);}else alert(d.erro);}catch(e){}}
+        
+        async function register(){
+            try{
+                const r=await fetch(`${API}/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nome:document.getElementById('nome').value,email:document.getElementById('email').value,senha:document.getElementById('senha').value,telefone:document.getElementById('telefone').value,foto_perfil:document.getElementById('foto_perfil').value,tipo:"passageiro"})});
+                const d=await r.json();
+                if(r.ok){alert("✅ Cadastro feito!");alternarTela(false);}else alert(d.erro);
+            }catch(e){}
+        }
+        
         function logout(){localStorage.clear();window.location.reload();}
-        async function enviarAvaliacao(){if(!notaAvaliacao)return alert("Selecione uma nota!");try{await fetch(`${API}/avaliar`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({corrida_id:corridaIdAvaliacao,motorista_id:motoristaIdAvaliacao,nota:notaAvaliacao,comentario:document.getElementById('comentarioAvaliacao').value})});}catch(e){}fecharAvaliacao();}
-        function fecharAvaliacao(){document.getElementById('modalAvaliacao').style.display='none';notaAvaliacao=0;document.querySelectorAll('#estrelasContainer .estrela').forEach(e=>e.classList.remove('ativa'));document.getElementById('comentarioAvaliacao').value='';}
-        async function abrirCarteira(){document.getElementById('painelCarteira').style.display='block';try{const r=await fetch(`${API}/carteira/saldo`,{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();document.getElementById('saldoCarteira').textContent=`R$ ${(d.saldo||0).toFixed(2)}`;}catch(e){}}
+        
+        async function enviarAvaliacao(){
+            if(!notaAvaliacao)return alert("Selecione uma nota!");
+            try{
+                await fetch(`${API}/avaliar`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({corrida_id:corridaIdAvaliacao,motorista_id:motoristaIdAvaliacao,nota:notaAvaliacao,comentario:document.getElementById('comentarioAvaliacao').value})});
+            }catch(e){}
+            fecharAvaliacao();
+        }
+        
+        function fecharAvaliacao(){
+            document.getElementById('modalAvaliacao').style.display='none';
+            notaAvaliacao=0;
+            document.querySelectorAll('#estrelasContainer .estrela').forEach(e=>e.classList.remove('ativa'));
+            document.getElementById('comentarioAvaliacao').value='';
+        }
+        
+        async function abrirCarteira(){
+            document.getElementById('painelCarteira').style.display='block';
+            try{
+                const r=await fetch(`${API}/carteira/saldo`,{headers:{Authorization:`Bearer ${token}`}});
+                const d=await r.json();
+                document.getElementById('saldoCarteira').textContent=`R$ ${(d.saldo||0).toFixed(2)}`;
+            }catch(e){}
+        }
+        
         function fecharCarteira(){document.getElementById('painelCarteira').style.display='none';}
-        async function adicionarSaldo(){const v=prompt("Valor (R$):");if(!v||isNaN(v))return;try{const r=await fetch(`${API}/checkout/criar`,{method:"POST",headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({valor:parseFloat(v)})});const d=await r.json();if(d.link)window.open(d.link);}catch(e){}}
+        
+        async function adicionarSaldo(){
+            const v=prompt("Valor (R$):");
+            if(!v||isNaN(v))return;
+            try{
+                const r=await fetch(`${API}/checkout/criar`,{method:"POST",headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({valor:parseFloat(v)})});
+                const d=await r.json();
+                if(d.link)window.open(d.link);
+            }catch(e){}
+        }
 
         document.addEventListener('DOMContentLoaded',()=>{
-            document.querySelectorAll('#estrelasContainer .estrela').forEach(e=>{e.addEventListener('click',function(){notaAvaliacao=parseInt(this.dataset.nota);document.querySelectorAll('#estrelasContainer .estrela').forEach((el,i)=>{el.classList.toggle('ativa',i<notaAvaliacao);});});});
+            document.querySelectorAll('#estrelasContainer .estrela').forEach(e=>{
+                e.addEventListener('click',function(){
+                    notaAvaliacao=parseInt(this.dataset.nota);
+                    document.querySelectorAll('#estrelasContainer .estrela').forEach((el,i)=>{el.classList.toggle('ativa',i<notaAvaliacao);});
+                });
+            });
             const t=localStorage.getItem("token_passageiro"),u=localStorage.getItem("user_passageiro");
-            if(t&&u){token=t;passageiro=JSON.parse(u);document.getElementById('loginCard').style.display='none';document.getElementById('dashboard').style.display='block';debug("✅ Auto-login: "+passageiro.nome);}
+            if(t&&u){
+                token=t;passageiro=JSON.parse(u);
+                document.getElementById('loginCard').style.display='none';
+                document.getElementById('dashboard').style.display='block';
+                debug("✅ Auto-login: "+passageiro.nome);
+            }
         });
     </script>
 </body>
