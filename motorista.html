@@ -62,43 +62,20 @@
             display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;
             position: relative; padding: 5px 10px; border-radius: 20px;
         }
-        .status-bolinha.online { 
-            color: var(--sucesso);
-            animation: pulsarOnline 1.5s infinite;
-        }
+        .status-bolinha.online { color: var(--sucesso); animation: pulsarOnline 1.5s infinite; }
         .status-bolinha.online i { text-shadow: 0 0 10px #00B42A, 0 0 20px #00B42A; }
         .status-bolinha.offline { color: var(--perigo); }
-        
         .status-bolinha.online::before {
-            content: '';
-            position: absolute;
-            left: 3px;
-            top: 50%;
-            width: 16px;
-            height: 16px;
-            background: var(--sucesso);
-            border-radius: 50%;
-            transform: translateY(-50%);
-            animation: ondaOnline 1.5s infinite;
-            z-index: 0;
-            opacity: 0.6;
+            content: ''; position: absolute; left: 3px; top: 50%;
+            width: 16px; height: 16px; background: var(--sucesso); border-radius: 50%;
+            transform: translateY(-50%); animation: ondaOnline 1.5s infinite; z-index: 0; opacity: 0.6;
         }
         .status-bolinha.online::after {
-            content: '';
-            position: absolute;
-            left: 3px;
-            top: 50%;
-            width: 16px;
-            height: 16px;
-            background: var(--sucesso);
-            border-radius: 50%;
-            transform: translateY(-50%);
-            animation: ondaOnline 1.5s infinite 0.5s;
-            z-index: 0;
-            opacity: 0.4;
+            content: ''; position: absolute; left: 3px; top: 50%;
+            width: 16px; height: 16px; background: var(--sucesso); border-radius: 50%;
+            transform: translateY(-50%); animation: ondaOnline 1.5s infinite 0.5s; z-index: 0; opacity: 0.4;
         }
-        .status-bolinha.online i,
-        .status-bolinha.online span { position: relative; z-index: 1; }
+        .status-bolinha.online i, .status-bolinha.online span { position: relative; z-index: 1; }
         
         @keyframes pulsarOnline { 
             0% { transform: scale(1); opacity: 1; } 
@@ -111,53 +88,28 @@
         }
 
         .container-deslize {
-            position: relative;
-            width: 100%;
-            height: 60px;
-            background: #272E3B;
-            border-radius: 14px;
-            overflow: hidden;
-            margin: 10px 0;
-            border: 2px solid var(--borda);
-            user-select: none;
-            touch-action: none;
+            position: relative; width: 100%; height: 60px; background: #272E3B;
+            border-radius: 14px; overflow: hidden; margin: 10px 0;
+            border: 2px solid var(--borda); user-select: none; touch-action: none;
         }
         .trilha-deslize {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #86909C;
-            font-weight: 700;
-            font-size: 15px;
-            pointer-events: none;
-            z-index: 1;
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #86909C; font-weight: 700; font-size: 15px; pointer-events: none; z-index: 1;
         }
         .trilha-deslize i { margin-right: 8px; }
         .pino-deslize {
-            position: absolute;
-            left: 3px; top: 3px; bottom: 3px;
-            width: 54px; background: var(--primaria);
-            border-radius: 11px;
+            position: absolute; left: 3px; top: 3px; bottom: 3px; width: 54px;
+            background: var(--primaria); border-radius: 11px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 24px; color: white;
-            cursor: grab; z-index: 2;
+            font-size: 24px; color: white; cursor: grab; z-index: 2;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         .pino-deslize:active { cursor: grabbing; }
-        .pino-deslize.concluido {
-            background: var(--sucesso);
-            box-shadow: 0 0 20px rgba(0,180,42,0.5);
-        }
-        .container-deslize.concluido {
-            border-color: var(--sucesso);
-            background: #1a2e1d;
-        }
+        .pino-deslize.concluido { background: var(--sucesso); box-shadow: 0 0 20px rgba(0,180,42,0.5); }
+        .container-deslize.concluido { border-color: var(--sucesso); background: #1a2e1d; }
         .container-deslize.concluido .trilha-deslize { color: var(--sucesso); }
         .progresso-deslize {
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
+            position: absolute; left: 0; top: 0; bottom: 0;
             background: linear-gradient(90deg, transparent, rgba(22,93,255,0.2));
             z-index: 0; border-radius: 12px;
         }
@@ -166,8 +118,7 @@
             position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 400px; background: var(--card);
             border-radius: 16px; padding: 20px; border: 2px solid var(--sucesso);
-            z-index: 200; display: none;
-            animation: sobe 0.3s ease;
+            z-index: 200; display: none; animation: sobe 0.3s ease;
         }
         @keyframes sobe { from { opacity:0; transform: translateX(-50%) translateY(30px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
         .linha { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--borda); font-size: 15px; }
@@ -223,32 +174,23 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600;
         }
 
-        /* Foto do passageiro no card de corrida */
         .foto-passageiro-card {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--sucesso);
-            margin-right: 10px;
+            width: 60px; height: 60px; border-radius: 50%;
+            object-fit: cover; border: 2px solid var(--sucesso); margin-right: 10px;
         }
-        .passageiro-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
+        .passageiro-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 
-        /* Badge pagamento */
         .badge-pagamento {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 700;
+            display: inline-block; padding: 3px 10px; border-radius: 8px;
+            font-size: 12px; font-weight: 700;
         }
         .badge-pix { background: var(--primaria); color: white; }
         .badge-dinheiro { background: var(--alerta); color: #000; }
+        
+        .linha-destacada {
+            background: rgba(255,125,0,0.15); border-radius: 6px;
+            padding: 8px !important; margin: 4px 0;
+        }
     </style>
 </head>
     
@@ -332,7 +274,7 @@
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
         <div class="passageiro-header">
             <img id="fotoPassageiroCard" src="" class="foto-passageiro-card" style="display:none;" onerror="this.style.display='none'">
-            <div>
+            <div style="flex:1;">
                 <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
             </div>
         </div>
@@ -340,7 +282,10 @@
         <div class="linha"><span>Origem</span> <span id="cOrigem">-</span></div>
         <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
         <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
-        <div class="linha" id="linhaPagamento" style="display:none;"><span>Pagamento</span> <span id="cPagamento">-</span></div>
+        <div class="linha linha-destacada" id="linhaPagamento" style="display:none;">
+            <span>💰 Pagamento</span> 
+            <span id="cPagamento">-</span>
+        </div>
         <div class="grupo-botoes">
             <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
             <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
@@ -368,9 +313,7 @@
     </div>
 
     <!-- ÁUDIOS -->
-    <audio id="somAlerta" preload="auto" loop>
-        <source src="https://larissacamila.github.io/comandos/chamarRota.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="somAlerta" preload="auto" loop src="https://larissacamila.github.io/comandos/chamarRota.mp3"></audio>
     <audio id="somAlto" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3"></audio>
     <audio id="somSucesso" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3"></audio>
     <audio id="somDinheiro" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/dinheiro.mp3"></audio>
@@ -434,6 +377,7 @@
         let estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
         let posicaoAtual = { lat: -23.5645, lng: -46.6523 };
         let envioLocalizacaoInterval = null;
+        let ultimaAtualizacaoMapa = 0;
         let notaAvaliacao = 0;
         let timerCorrida = null;
         let segundosCorrida = 15;
@@ -459,18 +403,25 @@
         }
 
         // ==============================================
-        // 📍 GPS
+        // 📍 GPS - ATUALIZA MAPA SEM PISCAR
         // ==============================================
         function iniciarGPS() {
             if (!navigator.geolocation) return;
+            
             navigator.geolocation.watchPosition(
                 (pos) => {
                     posicaoAtual.lat = pos.coords.latitude;
                     posicaoAtual.lng = pos.coords.longitude;
-                    document.getElementById('mapaFrame').src = 
-                        `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
+                    
+                    // 🔥 SÓ ATUALIZA O MAPA A CADA 5 SEGUNDOS (evita piscar)
+                    const agora = Date.now();
+                    if (agora - ultimaAtualizacaoMapa > 5000) {
+                        ultimaAtualizacaoMapa = agora;
+                        atualizarMapaSuave();
+                    }
+                    
+                    // Envia localização via socket (a cada 1.5s)
                     if (estado.aceito && corrida) {
-                        // 🔥 ENVIA LOCALIZAÇÃO + FOTO DO MOTORISTA
                         socket.emit('localizacao_motorista', {
                             corrida_id: corrida.corrida_id || corrida.id,
                             lat: posicaoAtual.lat,
@@ -482,8 +433,18 @@
                     }
                 },
                 (erro) => { console.warn("Erro GPS:", erro); },
-                { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+                { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
             );
+        }
+
+        function atualizarMapaSuave() {
+            const iframe = document.getElementById('mapaFrame');
+            const novaUrl = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
+            
+            // 🔥 Só atualiza se a URL for diferente
+            if (iframe.src !== novaUrl) {
+                iframe.src = novaUrl;
+            }
         }
 
         // ==============================================
@@ -493,7 +454,6 @@
             somAlerta.loop = true;
             somAlerta.currentTime = 0;
             somAlerta.play().catch(() => setTimeout(() => somAlerta.play(), 500));
-            console.log("🔊 Som de alerta iniciado");
         }
         function pararSomAlerta() {
             somAlerta.pause();
@@ -601,19 +561,19 @@
         }
 
         // ==============================================
-        // 🚨 NOVA CORRIDA (RECEBENDO FOTO DO PASSAGEIRO)
+        // 🚨 NOVA CORRIDA - COM FORMA DE PAGAMENTO CORRETA
         // ==============================================
         socket.on('nova_corrida', (dados) => {
             if (estado.aceito) return;
             
-            console.log("📥 NOVA CORRIDA RECEBIDA:", dados);
+            console.log("📥 NOVA CORRIDA:", dados);
             
             corrida = dados;
             estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
             
             iniciarSomAlertaRepetido();
             
-            // 🔥 EXIBE FOTO DO PASSAGEIRO
+            // 🔥 FOTO DO PASSAGEIRO
             const fotoPassageiro = dados.foto_passageiro || dados.foto_perfil || '';
             const fotoEl = document.getElementById('fotoPassageiroCard');
             if (fotoPassageiro) {
@@ -629,16 +589,20 @@
             document.getElementById('cDestino').textContent = dados.destino || '-';
             document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
             
-            // 🔥 EXIBE FORMA DE PAGAMENTO
-            const formaPgto = dados.forma_pagamento || 'pix';
+            // 🔥 FORMA DE PAGAMENTO - VERIFICA TODOS OS CAMPOS POSSÍVEIS
+            const formaPgto = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
+            console.log("💰 Forma de pagamento recebida:", formaPgto);
+            
             const linhaPgto = document.getElementById('linhaPagamento');
             const cPagamento = document.getElementById('cPagamento');
-            if (formaPgto === 'dinheiro') {
-                linhaPgto.style.display = 'flex';
-                cPagamento.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>';
+            linhaPgto.style.display = 'flex';
+            
+            if (formaPgto === 'dinheiro' || formaPgto === 'cash') {
+                cPagamento.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>';
+                linhaPgto.style.background = 'rgba(234,179,8,0.2)';
             } else {
-                linhaPgto.style.display = 'flex';
-                cPagamento.innerHTML = '<span class="badge-pagamento badge-pix">💳 Pix/Carteira</span>';
+                cPagamento.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>';
+                linhaPgto.style.background = 'rgba(22,93,255,0.15)';
             }
             
             document.getElementById('cardCorrida').style.display = 'block';
@@ -658,9 +622,7 @@
             }, 1000);
         }
 
-        function atualizarBtnRecusar() {
-            document.getElementById('btnRecusar').textContent = `❌ RECUSAR (${segundosCorrida}s)`;
-        }
+        function atualizarBtnRecusar() { document.getElementById('btnRecusar').textContent = `❌ RECUSAR (${segundosCorrida}s)`; }
 
         function recusarCorrida() {
             document.getElementById('cardCorrida').style.display = 'none';
@@ -671,7 +633,7 @@
         }
 
         // ==============================================
-        // ✅ ACEITAR CORRIDA (ENVIA FOTO DO MOTORISTA)
+        // ✅ ACEITAR CORRIDA
         // ==============================================
         async function aceitarCorrida() {
             clearInterval(timerCorrida);
@@ -681,7 +643,6 @@
             
             const corridaId = corrida.corrida_id || corrida.id;
             
-            // 🔥 DADOS COMPLETOS DO MOTORISTA (incluindo foto)
             const dadosMotorista = {
                 motorista_id: String(usuario.id),
                 nome_motorista: usuario.nome,
@@ -716,14 +677,11 @@
                         criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)
                     );
                     
-                    // 🔥 EMITE CORRIDA ACEITA COM DADOS COMPLETOS
-                    socket.emit('corrida_aceita', {
-                        ...dadosMotorista,
-                        corrida_id: corridaId
-                    });
+                    socket.emit('corrida_aceita', { ...dadosMotorista, corrida_id: corridaId });
                     socket.emit("entrar_na_sala", { corrida_id: corridaId });
                     
-                    // 🔥 INICIA ENVIO DE LOCALIZAÇÃO COM FOTO
+                    // Envia localização periodicamente
+                    if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
                     envioLocalizacaoInterval = setInterval(() => {
                         socket.emit('localizacao_motorista', {
                             corrida_id: corridaId,
@@ -733,7 +691,7 @@
                             motorista_nome: usuario.nome,
                             motorista_foto: usuario.foto_perfil || ''
                         });
-                    }, 1500);
+                    }, 2000);
                     
                     somSucesso.play().catch(() => {});
                     falar("Corrida aceita! Deslize para ir ao passageiro.");
@@ -752,12 +710,10 @@
             
             const destino = (corrida.lat_origem && corrida.lon_origem) 
                 ? `${corrida.lat_origem},${corrida.lon_origem}` 
-                : (corrida.origem_lat && corrida.origem_lng 
-                    ? `${corrida.origem_lat},${corrida.origem_lng}` 
-                    : corrida.origem);
+                : corrida.origem;
             
             document.getElementById('mapaFrame').src = 
-                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
+                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${encodeURIComponent(destino)}&mode=driving`;
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
             
             document.getElementById('containerAcoesCorrida').innerHTML = '';
@@ -767,7 +723,6 @@
         function mostrarCardPassageiro() {
             if (!corrida) return;
             
-            // 🔥 USA A FOTO DO PASSAGEIRO RECEBIDA
             const fotoPassageiro = corrida.foto_passageiro || corrida.foto_perfil || 
                 "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
             
@@ -796,12 +751,10 @@
             
             const destino = (corrida.lat_destino && corrida.lon_destino) 
                 ? `${corrida.lat_destino},${corrida.lon_destino}` 
-                : (corrida.destino_lat && corrida.destino_lng 
-                    ? `${corrida.destino_lat},${corrida.destino_lng}` 
-                    : corrida.destino);
+                : corrida.destino;
             
             document.getElementById('mapaFrame').src = 
-                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${destino}&mode=driving`;
+                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${encodeURIComponent(destino)}&mode=driving`;
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
             
             document.getElementById('etapaTexto').className = 'etapa etapa3';
@@ -833,7 +786,6 @@
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         status: "finalizada", valor_final: valorFinal,
-                        distancia_total: parseFloat(corrida.distancia || 0),
                         motorista_id: String(usuario.id),
                         motorista_nome: usuario.nome,
                         finalizado_em: new Date().toISOString()
@@ -891,17 +843,13 @@
                             corrida_id: corridaId, 
                             passageiro_id: String(corrida?.passageiro_id),
                             motorista_id: String(usuario.id), 
-                            nota: notaAvaliacao, 
-                            comentario: comentario
+                            nota: notaAvaliacao, comentario
                         })
                     });
                 }
-                document.getElementById('modalAvaliacao').style.display = 'none';
-                limparTudo();
-            } catch (e) { 
-                document.getElementById('modalAvaliacao').style.display = 'none';
-                limparTudo();
-            }
+            } catch (e) {}
+            document.getElementById('modalAvaliacao').style.display = 'none';
+            limparTudo();
         }
 
         // ==============================================
