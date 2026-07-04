@@ -69,14 +69,22 @@ class Usuario(db.Model):
 
 
 class Corrida(db.Model):
+    __tablename__ = 'corridas'
+    
     id = db.Column(db.Integer, primary_key=True)
-    passageiro_id = db.Column(db.Integer, nullable=False)
-    motorista_id = db.Column(db.Integer, nullable=True)
-    origem = db.Column(db.String(255), nullable=False)
-    destino = db.Column(db.String(255), nullable=False)
-    valor = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default="pendente")
-
+    passageiro_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
+    motorista_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
+    origem = db.Column(db.String(255))
+    destino = db.Column(db.String(255))
+    lat_origem = db.Column(db.Float)
+    lon_origem = db.Column(db.Float)
+    lat_destino = db.Column(db.Float)
+    lon_destino = db.Column(db.Float)
+    valor = db.Column(db.Float)
+    distancia = db.Column(db.String(50))
+    forma_pagamento = db.Column(db.String(20), default='pix')  # 🆕 NOVO CAMPO
+    status = db.Column(db.String(20), default='pendente')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Avaliacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -247,21 +255,14 @@ def historico():
         }
         for t in transacoes
     ])    
-#=========bliquear valor =======    
-def bloquear_valor_corrida(usuario_id, valor, forma_pagamento='pix'):
+#=========bliquear valor ======= 
+def bloquear_valor_corrida(usuario_id, valor):
     """
     Bloqueia o valor da corrida na carteira do passageiro.
-    Só bloqueia se a forma de pagamento for 'pix'.
-    Para 'dinheiro', retorna True sem bloquear.
+    Só é chamada quando forma_pagamento = 'pix'
     """
-    # 🔥 SE FOR DINHEIRO, NÃO PRECISA BLOQUEAR SALDO
-    if forma_pagamento == 'dinheiro':
-        print(f"💰 Pagamento em dinheiro - Usuário {usuario_id} - Valor R$ {valor} - NÃO bloqueado")
-        return True
-    
-    # 🔥 SÓ BLOQUEIA SE FOR PIX/CARTEIRA
     carteira = Carteira.query.filter_by(usuario_id=usuario_id).first()
-    
+
     if not carteira:
         print(f"❌ Carteira não encontrada para usuário {usuario_id}")
         return False
@@ -269,14 +270,14 @@ def bloquear_valor_corrida(usuario_id, valor, forma_pagamento='pix'):
     if carteira.saldo < valor:
         print(f"❌ Saldo insuficiente: R$ {carteira.saldo:.2f} < R$ {valor:.2f}")
         return False
-    
-    # Bloqueia o valor
+
     carteira.saldo -= valor
     carteira.saldo_bloqueado += valor
     db.session.commit()
     
-    print(f"✅ Valor bloqueado: R$ {valor:.2f} | Saldo: R$ {carteira.saldo:.2f} | Bloqueado: R$ {carteira.saldo_bloqueado:.2f}")
+    print(f"✅ Pix bloqueado: R$ {valor:.2f} | Saldo: R$ {carteira.saldo:.2f}")
     return True
+
 @app.route("/login", methods=["POST"])
 def login():
     dados = request.get_json()
