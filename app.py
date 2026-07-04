@@ -76,16 +76,19 @@ class Corrida(db.Model):
     motorista_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
     origem = db.Column(db.String(255))
     destino = db.Column(db.String(255))
-    lat_origem = db.Column(db.Float)
-    lon_origem = db.Column(db.Float)
-    lat_destino = db.Column(db.Float)
-    lon_destino = db.Column(db.Float)
+    lat_origem = db.Column(db.Float)        # ✅ Já existe
+    lon_origem = db.Column(db.Float)        # ✅ Já existe
+    lat_destino = db.Column(db.Float)       # ✅ Já existe
+    lon_destino = db.Column(db.Float)       # ✅ Já existe
     valor = db.Column(db.Float)
     distancia = db.Column(db.String(50))
-    forma_pagamento = db.Column(db.String(20), default='pix')  # 🆕 NOVO CAMPO
+    forma_pagamento = db.Column(db.String(20), default='pix')  # ✅ Já existe
     status = db.Column(db.String(20), default='pendente')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
+    # 🆕 Adicionar relacionamentos
+    passageiro = db.relationship('Usuario', foreign_keys=[passageiro_id], backref='corridas_passageiro')
+    motorista = db.relationship('Usuario', foreign_keys=[motorista_id], backref='corridas_motorista')
 class Avaliacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     corrida_id = db.Column(db.Integer)
@@ -387,31 +390,35 @@ def nova_corrida():
 
     valor_corrida = float(dados.get("valor"))
     
-    # 🔥 PEGA A FORMA DE PAGAMENTO (padrão: pix)
+    # 🔥 PEGA A FORMA DE PAGAMENTO
     forma_pagamento = dados.get("forma_pagamento", "pix")
 
-    # 🔥 CORREÇÃO: Só bloqueia saldo se for PIX
+    # 🔥 SÓ BLOQUEIA SALDO SE FOR PIX
     if forma_pagamento == "pix":
         if not bloquear_valor_corrida(passageiro_id, valor_corrida):
             return jsonify({
                 "erro": "Saldo insuficiente! Adicione saldo ou escolha pagar em dinheiro."
             }), 400
-    # Se for dinheiro, não faz nada - continua direto
     
-    # 🔥 Salva a forma de pagamento na corrida
+    # 🔥 CRIA CORRIDA COM TODOS OS CAMPOS
     nova = Corrida(
         passageiro_id=passageiro_id,
         origem=dados.get("origem"),
         destino=dados.get("destino"),
-        valor=float(dados.get("valor")),
-        forma_pagamento=forma_pagamento,  # 🆕 Salva forma de pagamento
+        lat_origem=dados.get("lat_origem"),      # 🆕
+        lon_origem=dados.get("lon_origem"),      # 🆕
+        lat_destino=dados.get("lat_destino"),    # 🆕
+        lon_destino=dados.get("lon_destino"),    # 🆕
+        valor=valor_corrida,
+        distancia=dados.get("distancia", ""),
+        forma_pagamento=forma_pagamento,
         status="pendente"
     )
 
     db.session.add(nova)
     db.session.commit()
 
-    # 🔥 Dados completos para os motoristas
+    # 🔥 DADOS COMPLETOS PARA MOTORISTAS
     dados_chamada = {
         "corrida_id": nova.id,
         "passageiro_id": passageiro.id,
@@ -423,36 +430,29 @@ def nova_corrida():
         "destino": nova.destino,
         "valor": nova.valor,
         "distancia": dados.get("distancia", "Calculando..."),
-        "forma_pagamento": forma_pagamento,  # 🆕 Envia forma de pagamento
+        "forma_pagamento": forma_pagamento,
         "lat_origem": dados.get("lat_origem"),
         "lon_origem": dados.get("lon_origem"),
         "lat_destino": dados.get("lat_destino"),
         "lon_destino": dados.get("lon_destino")
     }
 
-    # 🔥 Emite para TODOS os motoristas online (não só por sala)
-    motoristas = Usuario.query.filter_by(
-        tipo="motorista",
-        online=True
-    ).all()
+    # 🔥 EMITE PARA MOTORISTAS ONLINE
+    motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
 
     for motorista in motoristas:
-        socketio.emit(
-            "nova_corrida",
-            dados_chamada,
-            room=f"motorista_{motorista.id}"
-        )
+        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
     
-    # 🔥 Também emite no canal geral
     socketio.emit("nova_corrida", dados_chamada)
 
-    print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f} | Passageiro: {passageiro.nome}")
+    print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f}")
 
     return jsonify({
         "status": "Procurando motoristas",
         "corrida_id": nova.id,
         "forma_pagamento": forma_pagamento
     }), 201
+
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
@@ -487,7 +487,6 @@ def aceitar_corrida(id):
 def cancelar_corrida(id):
     corrida = Corrida.query.get(id)
     
-    # 1. Validações básicas
     if not corrida:
         return jsonify({"sucesso": False, "erro": "Corrida não encontrada"}), 404
         
@@ -498,86 +497,63 @@ def cancelar_corrida(id):
         return jsonify({"sucesso": False, "erro": "Corrida já estava cancelada"}), 400
 
     try:
-        # 2. Atualiza o status da corrida
         corrida.status = "cancelada"
         
-        # 3. Executa a devolução do dinheiro usando os dados da própria corrida
-        # (Ajuste 'passageiro_id' e 'valor' de acordo com as colunas do seu modelo Corrida)
-        devolver_saldo(corrida.passageiro_id, corrida.valor)
+        # 🔥 SÓ DEVOLVE SALDO SE FOR PIX
+        if corrida.forma_pagamento == 'pix':
+            devolver_saldo(corrida.passageiro_id, corrida.valor)
         
-        # 4. Salva todas as alterações no banco de dados de uma vez
         db.session.commit()
         
     except Exception as e:
-        # Se der qualquer erro na devolução ou no banco, desfaz as alterações
         db.session.rollback()
         return jsonify({"sucesso": False, "erro": f"Erro ao processar cancelamento: {str(e)}"}), 500
 
-    # 5. Avisa os envolvidos via Socket e retorna o sucesso
     socketio.emit("corrida_cancelada", {"corrida_id": id}, room=f"corrida_{id}")
     
     return jsonify({"sucesso": True, "corrida_id": corrida.id}), 200
-
 @app.route('/finalizar_corrida/<corrida_id>', methods=['POST'])
 def finalizar_corrida(corrida_id):
 
     try:
         corrida_id = int(corrida_id)
     except:
-        return jsonify({
-            "sucesso": False,
-            "erro": "ID inválido"
-        }), 400
+        return jsonify({"sucesso": False, "erro": "ID inválido"}), 400
 
     dados = request.get_json() or {}
-
     corrida = Corrida.query.get(corrida_id)
 
     if not corrida:
-        return jsonify({
-            "sucesso": False,
-            "erro": "Corrida não encontrada"
-        }), 404
+        return jsonify({"sucesso": False, "erro": "Corrida não encontrada"}), 404
 
     corrida.status = "finalizada"
 
-    # Libera pagamento
-    liberar_pagamento(
-        corrida.passageiro_id,
-        corrida.motorista_id,
-        corrida.valor
-    )
+    # 🔥 SÓ LIBERA PAGAMENTO SE FOR PIX
+    if corrida.forma_pagamento == 'pix':
+        liberar_pagamento(
+            corrida.passageiro_id,
+            corrida.motorista_id,
+            corrida.valor
+        )
 
     # Registra no histórico
     registro = Transacao(
         usuario_id=corrida.passageiro_id,
         tipo="corrida",
         valor=corrida.valor,
-        descricao=f"Corrida concluída #{corrida.id}"
+        descricao=f"Corrida #{corrida.id} - {'💵 Dinheiro' if corrida.forma_pagamento == 'dinheiro' else '💳 Pix'}"
     )
-
     db.session.add(registro)
-
     db.session.commit()
 
-    socketio.emit(
-        'viagem_finalizada',
-        {
-            "corrida_id": corrida_id,
-            "valor": corrida.valor,
-            "motorista_nome": dados.get(
-                'motorista_nome',
-                "Motorista"
-            ),
-            "motorista_id": corrida.motorista_id
-        },
-        room=f"corrida_{corrida_id}"
-    )
+    socketio.emit('viagem_finalizada', {
+        "corrida_id": corrida_id,
+        "valor": corrida.valor,
+        "motorista_nome": dados.get('motorista_nome', 'Motorista'),
+        "motorista_id": corrida.motorista_id
+    }, room=f"corrida_{corrida_id}")
 
-    return jsonify({
-        "sucesso": True,
-        "valor": corrida.valor
-    })
+    return jsonify({"sucesso": True, "valor": corrida.valor})
 
 # ==========================================
 # SOCKETIO — SALAS E EVENTOS ALINHADOS
@@ -623,19 +599,17 @@ def atualizar_localizacao():
 
 @socketio.on("localizacao_motorista")
 def receber_localizacao(dados):
+    # 🔥 EMITE COM O MESMO NOME QUE O FRONTEND ESPERA
+    socketio.emit("localizacao_motorista", {
+        "corrida_id": dados.get("corrida_id"),
+        "motorista_id": dados.get("motorista_id"),
+        "lat": dados.get("lat"),
+        "lng": dados.get("lng"),
+        "motorista_nome": dados.get("motorista_nome", ""),
+        "motorista_foto": dados.get("motorista_foto", "")
+    }, room=f"corrida_{dados['corrida_id']}")
 
-    socketio.emit(
-        "atualizacao_localizacao",
-        {
-            "motorista_id": dados["motorista_id"],
-            "latitude": dados["lat"],
-            "longitude": dados["lng"],
-            "status": dados.get("status")
-        },
-        room=f"corrida_{dados['corrida_id']}"
-    )
-
-    print("📍 Localização enviada:", dados)
+    print("📍 Localização enviada:", dados.get("lat"), dados.get("lng"))
 # ==========================================
 # AVALIAÇÕES
 # ==========================================
