@@ -385,53 +385,72 @@ def nova_corrida():
     dados = request.get_json()
 
     valor_corrida = float(dados.get("valor"))
+    
+    # 🔥 PEGA A FORMA DE PAGAMENTO (padrão: pix)
+    forma_pagamento = dados.get("forma_pagamento", "pix")
 
-    if not bloquear_valor_corrida(
-        passageiro_id,
-        valor_corrida
-    ):
-        return jsonify({
-            "erro": "Saldo insuficiente"
-        }), 400
-
+    # 🔥 CORREÇÃO: Só bloqueia saldo se for PIX
+    if forma_pagamento == "pix":
+        if not bloquear_valor_corrida(passageiro_id, valor_corrida):
+            return jsonify({
+                "erro": "Saldo insuficiente! Adicione saldo ou escolha pagar em dinheiro."
+            }), 400
+    # Se for dinheiro, não faz nada - continua direto
+    
+    # 🔥 Salva a forma de pagamento na corrida
     nova = Corrida(
         passageiro_id=passageiro_id,
         origem=dados.get("origem"),
         destino=dados.get("destino"),
         valor=float(dados.get("valor")),
+        forma_pagamento=forma_pagamento,  # 🆕 Salva forma de pagamento
         status="pendente"
     )
 
     db.session.add(nova)
     db.session.commit()
 
+    # 🔥 Dados completos para os motoristas
     dados_chamada = {
         "corrida_id": nova.id,
         "passageiro_id": passageiro.id,
         "passageiro_nome": passageiro.nome,
-        "foto_perfil": passageiro.foto_perfil,
+        "passageiro_telefone": passageiro.telefone or "",
+        "foto_passageiro": passageiro.foto_perfil or "",
+        "foto_perfil": passageiro.foto_perfil or "",
         "origem": nova.origem,
         "destino": nova.destino,
         "valor": nova.valor,
-        "distancia": dados.get("distancia", "Calculando...")
+        "distancia": dados.get("distancia", "Calculando..."),
+        "forma_pagamento": forma_pagamento,  # 🆕 Envia forma de pagamento
+        "lat_origem": dados.get("lat_origem"),
+        "lon_origem": dados.get("lon_origem"),
+        "lat_destino": dados.get("lat_destino"),
+        "lon_destino": dados.get("lon_destino")
     }
 
+    # 🔥 Emite para TODOS os motoristas online (não só por sala)
     motoristas = Usuario.query.filter_by(
         tipo="motorista",
         online=True
     ).all()
 
     for motorista in motoristas:
-
         socketio.emit(
             "nova_corrida",
             dados_chamada,
             room=f"motorista_{motorista.id}"
         )
+    
+    # 🔥 Também emite no canal geral
+    socketio.emit("nova_corrida", dados_chamada)
+
+    print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f} | Passageiro: {passageiro.nome}")
 
     return jsonify({
         "status": "Procurando motoristas",
-        "corrida_id": nova.id
+        "corrida_id": nova.id,
+        "forma_pagamento": forma_pagamento
     }), 201
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
