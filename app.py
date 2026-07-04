@@ -248,24 +248,35 @@ def historico():
         for t in transacoes
     ])    
 #=========bliquear valor =======    
-def bloquear_valor_corrida(
-    usuario_id,
-    valor
-):
-
-    carteira = Carteira.query.filter_by(
-        usuario_id=usuario_id
-    ).first()
-
-    if carteira.saldo < valor:
+def bloquear_valor_corrida(usuario_id, valor, forma_pagamento='pix'):
+    """
+    Bloqueia o valor da corrida na carteira do passageiro.
+    Só bloqueia se a forma de pagamento for 'pix'.
+    Para 'dinheiro', retorna True sem bloquear.
+    """
+    # 🔥 SE FOR DINHEIRO, NÃO PRECISA BLOQUEAR SALDO
+    if forma_pagamento == 'dinheiro':
+        print(f"💰 Pagamento em dinheiro - Usuário {usuario_id} - Valor R$ {valor} - NÃO bloqueado")
+        return True
+    
+    # 🔥 SÓ BLOQUEIA SE FOR PIX/CARTEIRA
+    carteira = Carteira.query.filter_by(usuario_id=usuario_id).first()
+    
+    if not carteira:
+        print(f"❌ Carteira não encontrada para usuário {usuario_id}")
         return False
-
+    
+    if carteira.saldo < valor:
+        print(f"❌ Saldo insuficiente: R$ {carteira.saldo:.2f} < R$ {valor:.2f}")
+        return False
+    
+    # Bloqueia o valor
     carteira.saldo -= valor
     carteira.saldo_bloqueado += valor
-
     db.session.commit()
-
-    return True    
+    
+    print(f"✅ Valor bloqueado: R$ {valor:.2f} | Saldo: R$ {carteira.saldo:.2f} | Bloqueado: R$ {carteira.saldo_bloqueado:.2f}")
+    return True
 @app.route("/login", methods=["POST"])
 def login():
     dados = request.get_json()
