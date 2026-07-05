@@ -859,7 +859,164 @@ def handle_cancelar_motorista(dados):
     cid = dados.get('corrida_id')
     if cid:
         socketio.emit('corrida_cancelada', {'corrida_id': cid}, room=f"corrida_{cid}")
-
+@app.route('/admin/dashboard', methods=['GET'])
+def admin_dashboard():
+    """Retorna dados para o painel de controle"""
+    try:
+        # Estatísticas gerais
+        total_usuarios = Usuario.query.count()
+        total_corridas = Corrida.query.count()
+        motoristas_online = Usuario.query.filter_by(tipo='motorista', online=True).count()
+        passageiros_online = Usuario.query.filter_by(tipo='passageiro').count()
+        faturamento_hoje = db.session.query(db.func.sum(Corrida.valor)).filter(
+            Corrida.status == 'finalizada',
+            db.func.date(Corrida.created_at) == db.func.date('now')
+        ).scalar() or 0
+        
+        # Média de avaliações
+        media_avaliacoes = db.session.query(db.func.avg(Avaliacao.nota)).scalar() or 5.0
+        
+        # Motoristas online (com detalhes)
+        motoristas = Usuario.query.filter_by(tipo='motorista', online=True).all()
+        motoristas_lista = []
+        for m in motoristas:
+            motoristas_lista.append({
+                'id': m.id,
+                'nome': m.nome,
+                'carro': m.carro or 'N/A',
+                'placa': m.placa or 'N/A',
+                'foto_perfil': m.foto_perfil,
+                'telefone': m.telefone or 'N/A',
+                'nota_media': 5.0
+            })
+        
+        # Passageiros online (com detalhes)
+        passageiros = Usuario.query.filter_by(tipo='passageiro').all()
+        passageiros_lista = []
+        for p in passageiros:
+            passageiros_lista.append({
+                'id': p.id,
+                'nome': p.nome,
+                'email': p.email,
+                'telefone': p.telefone or 'N/A',
+                'foto_perfil': p.foto_perfil
+            })
+        
+        # Corridas ativas (pendente, aceita, em_andamento)
+        corridas_ativas = Corrida.query.filter(
+            Corrida.status.in_(['pendente', 'aceita', 'em_andamento'])
+        ).order_by(Corrida.created_at.desc()).all()
+        
+        corridas_ativas_lista = []
+        for c in corridas_ativas:
+            passageiro = Usuario.query.get(c.passageiro_id)
+            motorista = Usuario.query.get(c.motorista_id) if c.motorista_id else None
+            corridas_ativas_lista.append({
+                'corrida_id': c.id,
+                'id': c.id,
+                'passageiro_id': c.passageiro_id,
+                'motorista_id': c.motorista_id,
+                'passageiro_nome': passageiro.nome if passageiro else 'N/A',
+                'passageiro_telefone': passageiro.telefone if passageiro else '',
+                'motorista_nome': motorista.nome if motorista else 'Aguardando',
+                'motorista_telefone': motorista.telefone if motorista else '',
+                'carro': motorista.carro if motorista else '',
+                'placa': motorista.placa if motorista else '',
+                'origem': c.origem,
+                'destino': c.destino,
+                'valor': c.valor,
+                'distancia': c.distancia or '',
+                'forma_pagamento': c.forma_pagamento or 'pix',
+                'status': c.status,
+                'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else None
+            })
+        
+        # Corridas finalizadas (últimas 20)
+        corridas_finalizadas = Corrida.query.filter_by(status='finalizada').order_by(
+            Corrida.created_at.desc()
+        ).limit(20).all()
+        
+        corridas_finalizadas_lista = []
+        for c in corridas_finalizadas:
+            passageiro = Usuario.query.get(c.passageiro_id)
+            motorista = Usuario.query.get(c.motorista_id) if c.motorista_id else None
+            corridas_finalizadas_lista.append({
+                'corrida_id': c.id,
+                'id': c.id,
+                'passageiro_nome': passageiro.nome if passageiro else 'N/A',
+                'motorista_nome': motorista.nome if motorista else 'N/A',
+                'origem': c.origem,
+                'destino': c.destino,
+                'valor': c.valor,
+                'forma_pagamento': c.forma_pagamento or 'pix',
+                'status': c.status,
+                'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else None
+            })
+        
+        # Últimas transações
+        transacoes = Transacao.query.order_by(Transacao.data.desc()).limit(10).all()
+        transacoes_lista = []
+        for t in transacoes:
+            usuario = Usuario.query.get(t.usuario_id)
+            transacoes_lista.append({
+                'id': t.id,
+                'usuario_id': t.usuario_id,
+                'usuario_nome': usuario.nome if usuario else 'N/A',
+                'tipo': t.tipo,
+                'valor': t.valor,
+                'descricao': t.descricao,
+                'data': t.data.strftime('%d/%m/%Y %H:%M') if t.data else None
+            })
+        
+        # Estatísticas para os cards
+        estatisticas = {
+            'total_usuarios': total_usuarios,
+            'total_corridas': total_corridas,
+            'motoristas_online': motoristas_online,
+            'passageiros_online': passageiros_online,
+            'corridas_ativas': len(corridas_ativas_lista),
+            'corridas_finalizadas_hoje': len(corridas_finalizadas_lista),
+            'faturamento_hoje': float(faturamento_hoje),
+            'media_avaliacoes': round(float(media_avaliacoes), 1)
+        }
+        
+        return jsonify({
+            'sucesso': True,
+            'estatisticas': estatisticas,
+            'motoristas_online': motoristas_online,
+            'motoristas_online_lista': motoristas_lista,
+            'passageiros_online': passageiros_online,
+            'passageiros_online_lista': passageiros_lista,
+            'corridas_ativas': corridas_ativas_lista,
+            'corridas_finalizadas': corridas_finalizadas_lista,
+            'transacoes': transacoes_lista,
+            'countMotoristasOnline': motoristas_online,
+            'countPassageirosOnline': passageiros_online,
+            'countCorridasAtivas': len(corridas_ativas_lista),
+            'countCorridasFinalizadas': len(corridas_finalizadas_lista),
+            'totalFaturamento': f'R$ {float(faturamento_hoje):.2f}',
+            'mediaAvaliacoes': round(float(media_avaliacoes), 1)
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro no dashboard: {e}")
+        return jsonify({
+            'sucesso': False,
+            'erro': str(e),
+            'motoristas_online': 0,
+            'motoristas_online_lista': [],
+            'passageiros_online_lista': [],
+            'corridas_ativas': [],
+            'corridas_finalizadas': [],
+            'estatisticas': {
+                'motoristas_online': 0,
+                'passageiros_online': 0,
+                'corridas_ativas': 0,
+                'corridas_finalizadas_hoje': 0,
+                'faturamento_hoje': 0,
+                'media_avaliacoes': 5.0
+            }
+        }), 500
 # ==========================================
 # RECRIAR BANCO
 # ==========================================
