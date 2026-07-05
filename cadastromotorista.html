@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🚗 Cadastro Motorista | Rota Brasil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --fundo: #0F1419;
+            --card: #1D2129;
+            --borda: #363E4D;
+            --texto: #F5F7FA;
+            --texto2: #86909C;
+            --primaria: #165DFF;
+            --sucesso: #00B42A;
+            --alerta: #FF7D00;
+            --perigo: #F53F3F;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--fundo);
+            color: var(--texto);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        /* Cabeçalho */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header .logo {
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #165DFF, #7B2CFF, #FF007F);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .header p {
+            color: var(--texto2);
+            font-size: 14px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--borda);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        /* Indicador de passo */
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+        .step {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--borda);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--texto2);
+            transition: all 0.3s;
+        }
+        .step.active {
+            background: var(--primaria);
+            color: white;
+        }
+        .step.done {
+            background: var(--sucesso);
+            color: white;
+        }
+        .step-line {
+            width: 40px;
+            height: 2px;
+            background: var(--borda);
+            align-self: center;
+        }
+        .step-line.done {
+            background: var(--sucesso);
+        }
+
+        /* Formulário */
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
+
+        .grupo-input {
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .grupo-input label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--texto2);
+        }
+        .grupo-input label i {
+            margin-right: 5px;
+            width: 16px;
+            text-align: center;
+        }
+        .grupo-input input {
+            width: 100%;
+            padding: 14px 16px;
+            background: #272E3B;
+            border: 1.5px solid var(--borda);
+            border-radius: 12px;
+            color: var(--texto);
+            font-size: 15px;
+            transition: all 0.3s;
+            outline: none;
+        }
+        .grupo-input input:focus {
+            border-color: var(--primaria);
+            box-shadow: 0 0 0 3px rgba(22,93,255,0.15);
+        }
+        .grupo-input input::placeholder {
+            color: #555;
+        }
+        .grupo-input .icon-input {
+            position: absolute;
+            right: 16px;
+            top: 42px;
+            color: var(--texto2);
+        }
+
+        /* Upload de foto */
+        .upload-foto {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .foto-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #272E3B;
+            border: 3px dashed var(--borda);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+            position: relative;
+        }
+        .foto-preview:hover {
+            border-color: var(--primaria);
+        }
+        .foto-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .foto-preview i {
+            font-size: 30px;
+            color: var(--texto2);
+        }
+        .foto-preview.has-photo i {
+            display: none;
+        }
+        .foto-url {
+            font-size: 12px;
+            color: var(--texto2);
+        }
+
+        /* Botões */
+        .botoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            color: white;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        .btn-primary {
+            background: var(--primaria);
+        }
+        .btn-success {
+            background: var(--sucesso);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--borda);
+            color: var(--texto);
+        }
+        .btn-outline:hover {
+            border-color: var(--texto2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Termos */
+        .termos {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--texto2);
+        }
+        .termos input {
+            margin-top: 3px;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--sucesso);
+        }
+        .termos a {
+            color: var(--primaria);
+            text-decoration: none;
+        }
+
+        /* Mensagem */
+        .mensagem {
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+        }
+        .mensagem.sucesso {
+            background: rgba(0,180,42,0.15);
+            border: 1px solid var(--sucesso);
+            color: var(--sucesso);
+            display: block;
+        }
+        .mensagem.erro {
+            background: rgba(245,63,63,0.15);
+            border: 1px solid var(--perigo);
+            color: var(--perigo);
+            display: block;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsivo */
+        @media (max-width: 400px) {
+            .card {
+                padding: 20px;
+            }
+            .header .logo {
+                font-size: 32px;
+            }
+            .botoes {
+                flex-direction: column;
+            }
+        }
+
+        /* Check animado */
+        .check-animado {
+            text-align: center;
+            padding: 30px;
+        }
+        .check-animado .circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--sucesso);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            color: white;
+            animation: popIn 0.5s ease;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .check-animado h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .check-animado p {
+            color: var(--texto2);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Cabeçalho -->
+        <div class="header">
+            <div class="logo">🚗</div>
+            <h1>Rota Brasil</h1>
+            <p>Cadastro de Motorista Parceiro</p>
+        </div>
+
+        <!-- Card -->
+        <div class="card" id="cardFormulario">
+            <!-- Passos -->
+            <div class="steps">
+                <div class="step active" id="step1">1</div>
+                <div class="step-line" id="line1"></div>
+                <div class="step" id="step2">2</div>
+                <div class="step-line" id="line2"></div>
+                <div class="step" id="step3">3</div>
+            </div>
+
+            <!-- PASSO 1: Dados Pessoais -->
+            <div class="form-step active" id="formStep1">
+                <div class="upload-foto">
+                    <div class="foto-preview" id="fotoPreview" onclick="document.getElementById('fotoInput').click()">
+                        <i class="fas fa-camera"></i>
+                        <img id="fotoImg" src="" style="display:none;">
+                    </div>
+                    <input type="hidden" id="fotoInput" accept="image/*">
+                    <p class="foto-url">ou cole o link da foto abaixo</p>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-image"></i> URL da Foto de Perfil</label>
+                    <input type="url" id="foto_perfil" placeholder="https://exemplo.com/sua-foto.jpg" oninput="atualizarPreview()">
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-user"></i> Nome Completo</label>
+                    <input type="text" id="nome" placeholder="Seu nome completo" required>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-envelope"></i> E-mail</label>
+                    <input type="email" id="email" placeholder="seuemail@provedor.com" required>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-phone"></i> WhatsApp / Telefone</label>
+                    <input type="tel" id="telefone" placeholder="(11) 99999-9999" required>
+                </div>
+
+                <div class="botoes">
+                    <button class="btn-primary" onclick="proximoPasso(2)">
+                        Próximo <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASSO 2: Veículo e Senha -->
+            <div class="form-step" id="formStep2">
+                <div class="grupo-input">
+                    <label><i class="fas fa-car"></i> Modelo / Cor do Veículo</label>
+                    <input type="text" id="carro" placeholder="Ex: HB20 Branco, Gol Prata..." required>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-id-card"></i> Placa do Veículo</label>
+                    <input type="text" id="placa" placeholder="Ex: ABC1234" maxlength="7" style="text-transform:uppercase;" required>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-lock"></i> Senha</label>
+                    <input type="password" id="senha" placeholder="Mínimo 6 caracteres" required>
+                </div>
+
+                <div class="grupo-input">
+                    <label><i class="fas fa-lock"></i> Confirmar Senha</label>
+                    <input type="password" id="confirmarSenha" placeholder="Repita a senha" required>
+                </div>
+
+                <div class="botoes">
+                    <button class="btn-outline" onclick="proximoPasso(1)">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button class="btn-primary" onclick="proximoPasso(3)">
+                        Próximo <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PASSO 3: Confirmação -->
+            <div class="form-step" id="formStep3">
+                <h3 style="text-align:center; margin-bottom:15px;">📋 Confirme seus dados</h3>
+                
+                <div id="resumoDados" style="background:#272E3B; padding:15px; border-radius:10px; margin-bottom:15px; font-size:14px;">
+                    <p><strong>👤 Nome:</strong> <span id="resNome">-</span></p>
+                    <p><strong>📧 E-mail:</strong> <span id="resEmail">-</span></p>
+                    <p><strong>📱 WhatsApp:</strong> <span id="resTelefone">-</span></p>
+                    <p><strong>🚘 Veículo:</strong> <span id="resCarro">-</span></p>
+                    <p><strong>🔖 Placa:</strong> <span id="resPlaca">-</span></p>
+                </div>
+
+                <div class="termos">
+                    <input type="checkbox" id="aceitarTermos" required>
+                    <label for="aceitarTermos">Aceito os <a href="#" onclick="alert('Termos de Uso: Você será um motorista parceiro Rota Brasil.')">Termos de Uso</a> e autorizo o processamento dos meus dados.</label>
+                </div>
+
+                <div class="botoes">
+                    <button class="btn-outline" onclick="proximoPasso(2)">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <button class="btn-success" id="btnCadastrar" onclick="cadastrarMotorista()">
+                        <i class="fas fa-check"></i> Finalizar Cadastro
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mensagem -->
+            <div class="mensagem" id="mensagem"></div>
+        </div>
+
+        <!-- Sucesso -->
+        <div class="card" id="cardSucesso" style="display:none;">
+            <div class="check-animado">
+                <div class="circle">✓</div>
+                <h2>Cadastro Realizado!</h2>
+                <p>Bem-vindo à Rota Brasil!<br>Agora você pode começar a receber corridas.</p>
+                <button class="btn-success" onclick="irParaMotorista()">
+                    <i class="fas fa-car"></i> Ir para o App do Motorista
+                </button>
+                <button class="btn-outline" style="margin-top:10px;" onclick="location.reload()">
+                    <i class="fas fa-user-plus"></i> Novo Cadastro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO
+        // ==========================================
+        const API = "https://rotabrasil-tobu.onrender.com";
+        let passoAtual = 1;
+
+        // ==========================================
+        // NAVEGAÇÃO ENTRE PASSOS
+        // ==========================================
+        function proximoPasso(passo) {
+            // Validação do passo 1
+            if (passoAtual === 1 && passo === 2) {
+                const nome = document.getElementById('nome').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const telefone = document.getElementById('telefone').value.trim();
+                
+                if (!nome || nome.length < 3) {
+                    mostrarMensagem('erro', 'Digite seu nome completo');
+                    return;
+                }
+                if (!email || !email.includes('@')) {
+                    mostrarMensagem('erro', 'Digite um e-mail válido');
+                    return;
+                }
+                if (!telefone || telefone.length < 10) {
+                    mostrarMensagem('erro', 'Digite um telefone válido');
+                    return;
+                }
+            }
+
+            // Validação do passo 2
+            if (passoAtual === 2 && passo === 3) {
+                const carro = document.getElementById('carro').value.trim();
+                const placa = document.getElementById('placa').value.trim();
+                const senha = document.getElementById('senha').value;
+                const confirmar = document.getElementById('confirmarSenha').value;
+                
+                if (!carro) {
+                    mostrarMensagem('erro', 'Digite o modelo do veículo');
+                    return;
+                }
+                if (!placa || placa.length < 6) {
+                    mostrarMensagem('erro', 'Digite a placa corretamente');
+                    return;
+                }
+                if (senha.length < 6) {
+                    mostrarMensagem('erro', 'A senha deve ter no mínimo 6 caracteres');
+                    return;
+                }
+                if (senha !== confirmar) {
+                    mostrarMensagem('erro', 'As senhas não conferem');
+                    return;
+                }
+
+                // Preenche resumo
+                document.getElementById('resNome').textContent = document.getElementById('nome').value;
+                document.getElementById('resEmail').textContent = document.getElementById('email').value;
+                document.getElementById('resTelefone').textContent = document.getElementById('telefone').value;
+                document.getElementById('resCarro').textContent = carro;
+                document.getElementById('resPlaca').textContent = placa.toUpperCase();
+            }
+
+            // Atualiza passos visuais
+            passoAtual = passo;
+            atualizarSteps();
+            
+            // Mostra o form step correto
+            document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
+            document.getElementById('formStep' + passo).classList.add('active');
+            
+            // Esconde mensagem
+            document.getElementById('mensagem').className = 'mensagem';
+        }
+
+        function atualizarSteps() {
+            const s1 = document.getElementById('step1');
+            const s2 = document.getElementById('step2');
+            const s3 = document.getElementById('step3');
+            const l1 = document.getElementById('line1');
+            const l2 = document.getElementById('line2');
+            
+            // Remove todas as classes
+            [s1, s2, s3].forEach(s => s.className = 'step');
+            [l1, l2].forEach(l => l.className = 'step-line');
+            
+            if (passoAtual === 1) {
+                s1.classList.add('active');
+            } else if (passoAtual === 2) {
+                s1.classList.add('done');
+                s2.classList.add('active');
+                l1.classList.add('done');
+            } else if (passoAtual === 3) {
+                s1.classList.add('done');
+                s2.classList.add('done');
+                s3.classList.add('active');
+                l1.classList.add('done');
+                l2.classList.add('done');
+            }
+        }
+
+        // ==========================================
+        // FOTO
+        // ==========================================
+        function atualizarPreview() {
+            const url = document.getElementById('foto_perfil').value.trim();
+            const img = document.getElementById('fotoImg');
+            const icon = document.querySelector('.foto-preview i');
+            
+            if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                img.src = url;
+                img.style.display = 'block';
+                if (icon) icon.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                if (icon) icon.style.display = 'block';
+            }
+        }
+
+        // ==========================================
+        // MENSAGEM
+        // ==========================================
+        function mostrarMensagem(tipo, texto) {
+            const msg = document.getElementById('mensagem');
+            msg.className = 'mensagem ' + tipo;
+            msg.textContent = texto;
+            setTimeout(() => {
+                msg.className = 'mensagem';
+            }, 4000);
+        }
+
+        // ==========================================
+        // CADASTRO
+        // ==========================================
+        async function cadastrarMotorista() {
+            // Verifica termos
+            if (!document.getElementById('aceitarTermos').checked) {
+                mostrarMensagem('erro', 'Aceite os termos de uso');
+                return;
+            }
+
+            const btn = document.getElementById('btnCadastrar');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Cadastrando...';
+
+            const dados = {
+                nome: document.getElementById('nome').value.trim(),
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                senha: document.getElementById('senha').value,
+                telefone: document.getElementById('telefone').value.trim(),
+                carro: document.getElementById('carro').value.trim(),
+                placa: document.getElementById('placa').value.trim().toUpperCase(),
+                foto_perfil: document.getElementById('foto_perfil').value.trim(),
+                tipo: "motorista"
+            };
+
+            console.log("📤 Enviando cadastro:", dados);
+
+            try {
+                const response = await fetch(`${API}/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    // Sucesso!
+                    document.getElementById('cardFormulario').style.display = 'none';
+                    document.getElementById('cardSucesso').style.display = 'block';
+                    console.log("✅ Cadastro realizado!");
+                } else {
+                    mostrarMensagem('erro', resultado.erro || 'Erro ao cadastrar');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Finalizar Cadastro';
+                }
+            } catch (error) {
+                console.error("❌ Erro:", error);
+                mostrarMensagem('erro', 'Erro de conexão. Verifique sua internet.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Finalizar Cadastro';
+            }
+        }
+
+        // ==========================================
+        // REDIRECIONAR
+        // ==========================================
+        function irParaMotorista() {
+            // Salva os dados básicos para auto-login
+            const email = document.getElementById('email').value.trim();
+            const senha = document.getElementById('senha').value;
+            
+            // Redireciona para o app do motorista
+            window.location.href = 'motorista.html';
+        }
+
+        // ==========================================
+        // TECLA ENTER
+        // ==========================================
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (passoAtual === 1) proximoPasso(2);
+                else if (passoAtual === 2) proximoPasso(3);
+            }
+        });
+    </script>
+</body>
+</html>
