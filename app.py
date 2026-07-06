@@ -1061,28 +1061,41 @@ def recriar():
         return jsonify({"status": "✅ Banco recriado com sucesso!"})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+#==========MOTORISTAS OLINE PARA PASSAGEIROS==≠=
 @app.route('/motoristas_localizacao', methods=['GET'])
 def motoristas_localizacao():
-    """Retorna motoristas online para exibição no mapa"""
+    """Retorna motoristas online - localização real com fallback"""
     try:
         motoristas = Usuario.query.filter_by(tipo='motorista', online=True).all()
         lista = []
         
-        # Posições simuladas espalhadas por SP para demonstração
-        posicoes_sp = [
-            (-23.5505, -46.6333),  # Centro
-            (-23.5610, -46.6560),  # Oeste
-            (-23.5400, -46.6100),  # Leste
-            (-23.5700, -46.6400),  # Sul
-            (-23.5300, -46.6200),  # Norte
-            (-23.5550, -46.6450),  # Centro-Oeste
-            (-23.5450, -46.6250),  # Centro-Leste
-            (-23.5600, -46.6150),  # Sudeste
+        # Posições de fallback espalhadas
+        fallback_positions = [
+            (-23.5505, -46.6333),
+            (-23.5610, -46.6560),
+            (-23.5400, -46.6100),
+            (-23.5700, -46.6400),
+            (-23.5300, -46.6200),
         ]
         
         for i, m in enumerate(motoristas):
-            # Usa posições espalhadas para cada motorista
-            pos = posicoes_sp[i % len(posicoes_sp)]
+            # Tenta buscar localização real
+            ultima_loc = db.session.execute(
+                db.text("""
+                    SELECT lat, lng FROM localizacoes 
+                    WHERE motorista_id = :mid 
+                    ORDER BY updated_at DESC LIMIT 1
+                """),
+                {'mid': m.id}
+            ).fetchone()
+            
+            if ultima_loc and ultima_loc[0] and ultima_loc[1]:
+                lat, lng = ultima_loc[0], ultima_loc[1]
+            else:
+                # Fallback: posição simulada
+                pos = fallback_positions[i % len(fallback_positions)]
+                lat = pos[0] + (i * 0.003)
+                lng = pos[1] + (i * 0.003)
             
             lista.append({
                 'id': m.id,
@@ -1090,8 +1103,8 @@ def motoristas_localizacao():
                 'carro': m.carro or 'Carro',
                 'placa': m.placa or '',
                 'foto_perfil': m.foto_perfil or '',
-                'lat': pos[0] + (i * 0.002),  # Pequena variação
-                'lng': pos[1] + (i * 0.002),  # Pequena variação
+                'lat': lat,
+                'lng': lng,
                 'nota': 5.0
             })
         
@@ -1101,8 +1114,8 @@ def motoristas_localizacao():
         })
     except Exception as e:
         print(f"❌ Erro motoristas_localizacao: {e}")
-        return jsonify({'motoristas': [], 'total': 0, 'erro': str(e)})
-# ==========================================
+        return jsonify({'motoristas': [], 'total': 0})        
+#===================
 # ROTAS BÁSICAS
 # ==========================================
 
