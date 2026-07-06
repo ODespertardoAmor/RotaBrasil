@@ -254,118 +254,128 @@
         <button class="btn-danger" onclick="fecharCarteira()">Fechar</button>
     </div>
     
-<script>
+  <script>
     // ========== CONFIG ==========
     const API = "https://rotabrasil-tobu.onrender.com";
     const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
 
     let token, passageiro, corridaAtual;
-    let latOrigem, lonOrigem, latDestino, lonDestino, latMotorista, lonMotorista;
+    let latOrigem = null, lonOrigem = null, latDestino = null, lonDestino = null, latMotorista = null, lonMotorista = null;
     let distancia, valorFinal, notaAvaliacao = 0;
     let formaPagamento = 'pix';
     let saldoCarteira = 0;
     let buscaTimeout = null;
     let pollingInterval = null;
 
-    
-    // ========== 🗺️ MAPA DE MOTORISTAS ONLINE (COM LOCALIZAÇÃO DO PASSAGEIRO) ==========
-let mapaMotoristas = null;
-let marcadoresMotoristas = [];
-let marcadorPassageiroMapa = null;
+    // ========== 🗺️ MAPA DE MOTORISTAS ONLINE ==========
+    let mapaMotoristas = null;
+    let marcadoresMotoristas = [];
+    let marcadorPassageiroMapa = null;
 
-function inicializarMapaMotoristas() {
-    if (mapaMotoristas) return;
-    
-    // Tenta obter a localização do passageiro
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                // Centraliza na posição do passageiro
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                
-                mapaMotoristas = L.map('mapaMotoristas', { 
-                    zoomControl: true, 
-                    attributionControl: false 
-                }).setView([lat, lng], 14);
-                
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                    maxZoom: 19 
-                }).addTo(mapaMotoristas);
-                
-                // Adiciona marcador do passageiro
-                marcadorPassageiroMapa = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '<div style="font-size:28px;">📍</div>',
-                        className: '',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30]
-                    })
-                }).addTo(mapaMotoristas);
-                marcadorPassageiroMapa.bindPopup('<b>📍 Você está aqui</b>');
-                
-                // Adiciona círculo de alcance
-                L.circle([lat, lng], {
-                    radius: 3000, // 3km de raio
-                    color: '#3B82F6',
-                    fillColor: '#3B82F6',
-                    fillOpacity: 0.05,
-                    weight: 1
-                }).addTo(mapaMotoristas);
-                
-                setTimeout(() => {
-                    mapaMotoristas.invalidateSize();
-                    atualizarMapaMotoristas();
-                }, 500);
-            },
-            (erro) => {
-                // Fallback: São Paulo
-                console.log('GPS não disponível, usando SP como fallback');
-                criarMapaFallback();
-            },
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
-    } else {
-        criarMapaFallback();
+    function criarMapaMotoristas(lat, lng) {
+        // Se já existe, remove
+        if (mapaMotoristas) {
+            mapaMotoristas.remove();
+            mapaMotoristas = null;
+            marcadoresMotoristas = [];
+            marcadorPassageiroMapa = null;
+        }
+
+        console.log('🗺️ Criando mapa em:', lat, lng);
+
+        mapaMotoristas = L.map('mapaMotoristas', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([lat, lng], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(mapaMotoristas);
+
+        // Marcador do passageiro
+        marcadorPassageiroMapa = L.marker([lat, lng], {
+            icon: L.divIcon({
+                html: '<div style="font-size:28px;">📍</div>',
+                className: '',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            })
+        }).addTo(mapaMotoristas);
+        marcadorPassageiroMapa.bindPopup('<b>📍 Você está aqui</b>');
+
+        // Círculo de alcance
+        L.circle([lat, lng], {
+            radius: 3000,
+            color: '#3B82F6',
+            fillColor: '#3B82F6',
+            fillOpacity: 0.05,
+            weight: 1
+        }).addTo(mapaMotoristas);
+
+        // Força redesenho
+        setTimeout(() => {
+            mapaMotoristas.invalidateSize();
+            carregarMotoristasNoMapa();
+        }, 500);
     }
-}
 
-function criarMapaFallback() {
-    mapaMotoristas = L.map('mapaMotoristas', { 
-        zoomControl: true, 
-        attributionControl: false 
-    }).setView([-23.5505, -46.6333], 13);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-        maxZoom: 19 
-    }).addTo(mapaMotoristas);
-    
-    setTimeout(() => {
-        mapaMotoristas.invalidateSize();
-        atualizarMapaMotoristas();
-    }, 500);
-}
+    async function carregarMotoristasNoMapa() {
+        if (!mapaMotoristas) return;
 
-    async function atualizarMapaMotoristas() {
-        if (!mapaMotoristas) { inicializarMapaMotoristas(); return; }
         try {
+            console.log('🔄 Buscando motoristas...');
             const res = await fetch(`${API}/motoristas_localizacao`);
             const data = await res.json();
             const motoristas = data.motoristas || [];
+
+            console.log(`🚗 ${motoristas.length} motoristas encontrados`);
+
             document.getElementById('totalMotoristasMapa').textContent = motoristas.length;
+
+            // Limpa marcadores antigos
             marcadoresMotoristas.forEach(m => mapaMotoristas.removeLayer(m));
             marcadoresMotoristas = [];
-            if (motoristas.length === 0) return;
-            motoristas.forEach(mot => {
+
+            if (motoristas.length === 0) {
+                console.log('⚠️ Nenhum motorista online');
+                return;
+            }
+
+            // Adiciona cada motorista
+            motoristas.forEach((mot, i) => {
+                console.log(`📍 Motorista ${i + 1}: ${mot.nome} - ${mot.lat}, ${mot.lng}`);
+
                 const marcador = L.marker([mot.lat, mot.lng], {
-                    icon: L.divIcon({ html: '<div style="font-size:32px;">🚗</div>', className: '', iconSize: [36, 36], iconAnchor: [18, 18] })
+                    icon: L.divIcon({
+                        html: '<div style="font-size:32px;">🚗</div>',
+                        className: '',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18]
+                    })
                 }).addTo(mapaMotoristas);
-                marcador.bindPopup(`<div style="text-align:center;"><p style="font-weight:bold;">🚗 ${mot.nome}</p><p>🚘 ${mot.carro||'Carro'}</p><p>🔖 ${mot.placa||'N/A'}</p></div>`);
+
+                marcador.bindPopup(`
+                    <div style="text-align:center; font-family:sans-serif;">
+                        <p style="font-weight:bold; margin:5px 0; font-size:14px;">🚗 ${mot.nome || 'Motorista'}</p>
+                        <p style="font-size:12px; margin:2px 0;">🚘 ${mot.carro || 'Carro'}</p>
+                        <p style="font-size:12px; margin:2px 0;">🔖 ${mot.placa || 'N/A'}</p>
+                        <p style="font-size:11px; color:#22C55E; margin:2px 0;">🟢 Online agora</p>
+                    </div>
+                `);
+
                 marcadoresMotoristas.push(marcador);
             });
-            if (motoristas.length === 1) mapaMotoristas.setView([motoristas[0].lat, motoristas[0].lng], 14);
-            else if (motoristas.length > 1) mapaMotoristas.fitBounds(L.featureGroup(marcadoresMotoristas).getBounds().pad(0.2));
-        } catch (e) { console.error('Erro motoristas:', e); }
+
+            // Ajusta zoom se tiver apenas 1 motorista
+            if (motoristas.length === 1 && marcadorPassageiroMapa) {
+                const group = L.featureGroup([marcadorPassageiroMapa, marcadoresMotoristas[0]]);
+                mapaMotoristas.fitBounds(group.getBounds().pad(0.3));
+            }
+
+        } catch (e) {
+            console.error('❌ Erro ao carregar motoristas:', e);
+            document.getElementById('totalMotoristasMapa').textContent = 'Erro';
+        }
     }
 
     // ========== 🗺️ MAPA DA CORRIDA ==========
@@ -440,22 +450,17 @@ function criarMapaFallback() {
     });
 
     // ========== SOCKET ==========
-    socket.on("connect", () => { if (corridaAtual?.id) socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id }); });
+    socket.on("connect", () => { console.log('✅ Socket conectado'); if (corridaAtual?.id) socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id }); });
+    
     socket.on("localizacao_motorista", (dados) => {
         if (!corridaAtual) return;
         if (dados.corrida_id != (corridaAtual.id || corridaAtual.corrida_id)) return;
         latMotorista = dados.lat; lonMotorista = dados.lng;
         atualizarPosicaoMotorista(dados.lat, dados.lng);
-        if (latOrigem && lonOrigem) {
-            const dk = calcularDistancia(latOrigem, lonOrigem, dados.lat, dados.lng);
-            if (dk < 0.3) {
-                const st = document.getElementById('conteudoStatus');
-                if (st && !st.innerHTML.includes('CHEGOU')) st.querySelector('h3').innerHTML = '✅ MOTORISTA CHEGOU! 🛑';
-            }
-        }
     });
 
     socket.on("corrida_aceita", (dados) => {
+        console.log('🚗 Corrida aceita!', dados);
         corridaAtual = { ...corridaAtual, ...dados };
         if (corridaAtual.id || dados.corrida_id) { socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); iniciarPolling(); }
         const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
@@ -475,7 +480,18 @@ function criarMapaFallback() {
 
     function iniciarPolling() { pararPolling(); const cid = corridaAtual?.id || corridaAtual?.corrida_id; if (!cid) return; pollingInterval = setInterval(async () => { try { const r = await fetch(`${API}/localizacao_motorista/${cid}`); if (r.ok) { const d = await r.json(); if (d.lat && d.lng) { latMotorista = d.lat; lonMotorista = d.lng; atualizarPosicaoMotorista(d.lat, d.lng); } } } catch (e) {} }, 3000); }
     function pararPolling() { if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; } }
-    function resetarInterface() { pararPolling(); corridaAtual = null; document.getElementById('cardStatus').style.display = 'none'; document.getElementById('mapaContainer').style.display = 'none'; document.getElementById('indicadorMapa').classList.remove('visivel'); if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; } markerPassageiro = null; markerMotorista = null; linhaRota = null; const btn = document.getElementById('btnChamar'); if (btn) { btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = '🚀 CHAMAR ROTA BRASIL'; } }
+    
+    function resetarInterface() {
+        pararPolling();
+        corridaAtual = null;
+        document.getElementById('cardStatus').style.display = 'none';
+        document.getElementById('mapaContainer').style.display = 'none';
+        document.getElementById('indicadorMapa').classList.remove('visivel');
+        if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
+        markerPassageiro = null; markerMotorista = null; linhaRota = null;
+        const btn = document.getElementById('btnChamar');
+        if (btn) { btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = '🚀 CHAMAR ROTA BRASIL'; }
+    }
 
     // ========== AUTENTICAÇÃO ==========
     async function fazerLogin() {
@@ -490,9 +506,27 @@ function criarMapaFallback() {
                 localStorage.setItem("token_passageiro", token); localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
                 document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block';
                 await verificarSaldo();
-                setTimeout(() => inicializarMapaMotoristas(), 500);
+                // 🔥 Inicia mapa com a localização do passageiro
+                iniciarMapaPassageiro();
             } else { document.getElementById('msgLogin').textContent = data.erro || 'Erro'; document.getElementById('msgLogin').style.color = '#EF4444'; }
         } catch (e) { document.getElementById('msgLogin').textContent = 'Erro de conexão'; document.getElementById('msgLogin').style.color = '#EF4444'; }
+    }
+
+    function iniciarMapaPassageiro() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    criarMapaMotoristas(pos.coords.latitude, pos.coords.longitude);
+                },
+                () => {
+                    // Fallback: São Paulo
+                    criarMapaMotoristas(-23.5505, -46.6333);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        } else {
+            criarMapaMotoristas(-23.5505, -46.6333);
+        }
     }
 
     async function fazerCadastro() {
@@ -550,24 +584,16 @@ function criarMapaFallback() {
         const o = document.getElementById('origem').value.trim();
         const d = document.getElementById('destino').value.trim();
         if (!o || !d || o.length < 3 || d.length < 3) return alert("Digite origem e destino!");
-        
         document.getElementById('cardValor').style.display = 'block';
-        document.getElementById('avisoSaldo').style.display = 'none';
-        document.getElementById('avisoDinheiro').style.display = 'none';
-        
         if (!latOrigem) await geocodificar(o, 'origem');
         if (!latDestino) await geocodificar(d, 'destino');
-        if (!latOrigem || !latDestino) return alert("Endereços não encontrados. Selecione uma sugestão da lista.");
-        
+        if (!latOrigem || !latDestino) return alert("Endereços não encontrados. Selecione uma sugestão.");
         try {
             const r = await fetch(`${API}/calcular_corrida`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lat_origem: latOrigem, lon_origem: lonOrigem, lat_destino: latDestino, lon_destino: lonDestino }) });
             const data = await r.json();
             if (data.erro) throw new Error(data.erro);
             distancia = data.distancia; valorFinal = data.valor;
-        } catch (e) {
-            distancia = calcularDistancia(latOrigem, lonOrigem, latDestino, lonDestino);
-            valorFinal = distancia * 3.5 + 5;
-        }
+        } catch (e) { distancia = calcularDistancia(latOrigem, lonOrigem, latDestino, lonDestino); valorFinal = distancia * 3.5 + 5; }
         document.getElementById('txtDistancia').textContent = distancia.toFixed(1) + ' km';
         document.getElementById('txtTempo').textContent = Math.round(distancia * 3) + ' min';
         document.getElementById('txtValor').textContent = 'R$ ' + valorFinal.toFixed(2);
@@ -576,90 +602,32 @@ function criarMapaFallback() {
     async function chamarCorrida() {
         if (!latOrigem || !latDestino || valorFinal <= 0) return alert("Calcule o valor primeiro!");
         document.getElementById('avisoSaldo').style.display = 'none';
-        
-        if (formaPagamento === 'pix') {
-            await verificarSaldo();
-            if (saldoCarteira < valorFinal) {
-                document.getElementById('avisoSaldo').style.display = 'block';
-                document.getElementById('avisoSaldo').innerHTML = '⚠️ Saldo insuficiente!<br><a href="#" onclick="selecionarPagamento(\'dinheiro\')" style="color:#EAB308;">Pagar em dinheiro</a>';
-                return;
-            }
-        }
-        
-        const btn = document.getElementById('btnChamar');
-        btn.disabled = true; btn.classList.add('btn-blocked'); btn.innerHTML = '⏳ Buscando...';
-        
+        if (formaPagamento === 'pix') { await verificarSaldo(); if (saldoCarteira < valorFinal) { document.getElementById('avisoSaldo').style.display = 'block'; document.getElementById('avisoSaldo').innerHTML = '⚠️ Saldo insuficiente!<br><a href="#" onclick="selecionarPagamento(\'dinheiro\')" style="color:#EAB308;">Pagar em dinheiro</a>'; return; } }
+        const btn = document.getElementById('btnChamar'); btn.disabled = true; btn.classList.add('btn-blocked'); btn.innerHTML = '⏳ Buscando...';
         try {
-            const res = await fetch(`${API}/nova_corrida`, {
-                method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ origem: document.getElementById('origem').value, destino: document.getElementById('destino').value, valor: valorFinal, distancia: distancia.toFixed(1) + ' km', lat_origem: latOrigem, lon_origem: lonOrigem, lat_destino: latDestino, lon_destino: lonDestino, forma_pagamento: formaPagamento, foto_perfil: passageiro?.foto_perfil || '' })
-            });
+            const res = await fetch(`${API}/nova_corrida`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify({ origem: document.getElementById('origem').value, destino: document.getElementById('destino').value, valor: valorFinal, distancia: distancia.toFixed(1) + ' km', lat_origem: latOrigem, lon_origem: lonOrigem, lat_destino: latDestino, lon_destino: lonDestino, forma_pagamento: formaPagamento, foto_perfil: passageiro?.foto_perfil || '' }) });
             const data = await res.json();
             if (!res.ok) throw new Error(data.erro);
-            
-            corridaAtual = { id: data.corrida_id };
-            socket.emit("entrar_na_sala", { corrida_id: data.corrida_id });
-            
-            document.getElementById('cardValor').style.display = 'none';
-            document.getElementById('cardStatus').style.display = 'block';
-            document.getElementById('conteudoStatus').innerHTML = `
-                <i class="fas fa-car-side status-icon status-buscando"></i>
-                <h3>Procurando Motoristas...</h3>
-                <p style="color:#94A3B8;">💰 ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix'}</p>
-                <br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
-        } catch (e) {
-            alert(e.message);
-            btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = '🚀 CHAMAR ROTA BRASIL';
-        }
+            corridaAtual = { id: data.corrida_id }; socket.emit("entrar_na_sala", { corrida_id: data.corrida_id });
+            document.getElementById('cardValor').style.display = 'none'; document.getElementById('cardStatus').style.display = 'block';
+            document.getElementById('conteudoStatus').innerHTML = `<i class="fas fa-car-side status-icon status-buscando"></i><h3>Procurando Motoristas...</h3><p style="color:#94A3B8;">💰 ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix'}</p><br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
+        } catch (e) { alert(e.message); btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = '🚀 CHAMAR ROTA BRASIL'; }
     }
 
-    async function cancelarCorrida() {
-        const cid = corridaAtual?.id;
-        if (cid) { try { await fetch(`${API}/cancelar_corrida/${cid}`, { method: "POST", headers: { "Authorization": `Bearer ${token}` } }); } catch (e) {} }
-        resetarInterface();
-    }
+    async function cancelarCorrida() { const cid = corridaAtual?.id; if (cid) { try { await fetch(`${API}/cancelar_corrida/${cid}`, { method: "POST", headers: { "Authorization": `Bearer ${token}` } }); } catch (e) {} } resetarInterface(); }
 
     // ========== AUXILIARES ==========
-    async function geocodificar(endereco, tipo) {
-        try {
-            const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json&limit=1&countrycodes=br`, { headers: { 'User-Agent': 'RotaBrasil/1.0' } });
-            const d = await r.json();
-            if (d.length > 0) { if (tipo === 'origem') { latOrigem = parseFloat(d[0].lat); lonOrigem = parseFloat(d[0].lon); } else { latDestino = parseFloat(d[0].lat); lonDestino = parseFloat(d[0].lon); } }
-        } catch (e) {}
-    }
-
-    function calcularDistancia(lat1, lon1, lat2, lon2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function usarLocalizacao() {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(p => { latOrigem = p.coords.latitude; lonOrigem = p.coords.longitude; document.getElementById('origem').value = latOrigem.toFixed(6) + ', ' + lonOrigem.toFixed(6); });
-    }
+    async function geocodificar(endereco, tipo) { try { const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json&limit=1&countrycodes=br`, { headers: { 'User-Agent': 'RotaBrasil/1.0' } }); const d = await r.json(); if (d.length > 0) { if (tipo === 'origem') { latOrigem = parseFloat(d[0].lat); lonOrigem = parseFloat(d[0].lon); } else { latDestino = parseFloat(d[0].lat); lonDestino = parseFloat(d[0].lon); } } } catch (e) {} }
+    function calcularDistancia(lat1, lon1, lat2, lon2) { const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2; return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
+    function usarLocalizacao() { if (!navigator.geolocation) return; navigator.geolocation.getCurrentPosition(p => { latOrigem = p.coords.latitude; lonOrigem = p.coords.longitude; document.getElementById('origem').value = latOrigem.toFixed(6) + ', ' + lonOrigem.toFixed(6); }); }
 
     // ========== CARTEIRA ==========
     async function abrirCarteira() { document.getElementById('painelCarteira').style.display = 'block'; await verificarSaldo(); document.getElementById('saldoCarteira').textContent = 'R$ ' + saldoCarteira.toFixed(2); }
     function fecharCarteira() { document.getElementById('painelCarteira').style.display = 'none'; }
-    
-    async function adicionarSaldo() {
-        const v = prompt("Valor (R$):");
-        if (!v || isNaN(v)) return;
-        try {
-            const r = await fetch(`${API}/checkout/criar`, { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ valor: parseFloat(v) }) });
-            const d = await r.json();
-            if (d.link) window.open(d.link);
-        } catch (e) {}
-    }
+    async function adicionarSaldo() { const v = prompt("Valor (R$):"); if (!v || isNaN(v)) return; try { const r = await fetch(`${API}/checkout/criar`, { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ valor: parseFloat(v) }) }); const d = await r.json(); if (d.link) window.open(d.link); } catch (e) {} }
 
     // ========== AVALIAÇÃO ==========
-    async function enviarAvaliacao() {
-        if (!notaAvaliacao) return alert("Selecione uma nota!");
-        try { await fetch(`${API}/avaliar`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify({ corrida_id: corridaIdAvaliacao, motorista_id: motoristaIdAvaliacao, nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {}
-        fecharAvaliacao();
-    }
+    async function enviarAvaliacao() { if (!notaAvaliacao) return alert("Selecione uma nota!"); try { await fetch(`${API}/avaliar`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify({ corrida_id: corridaIdAvaliacao, motorista_id: motoristaIdAvaliacao, nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {} fecharAvaliacao(); }
     function fecharAvaliacao() { document.getElementById('modalAvaliacao').style.display = 'none'; notaAvaliacao = 0; document.querySelectorAll('#estrelasContainer .estrela').forEach(e => e.classList.remove('ativa')); }
 
     // ========== INIT ==========
@@ -667,16 +635,14 @@ function criarMapaFallback() {
         document.querySelectorAll('#estrelasContainer .estrela').forEach(e => { e.addEventListener('click', function() { notaAvaliacao = parseInt(this.dataset.nota); document.querySelectorAll('#estrelasContainer .estrela').forEach((el, i) => { el.classList.toggle('ativa', i < notaAvaliacao); }); }); });
         const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
         if (t && u) {
-            try { token = t; passageiro = JSON.parse(u); document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; verificarSaldo(); setTimeout(() => inicializarMapaMotoristas(), 500); } catch (e) { localStorage.clear(); }
+            try { token = t; passageiro = JSON.parse(u); document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; verificarSaldo(); iniciarMapaPassageiro(); } catch (e) { localStorage.clear(); }
         }
     });
 
-    // Atualiza mapa de motoristas a cada 30s
-    setInterval(() => { if (document.getElementById('dashboard').style.display !== 'none') atualizarMapaMotoristas(); }, 30000);
+    // Atualiza motoristas a cada 30s
+    setInterval(() => { if (document.getElementById('dashboard').style.display !== 'none') carregarMotoristasNoMapa(); }, 30000);
 </script>
-     
-
-        
+       
         
 </body>
 </html>
