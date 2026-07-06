@@ -11,6 +11,20 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
+        /* Avatar com borda animada */
+#avatarPassageiro {
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(255,0,127,0.3);
+}
+#avatarPassageiro:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255,0,127,0.5);
+}
+
+/* Nome do passageiro */
+#nomePassageiro {
+    transition: color 0.3s;
+}
         :root {
             --cor-fundo: #0F172A; --cor-card: #1E293B; --cor-card-claro: #334155;
             --cor-primaria: #FF007F; --cor-sucesso: #22C55E; --cor-perigo: #EF4444;
@@ -174,15 +188,20 @@
     </div>
 
     <!-- DASHBOARD -->
-    <div id="dashboard" class="container" style="display:none;">
-        <div class="topo">
-            <div><h1>Rota Brasil 🚗</h1><span>Passageiro</span></div>
-            <button class="btn-sair" onclick="logout()">Sair</button>
+<div id="dashboard" class="container" style="display:none;">
+    <!-- 🔥 TOPO COM AVATAR E NOME DO PASSAGEIRO -->
+    <div class="topo" style="display:flex; align-items:center; gap:12px;">
+        <img id="avatarPassageiro" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
+             style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:2px solid var(--cor-primaria); flex-shrink:0;"
+             onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+        <div style="flex:1;">
+            <h1 style="font-size:18px; margin:0;">Rota Brasil 🚗</h1>
+            <span style="font-size:11px; color:var(--cor-texto-secundario);">Olá, <b id="nomePassageiro" style="color:var(--cor-primaria);">Passageiro</b></span>
         </div>
-        <div class="nota-bar">
-            <span>Nota: <b style="color:var(--cor-alerta);" id="minhaNota">5.0 ⭐</b></span>
-            <button class="btn-carteira" onclick="abrirCarteira()">💰 Carteira</button>
-        </div>
+        <button class="btn-sair" onclick="logout()">Sair</button>
+    </div>
+    
+    <!-- ... resto do dashboard continua igual ... -->
 
         <!-- 🔥 MAPA DE MOTORISTAS (SOME QUANDO ACEITA CORRIDA) -->
         <div class="mapa-motoristas-container" id="mapaMotoristasContainer">
@@ -466,23 +485,52 @@
         }
 
         // ========== AUTENTICAÇÃO ==========
-        async function fazerLogin() {
-            const email = document.getElementById('email').value.trim(), senha = document.getElementById('senha').value.trim();
-            if (!email || !senha) { document.getElementById('msgLogin').textContent = 'Preencha!'; return; }
-            document.getElementById('msgLogin').textContent = 'Entrando...'; document.getElementById('msgLogin').style.color = '#94A3B8';
-            try {
-                const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, senha }) });
-                const data = await res.json();
-                if (res.ok && data.token) {
-                    token = data.token; passageiro = data.user;
-                    localStorage.setItem("token_passageiro", token); localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
-                    document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block';
-                    await verificarSaldo();
-                    iniciarMapaPassageiro();
-                    carregarMinhasAvaliacoes();
-                } else { document.getElementById('msgLogin').textContent = data.erro || 'Erro'; document.getElementById('msgLogin').style.color = '#EF4444'; }
-            } catch (e) { document.getElementById('msgLogin').textContent = 'Erro de conexão'; document.getElementById('msgLogin').style.color = '#EF4444'; }
+    async function fazerLogin() {
+    const email = document.getElementById('email').value.trim(), senha = document.getElementById('senha').value.trim();
+    if (!email || !senha) { document.getElementById('msgLogin').textContent = 'Preencha!'; return; }
+    document.getElementById('msgLogin').textContent = 'Entrando...'; document.getElementById('msgLogin').style.color = '#94A3B8';
+    try {
+        const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, senha }) });
+        const data = await res.json();
+        if (res.ok && data.token) {
+            token = data.token; passageiro = data.user;
+            localStorage.setItem("token_passageiro", token); localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
+            document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block';
+            
+            // 🔥 ATUALIZA AVATAR E NOME
+            atualizarAvatarNome();
+            
+            await verificarSaldo();
+            iniciarMapaPassageiro();
+            carregarMinhasAvaliacoes();
+        } else { document.getElementById('msgLogin').textContent = data.erro || 'Erro'; document.getElementById('msgLogin').style.color = '#EF4444'; }
+    } catch (e) { document.getElementById('msgLogin').textContent = 'Erro de conexão'; document.getElementById('msgLogin').style.color = '#EF4444'; }
+}
+
+// 🔥 NOVA FUNÇÃO PARA ATUALIZAR AVATAR E NOME
+function atualizarAvatarNome() {
+    if (!passageiro) return;
+    
+    // Atualiza nome
+    const nomeEl = document.getElementById('nomePassageiro');
+    if (nomeEl) nomeEl.textContent = passageiro.nome || 'Passageiro';
+    
+    // Atualiza avatar
+    const avatarEl = document.getElementById('avatarPassageiro');
+    if (avatarEl) {
+        const foto = passageiro.foto_perfil || '';
+        if (foto && (foto.startsWith('http') || foto.startsWith('data:'))) {
+            avatarEl.src = foto;
+        } else {
+            // Avatar com iniciais
+            const iniciais = (passageiro.nome || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'Passageiro')}&size=100&background=FF007F&color=fff&bold=true`;
         }
+        avatarEl.onerror = function() {
+            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'P')}&size=100&background=FF007F&color=fff&bold=true`;
+        };
+    }
+}
 
         function iniciarMapaPassageiro() {
             if (navigator.geolocation) {
@@ -603,11 +651,24 @@
 
         // ========== INIT ==========
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('#estrelasContainer .estrela').forEach(e => { e.addEventListener('click', function() { notaAvaliacao = parseInt(this.dataset.nota); document.querySelectorAll('#estrelasContainer .estrela').forEach((el, i) => { el.classList.toggle('ativa', i < notaAvaliacao); }); }); });
-            const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
-            if (t && u) { try { token = t; passageiro = JSON.parse(u); document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; verificarSaldo(); iniciarMapaPassageiro(); carregarMinhasAvaliacoes(); } catch (e) { localStorage.clear(); } }
-        });
-
+    // ... código das estrelas ...
+    
+    const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
+    if (t && u) { 
+        try { 
+            token = t; passageiro = JSON.parse(u); 
+            document.getElementById('loginCard').style.display = 'none'; 
+            document.getElementById('dashboard').style.display = 'block'; 
+            
+            // 🔥 ATUALIZA AVATAR E NOME
+            atualizarAvatarNome();
+            
+            verificarSaldo(); 
+            iniciarMapaPassageiro(); 
+            carregarMinhasAvaliacoes(); 
+        } catch (e) { localStorage.clear(); } 
+    }
+});
         setInterval(() => { if (document.getElementById('dashboard').style.display !== 'none' && document.getElementById('mapaMotoristasContainer').style.display !== 'none') carregarMotoristasNoMapa(); }, 30000);
     </script>
 </body>
