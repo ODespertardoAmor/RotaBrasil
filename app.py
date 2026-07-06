@@ -1064,38 +1064,51 @@ def recriar():
 #==========MOTORISTAS OLINE PARA PASSAGEIROS==≠=
 @app.route('/motoristas_localizacao', methods=['GET'])
 def motoristas_localizacao():
-    """Retorna motoristas online - localização real com fallback"""
+    """Retorna motoristas online com posições para o mapa"""
     try:
         motoristas = Usuario.query.filter_by(tipo='motorista', online=True).all()
         lista = []
         
-        # Posições de fallback espalhadas
+        # Posições de fallback espalhadas por São Paulo
         fallback_positions = [
-            (-23.5505, -46.6333),
-            (-23.5610, -46.6560),
-            (-23.5400, -46.6100),
-            (-23.5700, -46.6400),
-            (-23.5300, -46.6200),
+            (-23.5505, -46.6333),  # Centro
+            (-23.5610, -46.6560),  # Oeste
+            (-23.5400, -46.6100),  # Leste
+            (-23.5700, -46.6400),  # Sul
+            (-23.5300, -46.6200),  # Norte
+            (-23.5550, -46.6450),  # Centro-Oeste
+            (-23.5450, -46.6250),  # Centro-Leste
+            (-23.5600, -46.6150),  # Sudeste
+            (-23.5350, -46.6500),  # Noroeste
+            (-23.5650, -46.6350),  # Sul-Centro
         ]
         
         for i, m in enumerate(motoristas):
-            # Tenta buscar localização real
-            ultima_loc = db.session.execute(
-                db.text("""
-                    SELECT lat, lng FROM localizacoes 
-                    WHERE motorista_id = :mid 
-                    ORDER BY updated_at DESC LIMIT 1
-                """),
-                {'mid': m.id}
-            ).fetchone()
+            lat = None
+            lng = None
             
-            if ultima_loc and ultima_loc[0] and ultima_loc[1]:
-                lat, lng = ultima_loc[0], ultima_loc[1]
-            else:
-                # Fallback: posição simulada
+            # Tenta buscar localização real
+            try:
+                ultima_loc = db.session.execute(
+                    db.text("""
+                        SELECT lat, lng FROM localizacoes 
+                        WHERE motorista_id = :mid 
+                        ORDER BY updated_at DESC LIMIT 1
+                    """),
+                    {'mid': m.id}
+                ).fetchone()
+                
+                if ultima_loc and ultima_loc[0] and ultima_loc[1]:
+                    lat = ultima_loc[0]
+                    lng = ultima_loc[1]
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar localização do motorista {m.id}: {e}")
+            
+            # Se não tem localização real, usa fallback
+            if lat is None or lng is None:
                 pos = fallback_positions[i % len(fallback_positions)]
-                lat = pos[0] + (i * 0.003)
-                lng = pos[1] + (i * 0.003)
+                lat = pos[0] + (i * 0.002)
+                lng = pos[1] + (i * 0.002)
             
             lista.append({
                 'id': m.id,
@@ -1108,14 +1121,16 @@ def motoristas_localizacao():
                 'nota': 5.0
             })
         
+        print(f"🗺️ Motoristas no mapa: {len(lista)}")
         return jsonify({
             'motoristas': lista,
             'total': len(lista)
         })
     except Exception as e:
         print(f"❌ Erro motoristas_localizacao: {e}")
-        return jsonify({'motoristas': [], 'total': 0})        
-#===================
+        # Retorna array vazio em caso de erro
+        return jsonify({'motoristas': [], 'total': 0})
+
 # ROTAS BÁSICAS
 # ==========================================
 
