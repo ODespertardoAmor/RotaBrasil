@@ -6,6 +6,9 @@
     <title>🚗 Motorista | Rota Brasil</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🔥 LEAFLET (MAPA ESTÁVEL) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --primaria: #165DFF;
@@ -49,8 +52,8 @@
         .erro { color: var(--perigo); font-weight: 600; }
         .ok { color: var(--sucesso); font-weight: 600; }
 
-        #mapa { position: absolute; inset: 0; z-index: 1; }
-        iframe { width: 100%; height: 100%; border: none; }
+        /* 🔥 MAPA LEAFLET ESTÁVEL */
+        #mapaLeaflet { position: absolute; inset: 0; z-index: 1; }
 
         .header {
             position: absolute; top: 0; left: 0; right: 0; padding: 15px 20px;
@@ -186,11 +189,7 @@
         }
         .badge-pix { background: var(--primaria); color: white; }
         .badge-dinheiro { background: var(--alerta); color: #000; }
-        
-        .linha-destacada {
-            background: rgba(255,125,0,0.15); border-radius: 6px;
-            padding: 8px !important; margin: 4px 0;
-        }
+        .linha-destacada { background: rgba(255,125,0,0.15); border-radius: 6px; padding: 8px !important; margin: 4px 0; }
     </style>
 </head>
     
@@ -204,7 +203,6 @@
         <button class="btn-danger" onclick="document.getElementById('painelCarteiraMotorista').style.display='none'" style="margin:5px 0;">❌ Fechar</button>
     </div>
 
-    <!-- CARD PASSAGEIRO CHEGADA -->
     <div id="cardPassageiroChegada" class="card-chegada">
         <img id="fotoChegada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E">
         <h3 id="nomeChegada">Passageiro</h3>
@@ -216,33 +214,24 @@
     </div>
 
     <div id="avisoErro" class="erro-tela"></div>
-
     <div id="alertaCancel" class="alerta-cancelamento">
         <h2><i class="fas fa-times-circle"></i> CORRIDA CANCELADA!</h2>
         <p>O passageiro cancelou a corrida.</p>
         <button onclick="document.getElementById('alertaCancel').style.display='none'" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border-radius:8px; font-weight:600;">OK</button>
     </div>
-
     <div id="modalAvaliacao" class="avaliacao-modal">
         <h2>🏁 CORRIDA FINALIZADA!</h2>
         <p style="color:#86909C; margin:10px 0;">Avalie o passageiro:</p>
         <div id="estrelasAvaliacao" class="estrelas">
-            <span class="estrela" data-valor="1">★</span>
-            <span class="estrela" data-valor="2">★</span>
-            <span class="estrela" data-valor="3">★</span>
-            <span class="estrela" data-valor="4">★</span>
-            <span class="estrela" data-valor="5">★</span>
+            <span class="estrela" data-valor="1">★</span><span class="estrela" data-valor="2">★</span><span class="estrela" data-valor="3">★</span><span class="estrela" data-valor="4">★</span><span class="estrela" data-valor="5">★</span>
         </div>
-        <textarea id="comentarioAvaliacao" placeholder="Comentário (opcional)..." style="width:100%; background:#272E3B; border:1px solid var(--borda); border-radius:8px; padding:10px; color:white; min-height:60px; resize:none;"></textarea>
+        <textarea id="comentarioAvaliacao" placeholder="Comentário..." style="width:100%; background:#272E3B; border:1px solid var(--borda); border-radius:8px; padding:10px; color:white; min-height:60px; resize:none;"></textarea>
         <button class="btn-success" onclick="enviarAvaliacao()">✅ ENVIAR AVALIAÇÃO</button>
     </div>
 
     <!-- LOGIN -->
     <div id="loginScreen">
-        <div class="logo">
-            <h1>ROTA BRASIL 🇧🇷</h1>
-            <p style="color:#86909C;">Painel do Motorista</p>
-        </div>
+        <div class="logo"><h1>ROTA BRASIL 🇧🇷</h1><p style="color:#86909C;">Painel do Motorista</p></div>
         <div class="card">
             <input type="text" id="nome" placeholder="👤 Nome Completo">
             <input type="email" id="email" placeholder="📧 E-mail">
@@ -256,10 +245,8 @@
         </div>
     </div>
 
-    <!-- MAPA -->
-    <div id="mapa">
-        <iframe id="mapaFrame" src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=-23.5645,-46.6523&zoom=16&maptype=roadmap"></iframe>
-    </div>
+    <!-- 🔥 MAPA LEAFLET ESTÁVEL -->
+    <div id="mapaLeaflet"></div>
 
     <!-- HEADER -->
     <div class="header" id="header" style="display:none;">
@@ -274,18 +261,13 @@
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
         <div class="passageiro-header">
             <img id="fotoPassageiroCard" src="" class="foto-passageiro-card" style="display:none;" onerror="this.style.display='none'">
-            <div style="flex:1;">
-                <div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div>
-            </div>
+            <div style="flex:1;"><div class="linha"><span>Passageiro</span> <span id="cPassageiro">-</span></div></div>
         </div>
         <div class="linha"><span>Telefone</span> <span id="cTelefone">-</span></div>
         <div class="linha"><span>Origem</span> <span id="cOrigem">-</span></div>
         <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
         <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
-        <div class="linha linha-destacada" id="linhaPagamento" style="display:none;">
-            <span>💰 Pagamento</span> 
-            <span id="cPagamento">-</span>
-        </div>
+        <div class="linha linha-destacada" id="linhaPagamento" style="display:none;"><span>💰 Pagamento</span> <span id="cPagamento">-</span></div>
         <div class="grupo-botoes">
             <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
             <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
@@ -298,21 +280,15 @@
             <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
             <button id="btnOffline" class="btn-danger" onclick="ficarOffline()" style="display:none;"><i class="fas fa-power-off"></i> FICAR OFFLINE</button>
             <button class="btn-warning" onclick="abrirCarteira()" style="margin-top:8px;">💵 Carteira</button>
-            <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()">
-                <i class="fas fa-door-open"></i> SAIR
-            </button>
+            <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()"><i class="fas fa-door-open"></i> SAIR</button>
         </div>
-
         <div id="areaAcoes" style="display:none;">
             <div id="etapaTexto" class="etapa etapa1"></div>
             <div id="containerAcoesCorrida"></div>
-            <button id="btnCancelarCorrida" class="btn-danger" onclick="cancelarCorrida()" style="margin-top:10px; display:none;">
-                <i class="fas fa-times"></i> ❌ CANCELAR CORRIDA
-            </button>
+            <button id="btnCancelarCorrida" class="btn-danger" onclick="cancelarCorrida()" style="margin-top:10px; display:none;"><i class="fas fa-times"></i> ❌ CANCELAR CORRIDA</button>
         </div>
     </div>
 
-    <!-- ÁUDIOS -->
     <audio id="somAlerta" preload="auto" loop src="https://larissacamila.github.io/comandos/chamarRota.mp3"></audio>
     <audio id="somAlto" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3"></audio>
     <audio id="somSucesso" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3"></audio>
@@ -331,36 +307,11 @@
             const pino = document.createElement('div'); pino.className = 'pino-deslize';
             pino.innerHTML = '→'; pino.style.background = cor;
             container.appendChild(progresso); container.appendChild(trilha); container.appendChild(pino);
-            
             let arrastando = false, concluido = false, callbackExecutado = false;
             const larguraMax = () => container.offsetWidth - pino.offsetWidth - 6;
-            
-            pino.addEventListener('pointerdown', (e) => {
-                if (concluido || callbackExecutado) return;
-                arrastando = true; pino.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
-            });
-            pino.addEventListener('pointermove', (e) => {
-                if (!arrastando || concluido || callbackExecutado) return;
-                const rect = container.getBoundingClientRect();
-                let x = e.clientX - rect.left - (pino.offsetWidth / 2);
-                x = Math.max(3, Math.min(x, larguraMax()));
-                pino.style.left = x + 'px'; progresso.style.width = (x + pino.offsetWidth/2) + 'px';
-                if (x >= larguraMax() - 10 && !callbackExecutado) {
-                    concluido = true; arrastando = false; callbackExecutado = true;
-                    pino.classList.add('concluido'); container.classList.add('concluido');
-                    pino.style.left = larguraMax() + 'px'; progresso.style.width = '100%'; pino.innerHTML = '✓';
-                    if (callback) setTimeout(() => callback(), 300);
-                }
-                e.preventDefault(); e.stopPropagation();
-            });
-            pino.addEventListener('pointerup', () => {
-                if (!arrastando) return; arrastando = false;
-                if (!concluido && !callbackExecutado) {
-                    pino.style.transition = 'left 0.3s ease'; pino.style.left = '3px';
-                    progresso.style.transition = 'width 0.3s ease'; progresso.style.width = '0px';
-                    setTimeout(() => { pino.style.transition = 'left 0.1s ease'; progresso.style.transition = 'width 0.1s ease'; }, 300);
-                }
-            });
+            pino.addEventListener('pointerdown', (e) => { if (concluido || callbackExecutado) return; arrastando = true; pino.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation(); });
+            pino.addEventListener('pointermove', (e) => { if (!arrastando || concluido || callbackExecutado) return; const rect = container.getBoundingClientRect(); let x = e.clientX - rect.left - (pino.offsetWidth / 2); x = Math.max(3, Math.min(x, larguraMax())); pino.style.left = x + 'px'; progresso.style.width = (x + pino.offsetWidth/2) + 'px'; if (x >= larguraMax() - 10 && !callbackExecutado) { concluido = true; arrastando = false; callbackExecutado = true; pino.classList.add('concluido'); container.classList.add('concluido'); pino.style.left = larguraMax() + 'px'; progresso.style.width = '100%'; pino.innerHTML = '✓'; if (callback) setTimeout(() => callback(), 300); } e.preventDefault(); e.stopPropagation(); });
+            pino.addEventListener('pointerup', () => { if (!arrastando) return; arrastando = false; if (!concluido && !callbackExecutado) { pino.style.transition = 'left 0.3s ease'; pino.style.left = '3px'; progresso.style.transition = 'width 0.3s ease'; progresso.style.width = '0px'; setTimeout(() => { pino.style.transition = 'left 0.1s ease'; progresso.style.transition = 'width 0.1s ease'; }, 300); } });
             container.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
             return container;
         }
@@ -371,565 +322,150 @@
         const API_URL = "https://rotabrasil-tobu.onrender.com";
         const socket = io(API_URL, { transports: ['websocket', 'polling'], reconnection: true, timeout: 10000, forceNew: true });
 
-        let usuario = null;
-        let token = null;
-        let corrida = null;
+        let usuario = null, token = null, corrida = null;
         let estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
         let posicaoAtual = { lat: -23.5645, lng: -46.6523 };
         let envioLocalizacaoInterval = null;
-        let ultimaAtualizacaoMapa = 0;
-        let notaAvaliacao = 0;
-        let timerCorrida = null;
-        let segundosCorrida = 15;
+        let notaAvaliacao = 0, timerCorrida = null, segundosCorrida = 15;
 
-        const somAlerta = document.getElementById('somAlerta');
-        const somAlto = document.getElementById('somAlto');
-        const somSucesso = document.getElementById('somSucesso');
-        const somDinheiro = document.getElementById('somDinheiro');
+        // 🔥 MAPA LEAFLET ESTÁVEL
+        let mapaLeaflet = null, marcadorMotorista = null;
 
-        function falar(texto) {
-            if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel();
-            const voz = new SpeechSynthesisUtterance(texto);
-            voz.lang = 'pt-BR'; voz.rate = 1.0; voz.volume = 1;
-            window.speechSynthesis.speak(voz);
-        }
-
-        function mostrarErro(texto) {
-            const el = document.getElementById('avisoErro');
-            el.textContent = "❌ " + texto;
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 4000);
-        }
-
-        // ==============================================
-        // 📍 GPS - ATUALIZA MAPA SEM PISCAR
-        // ==============================================
-        function iniciarGPS() {
-            if (!navigator.geolocation) return;
+        function iniciarMapa() {
+            if (mapaLeaflet) return; // Não recria se já existe
             
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    posicaoAtual.lat = pos.coords.latitude;
-                    posicaoAtual.lng = pos.coords.longitude;
-                    
-                    // 🔥 SÓ ATUALIZA O MAPA A CADA 5 SEGUNDOS (evita piscar)
-                    const agora = Date.now();
-                    if (agora - ultimaAtualizacaoMapa > 5000) {
-                        ultimaAtualizacaoMapa = agora;
-                        atualizarMapaSuave();
-                    }
-                    
-                    // Envia localização via socket (a cada 1.5s)
-                    if (estado.aceito && corrida) {
-                        socket.emit('localizacao_motorista', {
-                            corrida_id: corrida.corrida_id || corrida.id,
-                            lat: posicaoAtual.lat,
-                            lng: posicaoAtual.lng,
-                            motorista_id: usuario.id,
-                            motorista_nome: usuario.nome,
-                            motorista_foto: usuario.foto_perfil || ''
-                        });
-                    }
-                },
-                (erro) => { console.warn("Erro GPS:", erro); },
-                { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-            );
+            mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false })
+                .setView([posicaoAtual.lat, posicaoAtual.lng], 16);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
+            
+            marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], {
+                icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] })
+            }).addTo(mapaLeaflet);
         }
 
-        function atualizarMapaSuave() {
-            const iframe = document.getElementById('mapaFrame');
-            const novaUrl = `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&center=${posicaoAtual.lat},${posicaoAtual.lng}&zoom=16&maptype=roadmap`;
-            
-            // 🔥 Só atualiza se a URL for diferente
-            if (iframe.src !== novaUrl) {
-                iframe.src = novaUrl;
+        function atualizarPosicaoMapa(lat, lng) {
+            if (!mapaLeaflet) iniciarMapa();
+            if (marcadorMotorista) {
+                marcadorMotorista.setLatLng([lat, lng]);
+                mapaLeaflet.setView([lat, lng], 16, { animate: false }); // animate:false evita tremor
             }
         }
 
         // ==============================================
-        // 🔊 SOM
+        // 🔊 SOM E VOZ
         // ==============================================
-        function iniciarSomAlertaRepetido() {
-            somAlerta.loop = true;
-            somAlerta.currentTime = 0;
-            somAlerta.play().catch(() => setTimeout(() => somAlerta.play(), 500));
-        }
-        function pararSomAlerta() {
-            somAlerta.pause();
-            somAlerta.currentTime = 0;
-            somAlerta.loop = false;
+        const somAlerta = document.getElementById('somAlerta'), somAlto = document.getElementById('somAlto'), somSucesso = document.getElementById('somSucesso'), somDinheiro = document.getElementById('somDinheiro');
+        function falar(t) { if (window.speechSynthesis) { window.speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t); m.lang = 'pt-BR'; m.rate = 1.0; m.volume = 1; window.speechSynthesis.speak(m); } }
+        function mostrarErro(t) { const el = document.getElementById('avisoErro'); el.textContent = "❌ " + t; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+        function iniciarSomAlertaRepetido() { somAlerta.loop = true; somAlerta.currentTime = 0; somAlerta.play().catch(() => setTimeout(() => somAlerta.play(), 500)); }
+        function pararSomAlerta() { somAlerta.pause(); somAlerta.currentTime = 0; somAlerta.loop = false; }
+
+        // ==============================================
+        // 📍 GPS
+        // ==============================================
+        function iniciarGPS() {
+            if (!navigator.geolocation) return;
+            iniciarMapa();
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    posicaoAtual.lat = pos.coords.latitude;
+                    posicaoAtual.lng = pos.coords.longitude;
+                    atualizarPosicaoMapa(posicaoAtual.lat, posicaoAtual.lng);
+                    if (estado.aceito && corrida) {
+                        socket.emit('localizacao_motorista', { corrida_id: corrida.corrida_id || corrida.id, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' });
+                    }
+                },
+                () => {},
+                { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+            );
         }
 
         // ==============================================
         // 🔐 LOGIN
         // ==============================================
-        function statusLogin(texto, tipo) {
-            const el = document.getElementById('statusLogin');
-            el.textContent = texto; el.className = `status-text ${tipo}`;
-        }
-
+        function statusLogin(t, tipo) { const el = document.getElementById('statusLogin'); el.textContent = t; el.className = `status-text ${tipo}`; }
         async function cadastrar() {
-            const dados = {
-                nome: document.getElementById('nome').value.trim(),
-                email: document.getElementById('email').value.trim().toLowerCase(),
-                senha: document.getElementById('senha').value.trim(),
-                telefone: document.getElementById('telefone').value.trim(),
-                carro: document.getElementById('carro').value.trim(),
-                placa: document.getElementById('placa').value.trim().toUpperCase(),
-                tipo: "motorista"
-            };
-            if (Object.values(dados).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro");
-            if (dados.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro");
+            const d = { nome: document.getElementById('nome').value.trim(), email: document.getElementById('email').value.trim().toLowerCase(), senha: document.getElementById('senha').value.trim(), telefone: document.getElementById('telefone').value.trim(), carro: document.getElementById('carro').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), tipo: "motorista" };
+            if (Object.values(d).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro");
+            if (d.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro");
             statusLogin("⏳ Cadastrando...", "");
-            try {
-                const res = await fetch(`${API_URL}/register`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
-                });
-                const retorno = await res.json();
-                if (!res.ok) throw new Error(retorno.erro || "Falha");
-                statusLogin("✅ Criada! Entrando...", "ok");
-                setTimeout(() => entrar(dados.email, dados.senha), 1000);
-            } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
+            try { const r = await fetch(`${API_URL}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); statusLogin("✅ Criada! Entrando...", "ok"); setTimeout(() => entrar(d.email, d.senha), 1000); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
         }
-
         async function entrar(emailTxt = null, senhaTxt = null) {
-            const email = emailTxt || document.getElementById('email').value.trim().toLowerCase();
-            const senha = senhaTxt || document.getElementById('senha').value.trim();
+            const email = emailTxt || document.getElementById('email').value.trim().toLowerCase(), senha = senhaTxt || document.getElementById('senha').value.trim();
             if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro");
             statusLogin("⏳ Entrando...", "");
-            try {
-                const res = await fetch(`${API_URL}/login`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha })
-                });
-                const retorno = await res.json();
-                if (!res.ok) throw new Error(retorno.erro || "Falha");
-                if (retorno.user.tipo !== "motorista") throw new Error("Conta não é de motorista");
-                token = retorno.token;
-                usuario = retorno.user;
-                localStorage.setItem("token_motorista", token);
-                localStorage.setItem("dados_motorista", JSON.stringify(usuario));
-                telaPrincipal();
-                iniciarGPS();
-            } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
+            try { const r = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); if (ret.user.tipo !== "motorista") throw new Error("Conta não é de motorista"); token = ret.token; usuario = ret.user; localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario)); telaPrincipal(); iniciarGPS(); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
         }
-
-        function telaPrincipal() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('header').style.display = 'flex';
-            document.getElementById('barra').style.display = 'block';
-            document.getElementById('botoesFixos').style.display = 'block';
-            document.getElementById('areaAcoes').style.display = 'none';
-        }
-
-        function sair() {
-            if (estado.aceito && !confirm('Corrida em andamento! Sair mesmo assim?')) return;
-            localStorage.clear(); limparTudo(); window.location.reload();
-        }
+        function telaPrincipal() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('header').style.display = 'flex'; document.getElementById('barra').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'block'; document.getElementById('areaAcoes').style.display = 'none'; }
+        function sair() { if (estado.aceito && !confirm('Corrida em andamento!')) return; localStorage.clear(); limparTudo(); window.location.reload(); }
 
         // ==============================================
         // 🟢 ONLINE / OFFLINE
         // ==============================================
-        async function ficarOnline() {
-            if (!usuario || !token) return mostrarErro("Faça login!");
-            try {
-                await fetch(`${API_URL}/ficar_online/${usuario.id}`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                });
-                document.getElementById('btnOnline').style.display = 'none';
-                document.getElementById('btnOffline').style.display = 'block';
-                const statusEl = document.getElementById('statusMotorista');
-                statusEl.className = 'status-bolinha online';
-                statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>';
-                socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
-            } catch (e) { mostrarErro("Erro de conexão"); }
-        }
-
-        async function ficarOffline() {
-            try {
-                await fetch(`${API_URL}/ficar_offline/${usuario.id}`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                document.getElementById('btnOnline').style.display = 'block';
-                document.getElementById('btnOffline').style.display = 'none';
-                const statusEl = document.getElementById('statusMotorista');
-                statusEl.className = 'status-bolinha offline';
-                statusEl.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>';
-                socket.emit('motorista_offline', { id: usuario.id });
-                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-            } catch (e) {}
-        }
+        async function ficarOnline() { if (!usuario || !token) return mostrarErro("Faça login!"); try { await fetch(`${API_URL}/ficar_online/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }); document.getElementById('btnOnline').style.display = 'none'; document.getElementById('btnOffline').style.display = 'block'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha online'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>'; socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); } catch (e) { mostrarErro("Erro de conexão"); } }
+        async function ficarOffline() { try { await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha offline'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>'; socket.emit('motorista_offline', { id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); } catch (e) {} }
 
         // ==============================================
-        // 🚨 NOVA CORRIDA - COM FORMA DE PAGAMENTO CORRETA
+        // 🚨 NOVA CORRIDA
         // ==============================================
         socket.on('nova_corrida', (dados) => {
             if (estado.aceito) return;
-            
-            console.log("📥 NOVA CORRIDA:", dados);
-            
-            corrida = dados;
-            estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
-            
+            corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
             iniciarSomAlertaRepetido();
-            
-            // 🔥 FOTO DO PASSAGEIRO
-            const fotoPassageiro = dados.foto_passageiro || dados.foto_perfil || '';
-            const fotoEl = document.getElementById('fotoPassageiroCard');
-            if (fotoPassageiro) {
-                fotoEl.src = fotoPassageiro;
-                fotoEl.style.display = 'block';
-            } else {
-                fotoEl.style.display = 'none';
-            }
-            
+            const fp = dados.foto_passageiro || dados.foto_perfil || '';
+            const fe = document.getElementById('fotoPassageiroCard');
+            if (fp) { fe.src = fp; fe.style.display = 'block'; } else { fe.style.display = 'none'; }
             document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
             document.getElementById('cTelefone').textContent = dados.passageiro_telefone || "Não informado";
             document.getElementById('cOrigem').textContent = dados.origem || '-';
             document.getElementById('cDestino').textContent = dados.destino || '-';
             document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
-            
-            // 🔥 FORMA DE PAGAMENTO - VERIFICA TODOS OS CAMPOS POSSÍVEIS
-            const formaPgto = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
-            console.log("💰 Forma de pagamento recebida:", formaPgto);
-            
-            const linhaPgto = document.getElementById('linhaPagamento');
-            const cPagamento = document.getElementById('cPagamento');
-            linhaPgto.style.display = 'flex';
-            
-            if (formaPgto === 'dinheiro' || formaPgto === 'cash') {
-                cPagamento.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>';
-                linhaPgto.style.background = 'rgba(234,179,8,0.2)';
-            } else {
-                cPagamento.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>';
-                linhaPgto.style.background = 'rgba(22,93,255,0.15)';
-            }
-            
+            const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
+            const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento');
+            lp.style.display = 'flex';
+            if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; }
+            else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; }
             document.getElementById('cardCorrida').style.display = 'block';
             document.getElementById('botoesFixos').style.display = 'none';
-            
-            clearInterval(timerCorrida);
-            iniciarTemporizador();
+            clearInterval(timerCorrida); iniciarTemporizador();
         });
-
-        function iniciarTemporizador() {
-            segundosCorrida = 15;
-            atualizarBtnRecusar();
-            timerCorrida = setInterval(() => {
-                segundosCorrida--;
-                atualizarBtnRecusar();
-                if (segundosCorrida <= 0) { clearInterval(timerCorrida); recusarCorrida(); }
-            }, 1000);
-        }
-
+        function iniciarTemporizador() { segundosCorrida = 15; atualizarBtnRecusar(); timerCorrida = setInterval(() => { segundosCorrida--; atualizarBtnRecusar(); if (segundosCorrida <= 0) { clearInterval(timerCorrida); recusarCorrida(); } }, 1000); }
         function atualizarBtnRecusar() { document.getElementById('btnRecusar').textContent = `❌ RECUSAR (${segundosCorrida}s)`; }
-
-        function recusarCorrida() {
-            document.getElementById('cardCorrida').style.display = 'none';
-            corrida = null;
-            clearInterval(timerCorrida);
-            pararSomAlerta();
-            document.getElementById('botoesFixos').style.display = 'block';
-        }
+        function recusarCorrida() { document.getElementById('cardCorrida').style.display = 'none'; corrida = null; clearInterval(timerCorrida); pararSomAlerta(); document.getElementById('botoesFixos').style.display = 'block'; }
 
         // ==============================================
-        // ✅ ACEITAR CORRIDA
+        // ✅ ACEITAR
         // ==============================================
-        async function aceitarCorrida() {
-            clearInterval(timerCorrida);
-            pararSomAlerta();
-            
-            if (!corrida || !token || !usuario) return mostrarErro("Erro ao aceitar");
-            
-            const corridaId = corrida.corrida_id || corrida.id;
-            
-            const dadosMotorista = {
-                motorista_id: String(usuario.id),
-                nome_motorista: usuario.nome,
-                motorista_foto: usuario.foto_perfil || '',
-                carro: usuario.carro || '',
-                placa: usuario.placa || '',
-                status: "aceito"
-            };
-            
-            try {
-                const res = await fetch(`${API_URL}/aceitar_corrida/${corridaId}`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dadosMotorista)
-                });
-                
-                if (res.ok || res.status === 200 || res.status === 201) {
-                    estado.aceito = true;
-                    estado.pegouPassageiro = false;
-                    estado.viagemIniciada = false;
-                    
-                    document.getElementById('cardCorrida').style.display = 'none';
-                    document.getElementById('areaAcoes').style.display = 'block';
-                    document.getElementById('btnCancelarCorrida').style.display = 'flex';
-                    
-                    document.getElementById('etapaTexto').className = 'etapa etapa1';
-                    document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro';
-                    
-                    const container = document.getElementById('containerAcoesCorrida');
-                    container.innerHTML = '';
-                    container.appendChild(
-                        criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)
-                    );
-                    
-                    socket.emit('corrida_aceita', { ...dadosMotorista, corrida_id: corridaId });
-                    socket.emit("entrar_na_sala", { corrida_id: corridaId });
-                    
-                    // Envia localização periodicamente
-                    if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-                    envioLocalizacaoInterval = setInterval(() => {
-                        socket.emit('localizacao_motorista', {
-                            corrida_id: corridaId,
-                            lat: posicaoAtual.lat,
-                            lng: posicaoAtual.lng,
-                            motorista_id: usuario.id,
-                            motorista_nome: usuario.nome,
-                            motorista_foto: usuario.foto_perfil || ''
-                        });
-                    }, 2000);
-                    
-                    somSucesso.play().catch(() => {});
-                    falar("Corrida aceita! Deslize para ir ao passageiro.");
-                }
-            } catch (e) { mostrarErro(e.message); }
-        }
+        async function aceitarCorrida() { clearInterval(timerCorrida); pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
 
         // ==============================================
         // 📍 IR ATÉ PASSAGEIRO
         // ==============================================
-        function executarIrAtePassageiro() {
-            if (!estado.aceito) return;
-            if (estado.pegouPassageiro) return;
-            
-            estado.pegouPassageiro = true;
-            
-            const destino = (corrida.lat_origem && corrida.lon_origem) 
-                ? `${corrida.lat_origem},${corrida.lon_origem}` 
-                : corrida.origem;
-            
-            document.getElementById('mapaFrame').src = 
-                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${encodeURIComponent(destino)}&mode=driving`;
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
-            
-            document.getElementById('containerAcoesCorrida').innerHTML = '';
-            mostrarCardPassageiro();
-        }
-
-        function mostrarCardPassageiro() {
-            if (!corrida) return;
-            
-            const fotoPassageiro = corrida.foto_passageiro || corrida.foto_perfil || 
-                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
-            
-            document.getElementById('fotoChegada').src = fotoPassageiro;
-            document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
-            document.getElementById('cardPassageiroChegada').style.display = 'block';
-            
-            const container = document.getElementById('containerBtnEmbarque');
-            container.innerHTML = '';
-            container.appendChild(
-                criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)
-            );
-            
-            document.getElementById('btnLigarChegada').style.display = 'flex';
-        }
+        function executarIrAtePassageiro() { if (!estado.aceito || estado.pegouPassageiro) return; estado.pegouPassageiro = true; const dest = (corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : corrida.origem; window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank'); document.getElementById('containerAcoesCorrida').innerHTML = ''; mostrarCardPassageiro(); }
+        function mostrarCardPassageiro() { if (!corrida) return; const fp = corrida.foto_passageiro || corrida.foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E"; document.getElementById('fotoChegada').src = fp; document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro'; document.getElementById('cardPassageiroChegada').style.display = 'block'; const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)); document.getElementById('btnLigarChegada').style.display = 'flex'; }
 
         // ==============================================
-        // 🟢 INICIAR VIAGEM
+        // 🟢 INICIAR VIAGEM / FINALIZAR
         // ==============================================
-        function executarIniciarViagem() {
-            if (!estado.pegouPassageiro) return;
-            if (estado.viagemIniciada) return;
-            
-            estado.viagemIniciada = true;
-            document.getElementById('cardPassageiroChegada').style.display = 'none';
-            
-            const destino = (corrida.lat_destino && corrida.lon_destino) 
-                ? `${corrida.lat_destino},${corrida.lon_destino}` 
-                : corrida.destino;
-            
-            document.getElementById('mapaFrame').src = 
-                `https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${posicaoAtual.lat},${posicaoAtual.lng}&destination=${encodeURIComponent(destino)}&mode=driving`;
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}&travelmode=driving`, '_blank');
-            
-            document.getElementById('etapaTexto').className = 'etapa etapa3';
-            document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO! Deslize para finalizar';
-            
-            const container = document.getElementById('containerAcoesCorrida');
-            container.innerHTML = '';
-            container.appendChild(
-                criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)
-            );
-            
-            socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id });
-            falar("Viagem iniciada! Siga até o destino.");
-        }
+        function executarIniciarViagem() { if (!estado.pegouPassageiro || estado.viagemIniciada) return; estado.viagemIniciada = true; document.getElementById('cardPassageiroChegada').style.display = 'none'; const dest = (corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : corrida.destino; window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank'); document.getElementById('etapaTexto').className = 'etapa etapa3'; document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)); socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id }); falar("Viagem iniciada!"); }
+        async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome, finalizado_em: new Date().toISOString() }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
 
         // ==============================================
-        // 🏁 FINALIZAR
+        // 📞 LIGAR / ⭐ AVALIAR / ❌ CANCELAR
         // ==============================================
-        async function executarFinalizar() {
-            if (!estado.viagemIniciada) return;
-            if (!corrida) return;
-            
-            const valorFinal = parseFloat(corrida.valor || 0);
-            const corridaId = corrida.corrida_id || corrida.id;
-            
-            try {
-                const res = await fetch(`${API_URL}/finalizar_corrida/${corridaId}`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        status: "finalizada", valor_final: valorFinal,
-                        motorista_id: String(usuario.id),
-                        motorista_nome: usuario.nome,
-                        finalizado_em: new Date().toISOString()
-                    })
-                });
-                
-                if (res.ok || res.status === 200 || res.status === 201) {
-                    somDinheiro.play().catch(() => {});
-                    falar("Corrida finalizada! R$ " + valorFinal.toFixed(2).replace('.', ','));
-                    
-                    socket.emit('viagem_finalizada', { 
-                        corrida_id: corridaId, valor: valorFinal, 
-                        motorista_nome: usuario.nome, motorista_id: usuario.id 
-                    });
-                    
-                    if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-                    
-                    document.getElementById('areaAcoes').style.display = 'none';
-                    document.getElementById('btnCancelarCorrida').style.display = 'none';
-                    document.getElementById('modalAvaliacao').style.display = 'block';
-                    
-                    notaAvaliacao = 0;
-                    document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
-                    document.getElementById('comentarioAvaliacao').value = '';
-                }
-            } catch (e) { mostrarErro("Erro ao finalizar: " + e.message); }
-        }
-
-        // ==============================================
-        // 📞 LIGAR
-        // ==============================================
-        function ligarCliente() {
-            if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone");
-            const tel = corrida.passageiro_telefone.replace(/\D/g, '');
-            if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) {
-                window.location.href = `tel:${tel}`;
-            } else {
-                window.open(`https://wa.me/${tel}?text=Olá, sou seu motorista Rota Brasil!`, '_blank');
-            }
-        }
-
-        // ==============================================
-        // ⭐ AVALIAÇÃO
-        // ==============================================
-        async function enviarAvaliacao() {
-            if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; }
-            const comentario = document.getElementById('comentarioAvaliacao').value.trim();
-            const corridaId = corrida?.corrida_id || corrida?.id;
-            try {
-                if (corridaId) {
-                    await fetch(`${API_URL}/avaliar`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            corrida_id: corridaId, 
-                            passageiro_id: String(corrida?.passageiro_id),
-                            motorista_id: String(usuario.id), 
-                            nota: notaAvaliacao, comentario
-                        })
-                    });
-                }
-            } catch (e) {}
-            document.getElementById('modalAvaliacao').style.display = 'none';
-            limparTudo();
-        }
-
-        // ==============================================
-        // 🔴 CANCELAMENTO
-        // ==============================================
-        socket.on("corrida_cancelada", (dados) => {
-            if (corrida && (dados?.corrida_id == (corrida.corrida_id || corrida.id))) {
-                somAlto.play().catch(() => {});
-                if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-                limparTudo();
-                document.getElementById('alertaCancel').style.display = 'block';
-                falar("Passageiro cancelou a corrida!");
-            }
-        });
-
-        // ==============================================
-        // 🧹 LIMPEZA
-        // ==============================================
-        function limparTudo() {
-            corrida = null;
-            estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
-            notaAvaliacao = 0;
-            
-            document.getElementById('cardCorrida').style.display = 'none';
-            document.getElementById('areaAcoes').style.display = 'none';
-            document.getElementById('modalAvaliacao').style.display = 'none';
-            document.getElementById('alertaCancel').style.display = 'none';
-            document.getElementById('cardPassageiroChegada').style.display = 'none';
-            document.getElementById('btnCancelarCorrida').style.display = 'none';
-            document.getElementById('containerAcoesCorrida').innerHTML = '';
-            document.getElementById('containerBtnEmbarque').innerHTML = '';
-            document.getElementById('fotoPassageiroCard').style.display = 'none';
-            document.getElementById('linhaPagamento').style.display = 'none';
-            
-            document.getElementById('botoesFixos').style.display = 'block';
-            
-            document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa'));
-            document.getElementById('comentarioAvaliacao').value = '';
-            
-            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
-            pararSomAlerta();
-            
-            clearInterval(timerCorrida);
-            if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
-        }
-
-        async function cancelarCorrida() {
-            if (!corrida) return;
-            if (!confirm("Cancelar esta corrida?")) return;
-            const corridaId = corrida.corrida_id || corrida.id;
-            try {
-                await fetch(`${API_URL}/cancelar_corrida_motorista/${corridaId}`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-                });
-                socket.emit('corrida_cancelada_motorista', { corrida_id: corridaId });
-                limparTudo();
-            } catch (e) { mostrarErro("Erro ao cancelar."); }
-        }
-
-        async function abrirCarteira() {
-            document.getElementById('painelCarteiraMotorista').style.display = 'block';
-            try {
-                const res = await fetch(`${API_URL}/carteira/saldo`, { 
-                    headers: { Authorization: `Bearer ${token}` } 
-                });
-                const dados = await res.json();
-                document.getElementById('saldoMotorista').textContent = `R$ ${(dados.saldo || 0).toFixed(2)}`;
-            } catch (e) {}
-        }
+        function ligarCliente() { if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone"); const t = corrida.passageiro_telefone.replace(/\D/g, ''); if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) window.location.href = `tel:${t}`; else window.open(`https://wa.me/${t}?text=Olá, sou seu motorista Rota Brasil!`, '_blank'); }
+        async function enviarAvaliacao() { if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; } const cid = corrida?.corrida_id || corrida?.id; try { if (cid) await fetch(`${API_URL}/avaliar`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ corrida_id: cid, passageiro_id: String(corrida?.passageiro_id), motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {} document.getElementById('modalAvaliacao').style.display = 'none'; limparTudo(); }
+        socket.on("corrida_cancelada", (d) => { if (corrida && (d?.corrida_id == (corrida.corrida_id || corrida.id))) { somAlto.play().catch(() => {}); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); limparTudo(); document.getElementById('alertaCancel').style.display = 'block'; falar("Passageiro cancelou!"); } });
+        function limparTudo() { corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; notaAvaliacao = 0; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'none'; document.getElementById('alertaCancel').style.display = 'none'; document.getElementById('cardPassageiroChegada').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('containerAcoesCorrida').innerHTML = ''; document.getElementById('containerBtnEmbarque').innerHTML = ''; document.getElementById('fotoPassageiroCard').style.display = 'none'; document.getElementById('linhaPagamento').style.display = 'none'; document.getElementById('botoesFixos').style.display = 'block'; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; }); pararSomAlerta(); clearInterval(timerCorrida); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); }
+        async function cancelarCorrida() { if (!corrida) return; if (!confirm("Cancelar?")) return; const cid = corrida.corrida_id || corrida.id; try { await fetch(`${API_URL}/cancelar_corrida_motorista/${cid}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }); socket.emit('corrida_cancelada_motorista', { corrida_id: cid }); limparTudo(); } catch (e) { mostrarErro("Erro"); } }
+        async function abrirCarteira() { document.getElementById('painelCarteiraMotorista').style.display = 'block'; try { const r = await fetch(`${API_URL}/carteira/saldo`, { headers: { Authorization: `Bearer ${token}` } }); const d = await r.json(); document.getElementById('saldoMotorista').textContent = `R$ ${(d.saldo || 0).toFixed(2)}`; } catch (e) {} }
 
         // ==============================================
         // 🔌 SOCKET
         // ==============================================
-        socket.on('connect', () => {
-            console.log("✅ Conectado:", socket.id);
-            if (usuario?.id && document.getElementById('statusMotorista').classList.contains('online')) {
-                socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome });
-            }
-        });
+        socket.on('connect', () => { console.log("✅ Conectado:", socket.id); if (usuario?.id && document.getElementById('statusMotorista').classList.contains('online')) socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); });
         socket.on('disconnect', () => mostrarErro("Conexão perdida!"));
         socket.on('connect_error', () => mostrarErro("Servidor indisponível"));
 
@@ -937,25 +473,9 @@
         // 🚀 INICIALIZAÇÃO
         // ==============================================
         window.onload = () => {
-            const t = localStorage.getItem("token_motorista");
-            const d = localStorage.getItem("dados_motorista");
-            if (t && d) {
-                try {
-                    usuario = JSON.parse(d);
-                    token = t;
-                    telaPrincipal();
-                    iniciarGPS();
-                } catch { localStorage.clear(); }
-            }
-            
-            document.querySelectorAll('.estrela').forEach(estrela => {
-                estrela.addEventListener('click', function() {
-                    notaAvaliacao = parseInt(this.dataset.valor);
-                    document.querySelectorAll('.estrela').forEach((e, i) => {
-                        e.classList.toggle('ativa', i < notaAvaliacao);
-                    });
-                });
-            });
+            const t = localStorage.getItem("token_motorista"), d = localStorage.getItem("dados_motorista");
+            if (t && d) { try { usuario = JSON.parse(d); token = t; telaPrincipal(); iniciarGPS(); } catch { localStorage.clear(); } }
+            document.querySelectorAll('.estrela').forEach(e => { e.addEventListener('click', function() { notaAvaliacao = parseInt(this.dataset.valor); document.querySelectorAll('.estrela').forEach((el, i) => { el.classList.toggle('ativa', i < notaAvaliacao); }); }); });
         };
     </script>
 </body>
