@@ -11,20 +11,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* Avatar com borda animada */
-#avatarPassageiro {
-    transition: all 0.3s;
-    box-shadow: 0 0 10px rgba(255,0,127,0.3);
-}
-#avatarPassageiro:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(255,0,127,0.5);
-}
-
-/* Nome do passageiro */
-#nomePassageiro {
-    transition: color 0.3s;
-}
         :root {
             --cor-fundo: #0F172A; --cor-card: #1E293B; --cor-card-claro: #334155;
             --cor-primaria: #FF007F; --cor-sucesso: #22C55E; --cor-perigo: #EF4444;
@@ -47,6 +33,16 @@
         .topo span { font-size: 12px; color: var(--cor-primaria); font-weight: bold; }
         .nota-bar { background-color: var(--cor-card-claro); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 14px; flex-wrap: wrap; gap: 8px; }
         
+        #avatarPassageiro {
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(255,0,127,0.3);
+        }
+        #avatarPassageiro:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255,0,127,0.5);
+        }
+        #nomePassageiro { transition: color 0.3s; }
+
         .grupo-busca { position: relative; margin-bottom: 15px; }
         .grupo-busca label { display: block; margin-bottom: 5px; font-size: 12px; color: var(--cor-texto-secundario); }
         .grupo-busca input { width: 100%; padding: 14px; background-color: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 10px; color: var(--cor-texto-principal); font-size: 15px; }
@@ -66,11 +62,8 @@
         .sugestao-item i { color: var(--cor-primaria); }
         .sugestao-item .cidade { font-size: 11px; color: var(--cor-texto-secundario); display: block; }
 
-        /* 🔥 PARADAS */
         .paradas-container { margin-bottom: 15px; }
-        .parada-item {
-            display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
-        }
+        .parada-item { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
         .parada-item input { flex: 1; }
         .parada-item button {
             width: 36px; height: 36px; border-radius: 50%; background: var(--cor-perigo);
@@ -78,12 +71,10 @@
         }
         .btn-add-parada {
             background: transparent; border: 1px dashed var(--cor-borda); color: var(--cor-texto-secundario);
-            padding: 10px; border-radius: 10px; cursor: pointer; width: 100%; font-size: 13px;
-            margin-top: 5px;
+            padding: 10px; border-radius: 10px; cursor: pointer; width: 100%; font-size: 13px; margin-top: 5px;
         }
         .btn-add-parada:hover { border-color: var(--cor-info); color: var(--cor-info); }
 
-        /* MAPA DE MOTORISTAS */
         .mapa-motoristas-container {
             margin-top: 15px; border-radius: 12px; overflow: hidden;
             border: 2px solid var(--cor-info); position: relative;
@@ -136,12 +127,20 @@
             border: 3px solid var(--cor-sucesso); margin: 10px auto; display: block;
             box-shadow: 0 0 15px rgba(34,197,94,0.3);
         }
+        .foto-motorista-card.chegou {
+            border-color: #22C55E !important;
+            box-shadow: 0 0 25px rgba(34,197,94,0.5) !important;
+            animation: pulseChegou 1s infinite !important;
+        }
+        @keyframes pulseChegou {
+            0%, 100% { box-shadow: 0 0 15px rgba(34,197,94,0.3); }
+            50% { box-shadow: 0 0 30px rgba(34,197,94,0.7); }
+        }
         .placa-badge { background: #000; color: #FFF; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; }
         .badge-pagamento { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
         .badge-pix { background: var(--cor-info); color: white; }
         .badge-dinheiro { background: var(--cor-alerta); color: #000; }
 
-        /* 🔥 AVALIAÇÕES */
         .avaliacoes-section { margin-top: 20px; }
         .avaliacoes-section h3 { font-size: 14px; color: var(--cor-texto-secundario); margin-bottom: 10px; }
         .avaliacao-item {
@@ -188,22 +187,23 @@
     </div>
 
     <!-- DASHBOARD -->
-<div id="dashboard" class="container" style="display:none;">
-    <!-- 🔥 TOPO COM AVATAR E NOME DO PASSAGEIRO -->
-    <div class="topo" style="display:flex; align-items:center; gap:12px;">
-        <img id="avatarPassageiro" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
-             style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:2px solid var(--cor-primaria); flex-shrink:0;"
-             onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
-        <div style="flex:1;">
-            <h1 style="font-size:18px; margin:0;">Rota Brasil 🚗</h1>
-            <span style="font-size:11px; color:var(--cor-texto-secundario);">Olá, <b id="nomePassageiro" style="color:var(--cor-primaria);">Passageiro</b></span>
+    <div id="dashboard" class="container" style="display:none;">
+        <div class="topo" style="display:flex; align-items:center; gap:12px;">
+            <img id="avatarPassageiro" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
+                 style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:2px solid var(--cor-primaria); flex-shrink:0;"
+                 onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+            <div style="flex:1;">
+                <h1 style="font-size:18px; margin:0;">Rota Brasil 🚗</h1>
+                <span style="font-size:11px; color:var(--cor-texto-secundario);">Olá, <b id="nomePassageiro" style="color:var(--cor-primaria);">Passageiro</b></span>
+            </div>
+            <button class="btn-sair" onclick="logout()">Sair</button>
         </div>
-        <button class="btn-sair" onclick="logout()">Sair</button>
-    </div>
-    
-    <!-- ... resto do dashboard continua igual ... -->
+        
+        <div class="nota-bar">
+            <span>Nota: <b style="color:var(--cor-alerta);" id="minhaNota">5.0 ⭐</b></span>
+            <button class="btn-carteira" onclick="abrirCarteira()">💰 Carteira</button>
+        </div>
 
-        <!-- 🔥 MAPA DE MOTORISTAS (SOME QUANDO ACEITA CORRIDA) -->
         <div class="mapa-motoristas-container" id="mapaMotoristasContainer">
             <div class="motoristas-info" id="motoristasInfo">🚗 <span id="totalMotoristasMapa">0</span> motoristas online</div>
             <div id="mapaMotoristas"></div>
@@ -218,7 +218,6 @@
             <div class="sugestoes-lista" id="sugestoes-origem"></div>
         </div>
         
-        <!-- 🔥 PARADAS -->
         <div class="paradas-container" id="paradasContainer"></div>
         <button class="btn-add-parada" onclick="adicionarParada()">➕ Adicionar Parada</button>
         
@@ -245,7 +244,6 @@
             <button id="btnChamar" class="btn-sucesso-grande" onclick="chamarCorrida()">🚀 CHAMAR ROTA BRASIL</button>
         </div>
 
-        <!-- MAPA DA CORRIDA -->
         <div class="mapa-container" id="mapaContainer">
             <div class="indicador-mapa" id="indicadorMapa">🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min</div>
             <div id="mapaLeaflet"></div>
@@ -255,7 +253,6 @@
             <div id="conteudoStatus"></div>
         </div>
 
-        <!-- 🔥 AVALIAÇÕES RECEBIDAS -->
         <div class="avaliacoes-section">
             <h3>⭐ Avaliações que você recebeu</h3>
             <div id="minhasAvaliacoes">
@@ -295,6 +292,7 @@
         let buscaTimeout = null;
         let pollingInterval = null;
         let paradas = [];
+        let motoristaChegou = false;
 
         // ========== 🗺️ MAPA DE MOTORISTAS ==========
         let mapaMotoristas = null, marcadoresMotoristas = [], marcadorPassageiroMapa = null;
@@ -327,7 +325,7 @@
             } catch (e) { console.error('Erro motoristas:', e); }
         }
 
-        // ========== 🔥 PARADAS ==========
+        // ========== PARADAS ==========
         function adicionarParada() {
             const container = document.getElementById('paradasContainer');
             const index = paradas.length;
@@ -348,7 +346,6 @@
         function removerParada(index, btn) {
             paradas.splice(index, 1);
             btn.parentElement.remove();
-            // Reindexar
             document.querySelectorAll('.parada-item').forEach((el, i) => {
                 el.querySelector('label').textContent = `📍 Parada ${i + 1}`;
             });
@@ -379,12 +376,61 @@
                 else linhaRota = L.polyline([pp, [lat, lng]], { color: '#FF007F', weight: 3, dashArray: '10,10', opacity: 0.8 }).addTo(mapaLeaflet);
                 mapaLeaflet.fitBounds(L.featureGroup([markerPassageiro, markerMotorista]).getBounds().pad(0.3), { animate: true });
             }
+            
             if (latOrigem && lonOrigem) {
                 const dk = calcularDistancia(latOrigem, lonOrigem, lat, lng);
                 document.getElementById('distanciaMapa').textContent = dk.toFixed(1);
                 document.getElementById('tempoMapa').textContent = Math.round(dk * 2.5);
                 document.getElementById('indicadorMapa').classList.add('visivel');
+                
+                if (dk < 0.1 && !motoristaChegou) {
+                    motoristaChegou = true;
+                    motoristaChegouAlerta();
+                }
             }
+        }
+
+        function motoristaChegouAlerta() {
+            try {
+                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+                audio.volume = 0.8;
+                audio.play().catch(() => {});
+            } catch(e) {}
+            
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance("Seu motorista chegou! Por favor, vá até o veículo.");
+                msg.lang = 'pt-BR'; msg.rate = 1.0; msg.volume = 1;
+                window.speechSynthesis.speak(msg);
+            }
+            
+            const statusEl = document.getElementById('conteudoStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <div style="animation: pulse 1s infinite;">
+                        <i class="fas fa-check-circle" style="font-size:50px; color:#22C55E;"></i>
+                        <h3 style="color:#22C55E; margin-top:10px;">✅ MOTORISTA CHEGOU!</h3>
+                        <p style="font-size:14px; color:#94A3B8;">Seu motorista está no local.<br>Por favor, vá até o veículo.</p>
+                        ${paradas.length > 0 ? `
+                        <div style="background:rgba(234,179,8,0.15); padding:10px; border-radius:8px; margin:10px 0; text-align:left;">
+                            <p style="font-weight:bold; color:#EAB308;">📍 Paradas da rota:</p>
+                            ${paradas.map((p, i) => `<p style="font-size:12px; margin:3px 0;">🔹 Parada ${i+1}: ${p.endereco || 'Endereço não definido'}</p>`).join('')}
+                        </div>
+                        ` : ''}
+                        <button class="btn-danger" onclick="cancelarCorrida()" style="margin-top:10px;">❌ Cancelar</button>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('indicadorMapa').innerHTML = '✅ MOTORISTA CHEGOU!';
+            document.getElementById('indicadorMapa').style.background = 'rgba(34,197,94,0.95)';
+            document.getElementById('indicadorMapa').style.borderColor = '#22C55E';
+            document.getElementById('indicadorMapa').classList.add('visivel');
+            
+            const foto = document.querySelector('.foto-motorista-card');
+            if (foto) foto.classList.add('chegou');
+            
+            console.log('✅ MOTORISTA CHEGOU!');
         }
 
         // ========== SUGESTÕES ==========
@@ -432,6 +478,7 @@
 
         // ========== SOCKET ==========
         socket.on("connect", () => { if (corridaAtual?.id) socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id }); });
+        
         socket.on("localizacao_motorista", (dados) => {
             if (!corridaAtual) return;
             if (dados.corrida_id != (corridaAtual.id || corridaAtual.corrida_id)) return;
@@ -444,7 +491,6 @@
             corridaAtual = { ...corridaAtual, ...dados };
             if (corridaAtual.id || dados.corrida_id) { socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); iniciarPolling(); }
             
-            // 🔥 SOME O MAPA DE MOTORISTAS
             document.getElementById('mapaMotoristasContainer').style.display = 'none';
             document.querySelector('.btn-ver-mapa').style.display = 'none';
             
@@ -469,13 +515,18 @@
         function resetarInterface() {
             pararPolling();
             corridaAtual = null;
+            motoristaChegou = false;
+            
             document.getElementById('cardStatus').style.display = 'none';
             document.getElementById('mapaContainer').style.display = 'none';
             document.getElementById('indicadorMapa').classList.remove('visivel');
+            document.getElementById('indicadorMapa').innerHTML = '🚗 Motorista a <span id="distanciaMapa">--</span> km • 🕒 <span id="tempoMapa">--</span> min';
+            document.getElementById('indicadorMapa').style.background = 'rgba(30,41,59,0.95)';
+            document.getElementById('indicadorMapa').style.borderColor = 'var(--cor-primaria)';
+            
             if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null; }
             markerPassageiro = null; markerMotorista = null; linhaRota = null;
             
-            // 🔥 REAPARECE O MAPA DE MOTORISTAS
             document.getElementById('mapaMotoristasContainer').style.display = 'block';
             document.querySelector('.btn-ver-mapa').style.display = 'block';
             setTimeout(() => carregarMotoristasNoMapa(), 500);
@@ -485,52 +536,42 @@
         }
 
         // ========== AUTENTICAÇÃO ==========
-    async function fazerLogin() {
-    const email = document.getElementById('email').value.trim(), senha = document.getElementById('senha').value.trim();
-    if (!email || !senha) { document.getElementById('msgLogin').textContent = 'Preencha!'; return; }
-    document.getElementById('msgLogin').textContent = 'Entrando...'; document.getElementById('msgLogin').style.color = '#94A3B8';
-    try {
-        const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, senha }) });
-        const data = await res.json();
-        if (res.ok && data.token) {
-            token = data.token; passageiro = data.user;
-            localStorage.setItem("token_passageiro", token); localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
-            document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block';
-            
-            // 🔥 ATUALIZA AVATAR E NOME
-            atualizarAvatarNome();
-            
-            await verificarSaldo();
-            iniciarMapaPassageiro();
-            carregarMinhasAvaliacoes();
-        } else { document.getElementById('msgLogin').textContent = data.erro || 'Erro'; document.getElementById('msgLogin').style.color = '#EF4444'; }
-    } catch (e) { document.getElementById('msgLogin').textContent = 'Erro de conexão'; document.getElementById('msgLogin').style.color = '#EF4444'; }
-}
-
-// 🔥 NOVA FUNÇÃO PARA ATUALIZAR AVATAR E NOME
-function atualizarAvatarNome() {
-    if (!passageiro) return;
-    
-    // Atualiza nome
-    const nomeEl = document.getElementById('nomePassageiro');
-    if (nomeEl) nomeEl.textContent = passageiro.nome || 'Passageiro';
-    
-    // Atualiza avatar
-    const avatarEl = document.getElementById('avatarPassageiro');
-    if (avatarEl) {
-        const foto = passageiro.foto_perfil || '';
-        if (foto && (foto.startsWith('http') || foto.startsWith('data:'))) {
-            avatarEl.src = foto;
-        } else {
-            // Avatar com iniciais
-            const iniciais = (passageiro.nome || 'P').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'Passageiro')}&size=100&background=FF007F&color=fff&bold=true`;
+        async function fazerLogin() {
+            const email = document.getElementById('email').value.trim(), senha = document.getElementById('senha').value.trim();
+            if (!email || !senha) { document.getElementById('msgLogin').textContent = 'Preencha!'; return; }
+            document.getElementById('msgLogin').textContent = 'Entrando...'; document.getElementById('msgLogin').style.color = '#94A3B8';
+            try {
+                const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, senha }) });
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    token = data.token; passageiro = data.user;
+                    localStorage.setItem("token_passageiro", token); localStorage.setItem("user_passageiro", JSON.stringify(passageiro));
+                    document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block';
+                    atualizarAvatarNome();
+                    await verificarSaldo();
+                    iniciarMapaPassageiro();
+                    carregarMinhasAvaliacoes();
+                } else { document.getElementById('msgLogin').textContent = data.erro || 'Erro'; document.getElementById('msgLogin').style.color = '#EF4444'; }
+            } catch (e) { document.getElementById('msgLogin').textContent = 'Erro de conexão'; document.getElementById('msgLogin').style.color = '#EF4444'; }
         }
-        avatarEl.onerror = function() {
-            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'P')}&size=100&background=FF007F&color=fff&bold=true`;
-        };
-    }
-}
+
+        function atualizarAvatarNome() {
+            if (!passageiro) return;
+            const nomeEl = document.getElementById('nomePassageiro');
+            if (nomeEl) nomeEl.textContent = passageiro.nome || 'Passageiro';
+            const avatarEl = document.getElementById('avatarPassageiro');
+            if (avatarEl) {
+                const foto = passageiro.foto_perfil || '';
+                if (foto && (foto.startsWith('http') || foto.startsWith('data:'))) {
+                    avatarEl.src = foto;
+                } else {
+                    avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'Passageiro')}&size=100&background=FF007F&color=fff&bold=true`;
+                }
+                avatarEl.onerror = function() {
+                    this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(passageiro.nome || 'P')}&size=100&background=FF007F&color=fff&bold=true`;
+                };
+            }
+        }
 
         function iniciarMapaPassageiro() {
             if (navigator.geolocation) {
@@ -546,9 +587,9 @@ function atualizarAvatarNome() {
             try {
                 const res = await fetch(`${API}/minhas_avaliacoes`, { headers: { Authorization: `Bearer ${token}` } });
                 const data = await res.json();
-                document.getElementById('minhaNota').textContent = data.media.toFixed(1) + ' ⭐';
+                document.getElementById('minhaNota').textContent = (data.media || 5.0).toFixed(1) + ' ⭐';
                 const container = document.getElementById('minhasAvaliacoes');
-                if (data.avaliacoes.length === 0) {
+                if (!data.avaliacoes || data.avaliacoes.length === 0) {
                     container.innerHTML = '<p style="color:var(--cor-texto-secundario);font-size:12px;">Nenhuma avaliação ainda</p>';
                     return;
                 }
@@ -611,7 +652,6 @@ function atualizarAvatarNome() {
                 if (data.erro) throw new Error(data.erro);
                 distancia = data.distancia; valorFinal = data.valor;
             } catch (e) { distancia = calcularDistancia(latOrigem, lonOrigem, latDestino, lonDestino); valorFinal = distancia * 3.5 + 5; }
-            // Adiciona paradas ao valor (R$ 3 por parada)
             if (paradas.length > 0) valorFinal += paradas.length * 3;
             document.getElementById('txtDistancia').textContent = distancia.toFixed(1) + ' km';
             document.getElementById('txtTempo').textContent = Math.round(distancia * 3 + paradas.length * 5) + ' min';
@@ -651,24 +691,11 @@ function atualizarAvatarNome() {
 
         // ========== INIT ==========
         document.addEventListener('DOMContentLoaded', () => {
-    // ... código das estrelas ...
-    
-    const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
-    if (t && u) { 
-        try { 
-            token = t; passageiro = JSON.parse(u); 
-            document.getElementById('loginCard').style.display = 'none'; 
-            document.getElementById('dashboard').style.display = 'block'; 
-            
-            // 🔥 ATUALIZA AVATAR E NOME
-            atualizarAvatarNome();
-            
-            verificarSaldo(); 
-            iniciarMapaPassageiro(); 
-            carregarMinhasAvaliacoes(); 
-        } catch (e) { localStorage.clear(); } 
-    }
-});
+            document.querySelectorAll('#estrelasContainer .estrela').forEach(e => { e.addEventListener('click', function() { notaAvaliacao = parseInt(this.dataset.nota); document.querySelectorAll('#estrelasContainer .estrela').forEach((el, i) => { el.classList.toggle('ativa', i < notaAvaliacao); }); }); });
+            const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
+            if (t && u) { try { token = t; passageiro = JSON.parse(u); document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; atualizarAvatarNome(); verificarSaldo(); iniciarMapaPassageiro(); carregarMinhasAvaliacoes(); } catch (e) { localStorage.clear(); } }
+        });
+
         setInterval(() => { if (document.getElementById('dashboard').style.display !== 'none' && document.getElementById('mapaMotoristasContainer').style.display !== 'none') carregarMotoristasNoMapa(); }, 30000);
     </script>
 </body>
