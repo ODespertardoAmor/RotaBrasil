@@ -530,20 +530,46 @@ def criar_checkout():
         return jsonify({"erro": "Mercado Pago não configurado"}), 500
     
     dados = request.get_json()
-    valor = float(dados["valor"])
+    valor = float(dados.get("valor", 0))
     usuario_id = get_jwt_identity()
     
-    preference_data = {
-        "items": [{"title": "Recarga Carteira Rota Brasil", "quantity": 1, "unit_price": valor}],
-        "external_reference": str(usuario_id),
-        "notification_url": "https://rotabrasil-tobu.onrender.com/webhook"
-    }
+    if valor <= 0:
+        return jsonify({"erro": "Valor inválido"}), 400
     
-    preference = sdk.preference().create(preference_data)
-    response = preference.get("response", {})
-    link = response.get("init_point") or response.get("sandbox_init_point")
-    
-    return jsonify({"link": link})
+    try:
+        preference_data = {
+            "items": [
+                {
+                    "title": "Recarga Carteira Rota Brasil",
+                    "quantity": 1,
+                    "unit_price": valor
+                }
+            ],
+            "external_reference": str(usuario_id),
+            "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
+            "back_urls": {
+                "success": "https://rotabrasil-tobu.onrender.com/sucesso",
+                "failure": "https://rotabrasil-tobu.onrender.com/falha",
+                "pending": "https://rotabrasil-tobu.onrender.com/pendente"
+            },
+            "auto_return": "approved"
+        }
+        
+        preference = sdk.preference().create(preference_data)
+        response = preference.get("response", {})
+        
+        link = response.get("init_point") or response.get("sandbox_init_point")
+        
+        if link:
+            print(f"✅ Link de pagamento gerado: {link}")
+            return jsonify({"link": link})
+        else:
+            print(f"❌ Erro Mercado Pago: {response}")
+            return jsonify({"erro": "Erro ao gerar link de pagamento", "detalhes": str(response)}), 500
+            
+    except Exception as e:
+        print(f"❌ Erro Mercado Pago: {e}")
+        return jsonify({"erro": f"Erro no Mercado Pago: {str(e)}"}), 500
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
