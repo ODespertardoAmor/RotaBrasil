@@ -1061,7 +1061,47 @@ def recriar():
         return jsonify({"status": "✅ Banco recriado com sucesso!"})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
-
+@app.route('/motoristas_localizacao', methods=['GET'])
+def motoristas_localizacao():
+    """Retorna a localização de todos os motoristas online"""
+    try:
+        motoristas = Usuario.query.filter_by(tipo='motorista', online=True).all()
+        lista = []
+        for m in motoristas:
+            # Busca a última localização do motorista
+            ultima_loc = db.session.execute(
+                db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
+                {'mid': m.id}
+            ).fetchone()
+            
+            if ultima_loc:
+                lista.append({
+                    'id': m.id,
+                    'nome': m.nome,
+                    'carro': m.carro or '',
+                    'placa': m.placa or '',
+                    'foto_perfil': m.foto_perfil or '',
+                    'lat': ultima_loc[0],
+                    'lng': ultima_loc[1],
+                    'nota': 5.0
+                })
+        
+        return jsonify({'motoristas': lista, 'total': len(lista)})
+    except Exception as e:
+        # Fallback: retorna motoristas online mesmo sem localização
+        motoristas = Usuario.query.filter_by(tipo='motorista', online=True).all()
+        lista = [{
+            'id': m.id,
+            'nome': m.nome,
+            'carro': m.carro or '',
+            'placa': m.placa or '',
+            'foto_perfil': m.foto_perfil or '',
+            'lat': -23.5505 + (m.id * 0.01),  # Posições espalhadas como exemplo
+            'lng': -46.6333 + (m.id * 0.01),
+            'nota': 5.0
+        } for m in motoristas]
+        
+        return jsonify({'motoristas': lista, 'total': len(lista), 'simulado': True})
 # ==========================================
 # ROTAS BÁSICAS
 # ==========================================
