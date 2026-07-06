@@ -269,9 +269,54 @@
 
         // ========== ACEITAR ==========
         async function aceitarCorrida() { clearInterval(timerCorrida); pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
-
-        function executarIrAtePassageiro() { if (!estado.aceito || estado.pegouPassageiro) return; estado.pegouPassageiro = true; const dest = (corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : corrida.origem; window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank'); document.getElementById('containerAcoesCorrida').innerHTML = ''; mostrarCardPassageiro(); }
-
+        // 📍 IR ATÉ PASSAGEIRO (COM PARADAS)
+// ==============================================
+function executarIrAtePassageiro() {
+    if (!estado.aceito || estado.pegouPassageiro) return;
+    estado.pegouPassageiro = true;
+    
+    const paradas = corrida.paradas || [];
+    
+    if (paradas.length > 0) {
+        // 🔥 Cria rota com paradas no Google Maps
+        let waypoints = '';
+        paradas.forEach(p => {
+            const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+            if (endereco) {
+                waypoints += encodeURIComponent(endereco) + '|';
+            }
+        });
+        // Remove o último |
+        waypoints = waypoints.replace(/\|$/, '');
+        
+        const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+        const destino = (corrida.lat_origem && corrida.lon_origem) 
+            ? `${corrida.lat_origem},${corrida.lon_origem}` 
+            : encodeURIComponent(corrida.origem);
+        
+        if (waypoints) {
+            // Google Maps com waypoints
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destino}&waypoints=${waypoints}&travelmode=driving`;
+            window.open(url, '_blank');
+        } else {
+            // Sem waypoints válidos
+            const dest = (corrida.lat_origem && corrida.lon_origem) 
+                ? `${corrida.lat_origem},${corrida.lon_origem}` 
+                : corrida.origem;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+        }
+    } else {
+        // Sem paradas - rota direta
+        const dest = (corrida.lat_origem && corrida.lon_origem) 
+            ? `${corrida.lat_origem},${corrida.lon_origem}` 
+            : corrida.origem;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+    }
+    
+    document.getElementById('containerAcoesCorrida').innerHTML = '';
+    mostrarCardPassageiro();
+}
+        
         // 🔥 MOSTRAR CARD DO PASSAGEIRO COM PARADAS
         function mostrarCardPassageiro() {
             if (!corrida) return;
@@ -300,8 +345,61 @@
             document.getElementById('btnLigarChegada').style.display = 'flex';
         }
 
-        function executarIniciarViagem() { if (!estado.pegouPassageiro || estado.viagemIniciada) return; estado.viagemIniciada = true; document.getElementById('cardPassageiroChegada').style.display = 'none'; const dest = (corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : corrida.destino; window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank'); document.getElementById('etapaTexto').className = 'etapa etapa3'; document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)); socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id }); falar("Viagem iniciada!"); }
+        // 🟢 INICIAR VIAGEM (COM PARADAS)
+// ==============================================
+function executarIniciarViagem() {
+    if (!estado.pegouPassageiro || estado.viagemIniciada) return;
+    estado.viagemIniciada = true;
+    document.getElementById('cardPassageiroChegada').style.display = 'none';
+    
+    const paradas = corrida.paradas || [];
+    
+    if (paradas.length > 0) {
+        // 🔥 Cria rota com paradas no Google Maps
+        let waypoints = '';
+        paradas.forEach(p => {
+            const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+            if (endereco) {
+                waypoints += encodeURIComponent(endereco) + '|';
+            }
+        });
+        waypoints = waypoints.replace(/\|$/, '');
+        
+        const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+        const destinoFinal = (corrida.lat_destino && corrida.lon_destino) 
+            ? `${corrida.lat_destino},${corrida.lon_destino}` 
+            : encodeURIComponent(corrida.destino);
+        
+        if (waypoints) {
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving`;
+            window.open(url, '_blank');
+        } else {
+            const dest = (corrida.lat_destino && corrida.lon_destino) 
+                ? `${corrida.lat_destino},${corrida.lon_destino}` 
+                : corrida.destino;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+        }
+    } else {
+        // Sem paradas - rota direta ao destino
+        const dest = (corrida.lat_destino && corrida.lon_destino) 
+            ? `${corrida.lat_destino},${corrida.lon_destino}` 
+            : corrida.destino;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+    }
+    
+    document.getElementById('etapaTexto').className = 'etapa etapa3';
+    document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!';
+    
+    const ct = document.getElementById('containerAcoesCorrida');
+    ct.innerHTML = '';
+    ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar));
+    
+    socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id, paradas: paradas });
+    falar("Viagem iniciada! Siga até o destino.");
+}
+ 
         async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome, finalizado_em: new Date().toISOString() }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
+        
 
         function ligarCliente() { if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone"); const t = corrida.passageiro_telefone.replace(/\D/g, ''); if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) window.location.href = `tel:${t}`; else window.open(`https://wa.me/${t}?text=Olá, sou seu motorista Rota Brasil!`, '_blank'); }
         async function enviarAvaliacao() { if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; } const cid = corrida?.corrida_id || corrida?.id; try { if (cid) await fetch(`${API_URL}/avaliar`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ corrida_id: cid, passageiro_id: String(corrida?.passageiro_id), motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {} document.getElementById('modalAvaliacao').style.display = 'none'; limparTudo(); }
