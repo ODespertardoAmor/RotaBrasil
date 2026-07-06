@@ -320,11 +320,11 @@ def nova_corrida():
     
     valor_corrida = float(dados.get("valor", 0))
     forma_pagamento = dados.get("forma_pagamento", "pix")
+    paradas = dados.get("paradas", [])  # 🔥 RECEBE AS PARADAS
     
-    # 🔥 SÓ BLOQUEIA SALDO SE FOR PIX
     if forma_pagamento == "pix":
         if not bloquear_valor_corrida(passageiro_id, valor_corrida):
-            return jsonify({"erro": "Saldo insuficiente! Adicione saldo ou escolha pagar em dinheiro."}), 400
+            return jsonify({"erro": "Saldo insuficiente!"}), 400
     
     nova = Corrida(
         passageiro_id=passageiro_id,
@@ -342,6 +342,7 @@ def nova_corrida():
     db.session.add(nova)
     db.session.commit()
     
+    # 🔥 DADOS COMPLETOS COM PARADAS
     dados_chamada = {
         "corrida_id": nova.id,
         "passageiro_id": passageiro.id,
@@ -357,7 +358,8 @@ def nova_corrida():
         "lat_origem": dados.get("lat_origem"),
         "lon_origem": dados.get("lon_origem"),
         "lat_destino": dados.get("lat_destino"),
-        "lon_destino": dados.get("lon_destino")
+        "lon_destino": dados.get("lon_destino"),
+        "paradas": paradas  # 🔥 ENVIA AS PARADAS PARA O MOTORISTA
     }
     
     motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
@@ -365,10 +367,14 @@ def nova_corrida():
         socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
     socketio.emit("nova_corrida", dados_chamada)
     
-    print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f}")
+    print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f} | Paradas: {len(paradas)}")
     
-    return jsonify({"status": "Procurando motoristas", "corrida_id": nova.id, "forma_pagamento": forma_pagamento}), 201
-
+    return jsonify({
+        "status": "Procurando motoristas",
+        "corrida_id": nova.id,
+        "forma_pagamento": forma_pagamento,
+        "paradas": paradas
+    }), 201
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
