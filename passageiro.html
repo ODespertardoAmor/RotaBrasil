@@ -267,16 +267,84 @@
     let buscaTimeout = null;
     let pollingInterval = null;
 
-    // ========== 🗺️ MAPA DE MOTORISTAS ONLINE ==========
-    let mapaMotoristas = null;
-    let marcadoresMotoristas = [];
+    
+    // ========== 🗺️ MAPA DE MOTORISTAS ONLINE (COM LOCALIZAÇÃO DO PASSAGEIRO) ==========
+let mapaMotoristas = null;
+let marcadoresMotoristas = [];
+let marcadorPassageiroMapa = null;
 
-    function inicializarMapaMotoristas() {
-        if (mapaMotoristas) return;
-        mapaMotoristas = L.map('mapaMotoristas', { zoomControl: true, attributionControl: false }).setView([-23.5505, -46.6333], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaMotoristas);
-        setTimeout(() => { mapaMotoristas.invalidateSize(); atualizarMapaMotoristas(); }, 500);
+function inicializarMapaMotoristas() {
+    if (mapaMotoristas) return;
+    
+    // Tenta obter a localização do passageiro
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                // Centraliza na posição do passageiro
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                
+                mapaMotoristas = L.map('mapaMotoristas', { 
+                    zoomControl: true, 
+                    attributionControl: false 
+                }).setView([lat, lng], 14);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                    maxZoom: 19 
+                }).addTo(mapaMotoristas);
+                
+                // Adiciona marcador do passageiro
+                marcadorPassageiroMapa = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="font-size:28px;">📍</div>',
+                        className: '',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(mapaMotoristas);
+                marcadorPassageiroMapa.bindPopup('<b>📍 Você está aqui</b>');
+                
+                // Adiciona círculo de alcance
+                L.circle([lat, lng], {
+                    radius: 3000, // 3km de raio
+                    color: '#3B82F6',
+                    fillColor: '#3B82F6',
+                    fillOpacity: 0.05,
+                    weight: 1
+                }).addTo(mapaMotoristas);
+                
+                setTimeout(() => {
+                    mapaMotoristas.invalidateSize();
+                    atualizarMapaMotoristas();
+                }, 500);
+            },
+            (erro) => {
+                // Fallback: São Paulo
+                console.log('GPS não disponível, usando SP como fallback');
+                criarMapaFallback();
+            },
+            { enableHighAccuracy: true, timeout: 5000 }
+        );
+    } else {
+        criarMapaFallback();
     }
+}
+
+function criarMapaFallback() {
+    mapaMotoristas = L.map('mapaMotoristas', { 
+        zoomControl: true, 
+        attributionControl: false 
+    }).setView([-23.5505, -46.6333], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        maxZoom: 19 
+    }).addTo(mapaMotoristas);
+    
+    setTimeout(() => {
+        mapaMotoristas.invalidateSize();
+        atualizarMapaMotoristas();
+    }, 500);
+}
 
     async function atualizarMapaMotoristas() {
         if (!mapaMotoristas) { inicializarMapaMotoristas(); return; }
