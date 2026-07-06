@@ -1130,7 +1130,37 @@ def motoristas_localizacao():
         print(f"❌ Erro motoristas_localizacao: {e}")
         # Retorna array vazio em caso de erro
         return jsonify({'motoristas': [], 'total': 0})
-
+@app.route('/minhas_avaliacoes', methods=['GET'])
+@jwt_required()
+def minhas_avaliacoes():
+    """Retorna avaliações recebidas pelo usuário logado"""
+    usuario_id = int(get_jwt_identity())
+    
+    try:
+        avaliacoes = Avaliacao.query.filter_by(avaliado_id=usuario_id).order_by(Avaliacao.created_at.desc()).limit(10).all()
+        
+        lista = []
+        for a in avaliacoes:
+            avaliador = Usuario.query.get(a.avaliador_id)
+            lista.append({
+                'id': a.id,
+                'corrida_id': a.corrida_id,
+                'nota': a.nota,
+                'comentario': a.comentario or '',
+                'avaliador_nome': avaliador.nome if avaliador else 'Usuário',
+                'created_at': a.created_at.strftime('%d/%m/%Y') if a.created_at else ''
+            })
+        
+        # Calcula média
+        media = db.session.query(db.func.avg(Avaliacao.nota)).filter_by(avaliado_id=usuario_id).scalar() or 5.0
+        
+        return jsonify({
+            'avaliacoes': lista,
+            'media': round(float(media), 1),
+            'total': len(lista)
+        })
+    except Exception as e:
+        return jsonify({'avaliacoes': [], 'media': 5.0, 'total': 0})
 # ROTAS BÁSICAS
 # ==========================================
 
