@@ -256,50 +256,42 @@
         }
 
         // 🔥🔥 FUNÇÃO HÍBRIDA: WAZE + GOOGLE MAPS (NAVEGAÇÃO AUTOMÁTICA)
-        function abrirGPSHibrido(tipoDestino) {
-            const paradas = corrida.paradas || [];
-            const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
-            
-            let destinoFinal;
-            if (tipoDestino === 'origem') {
-                destinoFinal = (corrida.lat_origem && corrida.lon_origem) 
-                    ? `${corrida.lat_origem},${corrida.lon_origem}` 
-                    : encodeURIComponent(corrida.origem);
-            } else {
-                destinoFinal = (corrida.lat_destino && corrida.lon_destino) 
-                    ? `${corrida.lat_destino},${corrida.lon_destino}` 
-                    : encodeURIComponent(corrida.destino);
-            }
-            
-            // Waypoints
-            let waypoints = '';
-            paradas.forEach(p => {
-                const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
-                if (endereco) waypoints += encodeURIComponent(endereco) + '|';
-            });
-            waypoints = waypoints.replace(/\|$/, '');
-            
-            // URL Google Maps com navegação
-            let googleUrl;
-            if (waypoints) {
-                googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate`;
-            } else {
-                googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`;
-            }
-            
-            // URL Waze (sempre inicia navegação automática)
-            const wazeUrl = `https://waze.com/ul?ll=${destinoFinal}&navigate=yes&from_lat=${posicaoAtual.lat}&from_lon=${posicaoAtual.lng}`;
-            
-            // 🔥 Tenta Waze primeiro (inicia navegação automática)
-            const wazeWindow = window.open(wazeUrl, '_blank');
-            
-            // Se Waze não abrir, abre Google Maps
-            setTimeout(() => {
-                if (!wazeWindow || wazeWindow.closed || typeof wazeWindow.closed === 'undefined') {
-                    window.open(googleUrl, '_blank');
-                }
-            }, 1500);
-        }
+        // 🔥 FUNÇÃO HÍBRIDA CORRIGIDA (ABRE APENAS UM APP)
+function abrirGPSHibrido(tipoDestino) {
+    const paradas = corrida.paradas || [];
+    const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+    
+    let destinoFinal;
+    if (tipoDestino === 'origem') {
+        destinoFinal = (corrida.lat_origem && corrida.lon_origem) 
+            ? `${corrida.lat_origem},${corrida.lon_origem}` 
+            : encodeURIComponent(corrida.origem);
+    } else {
+        destinoFinal = (corrida.lat_destino && corrida.lon_destino) 
+            ? `${corrida.lat_destino},${corrida.lon_destino}` 
+            : encodeURIComponent(corrida.destino);
+    }
+    
+    // Waypoints
+    let waypoints = '';
+    paradas.forEach(p => {
+        const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+        if (endereco) waypoints += encodeURIComponent(endereco) + '|';
+    });
+    waypoints = waypoints.replace(/\|$/, '');
+    
+    // URL Google Maps com navegação (fallback)
+    let googleUrl;
+    if (waypoints) {
+        googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate`;
+    } else {
+        googleUrl = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`;
+    }
+    
+    // 🔥 ABRE APENAS O GOOGLE MAPS (que funciona em todos os dispositivos)
+    // O parâmetro dir_action=navigate já inicia a navegação
+    window.location.href = googleUrl;
+}
 
         // ========== MOSTRAR CARD DO PASSAGEIRO ==========
         function mostrarCardPassageiro() {
