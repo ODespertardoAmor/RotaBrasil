@@ -50,7 +50,7 @@
         .container-deslize.concluido { border-color: var(--sucesso); background: #1a2e1d; }
         .container-deslize.concluido .trilha-deslize { color: var(--sucesso); }
         .progresso-deslize { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(22,93,255,0.2)); z-index: 0; border-radius: 12px; }
-        .card-corrida { position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px; background: var(--card); border-radius: 16px; padding: 20px; border: 2px solid var(--sucesso); z-index: 200; display: none; animation: sobe 0.3s ease; }
+        .card-corrida { position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px; background: var(--card); border-radius: 16px; padding: 20px; border: 2px solid var(--sucesso); z-index: 200; display: none; animation: sobe 0.3s ease; max-height: 80vh; overflow-y: auto; }
         @keyframes sobe { from { opacity:0; transform: translateX(-50%) translateY(30px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
         .linha { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--borda); font-size: 15px; }
         .valor-grande { font-size: 26px; font-weight: 800; color: var(--sucesso); }
@@ -68,13 +68,10 @@
         .estrela { color: #666; cursor: pointer; transition: 0.2s; display: inline-block; padding: 0 5px; }
         .estrela.ativa { color: #FFD700; text-shadow: 0 0 10px #FFD70080; transform: scale(1.1); }
         .erro-tela { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--perigo); color: white; padding: 12px 20px; border-radius: 8px; z-index: 999999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600; }
-        .foto-passageiro-card { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--sucesso); margin-right: 10px; }
-        .passageiro-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .badge-pagamento { display: inline-block; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; }
         .badge-pix { background: var(--primaria); color: white; }
         .badge-dinheiro { background: var(--alerta); color: #000; }
         .linha-destacada { background: rgba(255,125,0,0.15); border-radius: 6px; padding: 8px !important; margin: 4px 0; }
-        /* 🔥 PARADAS */
         .linha-parada { background: rgba(234,179,8,0.1); padding: 6px 8px; border-radius: 6px; margin: 3px 0; font-size: 13px; display: flex; justify-content: space-between; }
         .linha-parada span:last-child { color: #EAB308; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
@@ -125,15 +122,14 @@
         <div id="statusMotorista" class="status-bolinha offline"><i class="fas fa-circle"></i> <span>Offline</span></div>
     </div>
 
-    <!-- CARD NOVA CORRIDA COM PARADAS -->
+    <!-- CARD NOVA CORRIDA LIMPO -->
     <div id="cardCorrida" class="card-corrida">
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
-    
-        
-        <div class="linha"><span>Origem</span> <span id="cOrigem">-</span></div>
+        <div class="linha"><span>📍 Origem</span> <span id="cOrigem">-</span></div>
         <div id="paradasContainer"></div>
-        <div class="linha"><span>Destino</span> <span id="cDestino">-</span></div>
-        <div class="linha"><span>Valor</span> <span id="cValor" class="valor-grande">-</span></div>
+        <div class="linha"><span>🏁 Destino</span> <span id="cDestino">-</span></div>
+        <div class="linha"><span>📏 Distância</span> <span id="cDistancia">-</span></div>
+        <div class="linha"><span>💵 Valor</span> <span id="cValor" class="valor-grande">-</span></div>
         <div class="linha linha-destacada" id="linhaPagamento" style="display:none;"><span>💰 Pagamento</span> <span id="cPagamento">-</span></div>
         <div class="grupo-botoes">
             <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
@@ -208,7 +204,7 @@
         async function ficarOnline() { if (!usuario || !token) return mostrarErro("Faça login!"); try { await fetch(`${API_URL}/ficar_online/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }); document.getElementById('btnOnline').style.display = 'none'; document.getElementById('btnOffline').style.display = 'block'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha online'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>'; socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); } catch (e) { mostrarErro("Erro de conexão"); } }
         async function ficarOffline() { try { await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha offline'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>'; socket.emit('motorista_offline', { id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); } catch (e) {} }
 
-        // ========== 🔥 NOVA CORRIDA COM PARADAS ==========
+        // ========== NOVA CORRIDA (CARD LIMPO) ==========
         socket.on('nova_corrida', (dados) => {
             if (estado.aceito) return;
             console.log("📥 NOVA CORRIDA:", dados);
@@ -216,18 +212,11 @@
             estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
             iniciarSomAlertaRepetido();
             
-            // Foto
-            const fp = dados.foto_passageiro || dados.foto_perfil || '';
-            const fe = document.getElementById('fotoPassageiroCard');
-            if (fp) { fe.src = fp; fe.style.display = 'block'; } else { fe.style.display = 'none'; }
-            
-            document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
-            document.getElementById('cTelefone').textContent = dados.passageiro_telefone || "Não informado";
             document.getElementById('cOrigem').textContent = dados.origem || '-';
             document.getElementById('cDestino').textContent = dados.destino || '-';
+            document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...';
             document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
             
-            // Pagamento
             const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
             const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento');
             lp.style.display = 'flex';
@@ -239,14 +228,14 @@
                 lp.style.background = 'rgba(22,93,255,0.15)';
             }
             
-            // 🔥🔥 PARADAS
+            // Paradas
             const paradasContainer = document.getElementById('paradasContainer');
             const paradas = dados.paradas || [];
             if (paradas.length > 0) {
                 let html = '';
                 paradas.forEach((p, i) => {
-                    const endereco = p.endereco || p.endereço || p.address || p || 'Endereço não informado';
-                    const texto = typeof endereco === 'string' ? endereco.substring(0, 35) : 'Parada ' + (i+1);
+                    const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+                    const texto = endereco ? endereco.substring(0, 35) : 'Parada ' + (i+1);
                     html += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${texto}</span></div>`;
                 });
                 paradasContainer.innerHTML = html;
@@ -256,8 +245,7 @@
             
             document.getElementById('cardCorrida').style.display = 'block';
             document.getElementById('botoesFixos').style.display = 'none';
-            clearInterval(timerCorrida);
-            iniciarTemporizador();
+            clearInterval(timerCorrida); iniciarTemporizador();
         });
 
         function iniciarTemporizador() { segundosCorrida = 15; atualizarBtnRecusar(); timerCorrida = setInterval(() => { segundosCorrida--; atualizarBtnRecusar(); if (segundosCorrida <= 0) { clearInterval(timerCorrida); recusarCorrida(); } }, 1000); }
@@ -266,55 +254,70 @@
 
         // ========== ACEITAR ==========
         async function aceitarCorrida() { clearInterval(timerCorrida); pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
-        // 📍 IR ATÉ PASSAGEIRO (COM PARADAS)
-// ==============================================
-function executarIrAtePassageiro() {
-    if (!estado.aceito || estado.pegouPassageiro) return;
-    estado.pegouPassageiro = true;
-    
-    const paradas = corrida.paradas || [];
-    
-    if (paradas.length > 0) {
-        // 🔥 Cria rota com paradas no Google Maps
-        let waypoints = '';
-        paradas.forEach(p => {
-            const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
-            if (endereco) {
-                waypoints += encodeURIComponent(endereco) + '|';
-            }
-        });
-        // Remove o último |
-        waypoints = waypoints.replace(/\|$/, '');
-        
-        const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
-        const destino = (corrida.lat_origem && corrida.lon_origem) 
-            ? `${corrida.lat_origem},${corrida.lon_origem}` 
-            : encodeURIComponent(corrida.origem);
-        
-        if (waypoints) {
-            // Google Maps com waypoints
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destino}&waypoints=${waypoints}&travelmode=driving`;
-            window.open(url, '_blank');
-        } else {
-            // Sem waypoints válidos
-            const dest = (corrida.lat_origem && corrida.lon_origem) 
-                ? `${corrida.lat_origem},${corrida.lon_origem}` 
-                : corrida.origem;
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
+
+        // ========== 🔥 IR ATÉ PASSAGEIRO (GPS ABRE AUTOMÁTICO) ==========
+        function executarIrAtePassageiro() {
+            if (!estado.aceito || estado.pegouPassageiro) return;
+            estado.pegouPassageiro = true;
+            
+            abrirGPSComParadas('origem');
+            document.getElementById('containerAcoesCorrida').innerHTML = '';
+            mostrarCardPassageiro();
         }
-    } else {
-        // Sem paradas - rota direta
-        const dest = (corrida.lat_origem && corrida.lon_origem) 
-            ? `${corrida.lat_origem},${corrida.lon_origem}` 
-            : corrida.origem;
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
-    }
-    
-    document.getElementById('containerAcoesCorrida').innerHTML = '';
-    mostrarCardPassageiro();
-}
-        
-        // 🔥 MOSTRAR CARD DO PASSAGEIRO COM PARADAS
+
+        // ========== 🔥 INICIAR VIAGEM (GPS ABRE AUTOMÁTICO) ==========
+        function executarIniciarViagem() {
+            if (!estado.pegouPassageiro || estado.viagemIniciada) return;
+            estado.viagemIniciada = true;
+            document.getElementById('cardPassageiroChegada').style.display = 'none';
+            
+            abrirGPSComParadas('destino');
+            
+            document.getElementById('etapaTexto').className = 'etapa etapa3';
+            document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!';
+            const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = '';
+            ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar));
+            socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id });
+            falar("Viagem iniciada!");
+        }
+
+        // 🔥 FUNÇÃO ÚNICA PARA ABRIR GPS COM PARADAS
+        function abrirGPSComParadas(tipoDestino) {
+            const paradas = corrida.paradas || [];
+            const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+            
+            let destinoFinal;
+            if (tipoDestino === 'origem') {
+                destinoFinal = (corrida.lat_origem && corrida.lon_origem) 
+                    ? `${corrida.lat_origem},${corrida.lon_origem}` 
+                    : encodeURIComponent(corrida.origem);
+            } else {
+                destinoFinal = (corrida.lat_destino && corrida.lon_destino) 
+                    ? `${corrida.lat_destino},${corrida.lon_destino}` 
+                    : encodeURIComponent(corrida.destino);
+            }
+            
+            // Monta waypoints das paradas
+            let waypoints = '';
+            paradas.forEach(p => {
+                const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+                if (endereco) waypoints += encodeURIComponent(endereco) + '|';
+            });
+            waypoints = waypoints.replace(/\|$/, '');
+            
+            // Monta URL do Google Maps
+            let url;
+            if (waypoints) {
+                url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving`;
+            } else {
+                url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving`;
+            }
+            
+            // 🔥 ABRE O GPS AUTOMATICAMENTE (sem precisar clicar)
+            window.open(url, '_blank');
+        }
+
+        // ========== MOSTRAR CARD DO PASSAGEIRO COM PARADAS ==========
         function mostrarCardPassageiro() {
             if (!corrida) return;
             const fp = corrida.foto_passageiro || corrida.foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
@@ -322,10 +325,9 @@ function executarIrAtePassageiro() {
             document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
             document.getElementById('cardPassageiroChegada').style.display = 'block';
             
-            const ct = document.getElementById('containerBtnEmbarque');
-            ct.innerHTML = '';
+            const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = '';
             
-            // 🔥 Exibe paradas no card de chegada
+            // Paradas no card de chegada
             const paradas = corrida.paradas || [];
             if (paradas.length > 0) {
                 let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;">';
@@ -342,67 +344,14 @@ function executarIrAtePassageiro() {
             document.getElementById('btnLigarChegada').style.display = 'flex';
         }
 
-        // 🟢 INICIAR VIAGEM (COM PARADAS)
-// ==============================================
-function executarIniciarViagem() {
-    if (!estado.pegouPassageiro || estado.viagemIniciada) return;
-    estado.viagemIniciada = true;
-    document.getElementById('cardPassageiroChegada').style.display = 'none';
-    
-    const paradas = corrida.paradas || [];
-    
-    if (paradas.length > 0) {
-        // 🔥 Cria rota com paradas no Google Maps
-        let waypoints = '';
-        paradas.forEach(p => {
-            const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
-            if (endereco) {
-                waypoints += encodeURIComponent(endereco) + '|';
-            }
-        });
-        waypoints = waypoints.replace(/\|$/, '');
-        
-        const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
-        const destinoFinal = (corrida.lat_destino && corrida.lon_destino) 
-            ? `${corrida.lat_destino},${corrida.lon_destino}` 
-            : encodeURIComponent(corrida.destino);
-        
-        if (waypoints) {
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving`;
-            window.open(url, '_blank');
-        } else {
-            const dest = (corrida.lat_destino && corrida.lon_destino) 
-                ? `${corrida.lat_destino},${corrida.lon_destino}` 
-                : corrida.destino;
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
-        }
-    } else {
-        // Sem paradas - rota direta ao destino
-        const dest = (corrida.lat_destino && corrida.lon_destino) 
-            ? `${corrida.lat_destino},${corrida.lon_destino}` 
-            : corrida.destino;
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving`, '_blank');
-    }
-    
-    document.getElementById('etapaTexto').className = 'etapa etapa3';
-    document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!';
-    
-    const ct = document.getElementById('containerAcoesCorrida');
-    ct.innerHTML = '';
-    ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar));
-    
-    socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id, paradas: paradas });
-    falar("Viagem iniciada! Siga até o destino.");
-}
- 
+        // ========== FINALIZAR ==========
         async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome, finalizado_em: new Date().toISOString() }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
-        
 
         function ligarCliente() { if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone"); const t = corrida.passageiro_telefone.replace(/\D/g, ''); if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) window.location.href = `tel:${t}`; else window.open(`https://wa.me/${t}?text=Olá, sou seu motorista Rota Brasil!`, '_blank'); }
         async function enviarAvaliacao() { if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; } const cid = corrida?.corrida_id || corrida?.id; try { if (cid) await fetch(`${API_URL}/avaliar`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ corrida_id: cid, passageiro_id: String(corrida?.passageiro_id), motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {} document.getElementById('modalAvaliacao').style.display = 'none'; limparTudo(); }
         socket.on("corrida_cancelada", (d) => { if (corrida && (d?.corrida_id == (corrida.corrida_id || corrida.id))) { somAlto.play().catch(() => {}); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); limparTudo(); document.getElementById('alertaCancel').style.display = 'block'; falar("Passageiro cancelou!"); } });
 
-        function limparTudo() { corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; notaAvaliacao = 0; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'none'; document.getElementById('alertaCancel').style.display = 'none'; document.getElementById('cardPassageiroChegada').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('containerAcoesCorrida').innerHTML = ''; document.getElementById('containerBtnEmbarque').innerHTML = ''; document.getElementById('fotoPassageiroCard').style.display = 'none'; document.getElementById('linhaPagamento').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('botoesFixos').style.display = 'block'; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; }); pararSomAlerta(); clearInterval(timerCorrida); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); }
+        function limparTudo() { corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; notaAvaliacao = 0; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'none'; document.getElementById('alertaCancel').style.display = 'none'; document.getElementById('cardPassageiroChegada').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('containerAcoesCorrida').innerHTML = ''; document.getElementById('containerBtnEmbarque').innerHTML = ''; document.getElementById('linhaPagamento').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('botoesFixos').style.display = 'block'; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; }); pararSomAlerta(); clearInterval(timerCorrida); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); }
         async function cancelarCorrida() { if (!corrida) return; if (!confirm("Cancelar?")) return; const cid = corrida.corrida_id || corrida.id; try { await fetch(`${API_URL}/cancelar_corrida_motorista/${cid}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }); socket.emit('corrida_cancelada_motorista', { corrida_id: cid }); limparTudo(); } catch (e) { mostrarErro("Erro"); } }
         async function abrirCarteira() { document.getElementById('painelCarteiraMotorista').style.display = 'block'; try { const r = await fetch(`${API_URL}/carteira/saldo`, { headers: { Authorization: `Bearer ${token}` } }); const d = await r.json(); document.getElementById('saldoMotorista').textContent = `R$ ${(d.saldo || 0).toFixed(2)}`; } catch (e) {} }
 
