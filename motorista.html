@@ -293,29 +293,75 @@ function abrirGPSHibrido(tipoDestino) {
     window.location.href = googleUrl;
 }
 
-        // ========== MOSTRAR CARD DO PASSAGEIRO ==========
-        function mostrarCardPassageiro() {
-            if (!corrida) return;
-            const fp = corrida.foto_passageiro || corrida.foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
-            document.getElementById('fotoChegada').src = fp;
-            document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
-            document.getElementById('cardPassageiroChegada').style.display = 'block';
-            const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = '';
-            const paradas = corrida.paradas || [];
-            if (paradas.length > 0) {
-                let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;">';
-                pHtml += '<p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas da rota:</p>';
-                paradas.forEach((p, i) => {
-                    const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || 'Endereço não informado');
-                    pHtml += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`;
-                });
-                pHtml += '</div>';
-                ct.innerHTML = pHtml;
+// ========== MOSTRAR CARD DO PASSAGEIRO ==========
+  // Função atualizada para mostrar card do passageiro com perfil
+   async function mostrarCardPassageiro() {
+    if (!corrida) return;
+    
+    const passageiroId = corrida.passageiro_id;
+    const fotoPadrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
+    
+    // Foto imediata do que já temos
+    const fp = corrida.foto_passageiro || corrida.foto_perfil || fotoPadrao;
+    document.getElementById('fotoChegada').src = fp;
+    document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro';
+    document.getElementById('cardPassageiroChegada').style.display = 'block';
+    
+    // Busca perfil completo do passageiro
+    try {
+        const res = await fetch(`${API_URL}/perfil/${passageiroId}`);
+        const perfil = await res.json();
+        
+        if (perfil.id) {
+            // Atualiza foto se tiver no perfil
+            if (perfil.foto_perfil) {
+                document.getElementById('fotoChegada').src = perfil.foto_perfil;
             }
-            ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem));
-            document.getElementById('btnLigarChegada').style.display = 'flex';
+            document.getElementById('fotoChegada').onerror = function() { this.src = fotoPadrao; };
+            
+            // Monta informações do perfil
+            let infoHtml = '';
+            
+            // Badge "NOVO" se for novo na plataforma
+            if (perfil.is_novo) {
+                infoHtml += '<span style="background:#FF007F; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">🆕 NOVO</span> ';
+            }
+            
+            // Nota
+            infoHtml += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `;
+            
+            // Corridas
+            infoHtml += `<span style="color:#94A3B8; font-size:12px;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`;
+            
+            // Atualiza o nome com informações
+            document.getElementById('nomeChegada').innerHTML = `
+                ${corrida.passageiro_nome || 'Passageiro'}
+                <div style="font-size:12px; margin-top:4px;">${infoHtml}</div>
+            `;
         }
-
+    } catch (e) {
+        console.log('Erro ao buscar perfil:', e);
+    }
+    
+    const ct = document.getElementById('containerBtnEmbarque');
+    ct.innerHTML = '';
+    
+    // Paradas
+    const paradas = corrida.paradas || [];
+    if (paradas.length > 0) {
+        let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;">';
+        pHtml += '<p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas:</p>';
+        paradas.forEach((p, i) => {
+            const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+            pHtml += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`;
+        });
+        pHtml += '</div>';
+        ct.innerHTML = pHtml;
+    }
+    
+    ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem));
+    document.getElementById('btnLigarChegada').style.display = 'flex';
+}
         // ========== FINALIZAR ==========
         async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome, finalizado_em: new Date().toISOString() }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
 
