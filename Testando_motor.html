@@ -167,110 +167,134 @@
         let mapaLeaflet = null, marcadorMotorista = null;
 
         // ========== 🔥 PREÇO DINÂMICO (FUNCIONANDO) ==========
-        let marcadoresDinamicos = [];
-        let verificacaoDinamicoInterval = null;
-        let watchdogDinamicoInterval = null;
-        let dinamicoAtivo = false;
+        // ========== 🔥 PREÇO DINÂMICO (TRAVADO - NUNCA SOME) ==========
+let marcadoresDinamicos = [];
+let watchdogDinamicoInterval = null;
+let dinamicoAtivo = false;
 
-        const iconeDinamico = L.divIcon({
-            html: '<div style="font-size:28px; animation: float 2s ease-in-out infinite; filter: drop-shadow(0 0 6px #FF7D00);">🔥</div>',
-            className: '',
-            iconSize: [35, 35],
-            iconAnchor: [17, 17]
+const iconeDinamico = L.divIcon({
+    html: '<div style="font-size:28px; animation: float 2s ease-in-out infinite; filter: drop-shadow(0 0 6px #FF7D00);">🔥</div>',
+    className: '',
+    iconSize: [35, 35],
+    iconAnchor: [17, 17]
+});
+
+const posicoesDinamicas = [
+    [-23.5505, -46.6333], [-23.5610, -46.6560], [-23.5400, -46.6100],
+    [-23.5700, -46.6400], [-23.5300, -46.6200], [-23.5550, -46.6450],
+    [-23.5450, -46.6250], [-23.5600, -46.6150]
+];
+
+function mostrarIndicadoresDinamicos() {
+    if (!mapaLeaflet) {
+        setTimeout(mostrarIndicadoresDinamicos, 500);
+        return;
+    }
+    // Remove duplicados
+    removerIndicadoresDuplicados();
+    if (marcadoresDinamicos.length > 0) return;
+    
+    posicoesDinamicas.forEach(pos => {
+        const m = L.marker(pos, {
+            icon: iconeDinamico,
+            interactive: false,
+            zIndexOffset: 1000
+        }).addTo(mapaLeaflet);
+        m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', {
+            closeButton: false,
+            className: 'popup-dinamico'
         });
+        marcadoresDinamicos.push(m);
+    });
+    console.log('🔥 ' + marcadoresDinamicos.length + ' foguinhos exibidos');
+}
 
-        const posicoesDinamicas = [
-            [-23.5505, -46.6333], [-23.5610, -46.6560], [-23.5400, -46.6100],
-            [-23.5700, -46.6400], [-23.5300, -46.6200], [-23.5550, -46.6450],
-            [-23.5450, -46.6250], [-23.5600, -46.6150]
-        ];
+function removerIndicadoresDuplicados() {
+    // Remove marcadores que não estão mais no mapa
+    marcadoresDinamicos = marcadoresDinamicos.filter(m => {
+        const noMapa = mapaLeaflet && mapaLeaflet.hasLayer(m);
+        if (!noMapa) console.log('🗑️ Removendo foguinho órfão');
+        return noMapa;
+    });
+}
 
-        function mostrarIndicadoresDinamicos() {
-            if (!mapaLeaflet) {
-                console.warn('⏳ Mapa não existe, tentando em 500ms...');
-                setTimeout(mostrarIndicadoresDinamicos, 500);
-                return;
-            }
-            if (marcadoresDinamicos.length > 0) {
-                console.log('🔥 Foguinhos já estão visíveis');
-                return;
-            }
-            
-            console.log('🔥 Criando foguinhos no mapa...');
-            posicoesDinamicas.forEach(pos => {
-                const m = L.marker(pos, {
-                    icon: iconeDinamico,
-                    interactive: false,
-                    zIndexOffset: 1000
-                }).addTo(mapaLeaflet);
-                m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b><br>Corridas com valor aumentado.', {
-                    closeButton: false,
-                    className: 'popup-dinamico'
-                });
-                marcadoresDinamicos.push(m);
-            });
-            console.log(`🔥 ${marcadoresDinamicos.length} foguinhos exibidos`);
+function removerIndicadoresDinamicos() {
+    marcadoresDinamicos.forEach(m => {
+        if (mapaLeaflet) mapaLeaflet.removeLayer(m);
+    });
+    marcadoresDinamicos = [];
+}
+
+// 🔥 VERIFICA E ATIVA UMA ÚNICA VEZ (DEPOIS NUNCA MAIS DESATIVA)
+async function verificarPrecoDinamico() {
+    // Se já está ativo, não faz nada (mantém os foguinhos)
+    if (dinamicoAtivo) {
+        // Apenas garante que estão visíveis
+        if (marcadoresDinamicos.length === 0 && mapaLeaflet) {
+            mostrarIndicadoresDinamicos();
         }
-
-        function removerIndicadoresDinamicos() {
-            if (marcadoresDinamicos.length === 0) return;
-            console.log('🗑️ Removendo foguinhos...');
-            marcadoresDinamicos.forEach(m => {
-                if (mapaLeaflet) mapaLeaflet.removeLayer(m);
-            });
-            marcadoresDinamicos = [];
+        return;
+    }
+    
+    try {
+        const r = await fetch(`${API_URL}/configuracoes`);
+        const config = await r.json();
+        const ativo = parseInt(config.dinamico_ativo || 0) === 1;
+        
+        if (ativo) {
+            console.log('🔥 PREÇO DINÂMICO ATIVADO - TRAVANDO FOGUINHOS!');
+            dinamicoAtivo = true;
+            mostrarIndicadoresDinamicos();
+            // 🛑 Para de verificar a API depois de ativado
+            pararVerificacaoAPI();
+            // Inicia apenas o watchdog para garantir que continuam visíveis
+            iniciarWatchdogDinamico();
         }
+    } catch (e) {
+        // Silencioso
+    }
+}
 
-        async function verificarPrecoDinamico() {
-            try {
-                console.log('🔍 Verificando preço dinâmico...');
-                const r = await fetch(`${API_URL}/configuracoes`);
-                const config = await r.json();
-                console.log('📊 Config:', config);
-                const ativo = parseInt(config.dinamico_ativo || 0) === 1;
-                
-                if (ativo && !dinamicoAtivo) {
-                    console.log('🔥 ATIVANDO foguinhos');
-                    dinamicoAtivo = true;
-                    mostrarIndicadoresDinamicos();
-                } else if (!ativo && dinamicoAtivo) {
-                    console.log('❌ DESATIVANDO foguinhos');
-                    dinamicoAtivo = false;
-                    removerIndicadoresDinamicos();
-                } else {
-                    console.log('⏺️ Estado mantido (ativo=' + dinamicoAtivo + ')');
-                }
-            } catch (e) {
-                console.error('❌ Erro ao verificar preço dinâmico:', e);
-            }
+function iniciarWatchdogDinamico() {
+    if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
+    watchdogDinamicoInterval = setInterval(() => {
+        if (dinamicoAtivo && marcadoresDinamicos.length === 0 && mapaLeaflet) {
+            console.warn('🔍 Watchdog: recriando foguinhos...');
+            mostrarIndicadoresDinamicos();
         }
+    }, 2000); // Verifica a cada 2 segundos
+}
 
-        function iniciarWatchdogDinamico() {
-            if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
-            watchdogDinamicoInterval = setInterval(() => {
-                if (dinamicoAtivo && marcadoresDinamicos.length === 0 && mapaLeaflet) {
-                    console.warn('🔍 Watchdog: recriando foguinhos...');
-                    mostrarIndicadoresDinamicos();
-                }
-            }, 3000);
-        }
+let verificacaoDinamicoInterval = null;
 
-        function iniciarVerificacaoDinamico() {
-            pararVerificacaoDinamico();
-            // Primeira verificação com delay para garantir que o mapa existe
-            setTimeout(() => {
-                verificarPrecoDinamico();
-                iniciarWatchdogDinamico();
-            }, 1000);
-            verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 15000);
-        }
+function iniciarVerificacaoAPI() {
+    if (verificacaoDinamicoInterval) clearInterval(verificacaoDinamicoInterval);
+    verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 15000);
+}
 
-        function pararVerificacaoDinamico() {
-            if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
-            if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; }
-            removerIndicadoresDinamicos();
-            dinamicoAtivo = false;
-        }
+function pararVerificacaoAPI() {
+    if (verificacaoDinamicoInterval) {
+        clearInterval(verificacaoDinamicoInterval);
+        verificacaoDinamicoInterval = null;
+        console.log('⏹️ Verificação da API parada (foguinhos travados)');
+    }
+}
+
+function iniciarVerificacaoDinamico() {
+    pararVerificacaoDinamico();
+    verificarPrecoDinamico();
+    iniciarVerificacaoAPI();
+}
+
+function pararVerificacaoDinamico() {
+    pararVerificacaoAPI();
+    if (watchdogDinamicoInterval) {
+        clearInterval(watchdogDinamicoInterval);
+        watchdogDinamicoInterval = null;
+    }
+    removerIndicadoresDinamicos();
+    dinamicoAtivo = false;
+}
 
         // ========== MAPA ==========
         function iniciarMapa() {
