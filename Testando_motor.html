@@ -74,6 +74,32 @@
         .linha-destacada { background: rgba(255,125,0,0.15); border-radius: 6px; padding: 8px !important; margin: 4px 0; }
         .linha-parada { background: rgba(234,179,8,0.1); padding: 6px 8px; border-radius: 6px; margin: 3px 0; font-size: 13px; display: flex; justify-content: space-between; }
         .linha-parada span:last-child { color: #EAB308; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .card-corrida {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 92%;
+    max-width: 400px;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    border: 2px solid var(--sucesso);
+    z-index: 200;
+    display: none;
+    animation: sobe 0.3s ease;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+@keyframes sobe {
+    from { opacity: 0; transform: translate(-50%, -50%) translateY(30px); }
+    to { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+}
+        @keyframes piscar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
     </style>
 </head>
 <body>
