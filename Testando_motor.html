@@ -318,13 +318,25 @@
     document.getElementById('botoesFixos').style.display = 'none';
     clearInterval(timerCorrida);
     iniciarTemporizador();
-});function iniciarTemporizador() {
+});
+        // Variável global (já deve existir, mas verifique)
+let timerCorrida = null;
+let segundosCorrida = 15;
+
+function iniciarTemporizador() {
+    // Limpa qualquer timer anterior
+    if (timerCorrida) {
+        clearInterval(timerCorrida);
+        timerCorrida = null;
+    }
+    
     segundosCorrida = 15;
     atualizarBtnRecusar();
-    if (timerCorrida) clearInterval(timerCorrida); // Limpa timer anterior se existir
+    
     timerCorrida = setInterval(() => {
         segundosCorrida--;
         atualizarBtnRecusar();
+        
         if (segundosCorrida <= 0) {
             clearInterval(timerCorrida);
             timerCorrida = null;
@@ -337,26 +349,36 @@ function atualizarBtnRecusar() {
     const btn = document.getElementById('btnRecusar');
     if (btn) {
         btn.textContent = `❌ RECUSAR (${segundosCorrida}s)`;
+        
+        // Efeito visual quando está acabando
         if (segundosCorrida <= 5) {
             btn.style.background = '#F53F3F';
             btn.style.animation = 'piscar 0.5s infinite';
+        } else {
+            btn.style.background = ''; // volta ao padrão (var(--perigo))
+            btn.style.animation = '';
         }
     }
 }
 
 function recusarCorrida() {
+    // Para o timer
     if (timerCorrida) {
         clearInterval(timerCorrida);
         timerCorrida = null;
     }
+    
+    // Esconde o card
     document.getElementById('cardCorrida').style.display = 'none';
     document.getElementById('paradasContainer').innerHTML = '';
     document.getElementById('perfilPassageiro').innerHTML = '';
+    
+    // Limpa dados
     corrida = null;
     pararSomAlerta();
     document.getElementById('botoesFixos').style.display = 'block';
     
-    // Reseta o botão recusar
+    // Reseta o botão de recusar para o estado inicial
     const btn = document.getElementById('btnRecusar');
     if (btn) {
         btn.textContent = '❌ RECUSAR (15s)';
