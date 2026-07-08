@@ -235,6 +235,7 @@
             <p>Distância: <strong id="txtDistancia">--</strong></p>
             <p>Tempo: <strong id="txtTempo">--</strong></p>
             <p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span></p>
+            <span id="badgeDinamico" style="display:none; background:#FF7D00; color:#000; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:700; margin-left:8px;"></span>
             <div class="opcoes-pagamento">
                 <div class="btn-pagamento btn-pix selecionado" onclick="selecionarPagamento('pix')" id="btnPix">💳 Pix<small>Saldo na conta</small></div>
                 <div class="btn-pagamento btn-dinheiro" onclick="selecionarPagamento('dinheiro')" id="btnDinheiro">💵 Dinheiro<small>Pagar ao motorista</small></div>
@@ -688,7 +689,12 @@ socket.on("corrida_aceita", async (dados) => {
             document.getElementById('txtTempo').textContent = Math.round(distancia * 3 + paradas.length * 5) + ' min';
             document.getElementById('txtValor').textContent = 'R$ ' + valorFinal.toFixed(2);
         }
-
+         if (data.dinamico_ativo) {
+    document.getElementById('badgeDinamico').style.display = 'inline-block';
+    document.getElementById('badgeDinamico').textContent = `🔥 Demanda alta: ${data.multiplicador}x`;
+} else {
+    document.getElementById('badgeDinamico').style.display = 'none';
+}
         async function chamarCorrida() {
             if (!latOrigem || !latDestino || valorFinal <= 0) return alert("Calcule o valor primeiro!");
             document.getElementById('avisoSaldo').style.display = 'none';
