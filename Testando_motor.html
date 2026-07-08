@@ -15,10 +15,7 @@
             --borda: #363E4D; --texto: #F5F7FA;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body {
-            background: var(--fundo); color: var(--texto); height: 100vh;
-            overflow-x: hidden; overflow-y: auto; user-select: none; position: relative;
-        }
+        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow-x: hidden; overflow-y: auto; user-select: none; position: relative; }
         #loginScreen { position: absolute; inset: 0; background: var(--fundo); display: flex; flex-direction: column; justify-content: center; padding: 20px; z-index: 9999; }
         .logo { text-align: center; margin-bottom: 30px; }
         .logo h1 { font-size: 38px; font-weight: 900; background: linear-gradient(90deg, #165DFF, #7B2CFF); -webkit-background-clip: text; color: transparent; }
@@ -84,7 +81,7 @@
     </style>
 </head>
 <body>
-    <!-- Modais e estruturas iguais ao anterior (carteira, card passageiro, alerta, avaliação, login) -->
+    <!-- Modais (carteira, card passageiro, alerta, avaliação, login) - mantidos iguais -->
     <div id="painelCarteiraMotorista" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999;">
         <h2>💵 Carteira do Motorista</h2><p>Saldo: <strong id="saldoMotorista">R$ 0,00</strong></p>
         <button class="btn-warning" style="margin:5px 0;">🏦 Solicitar Saque</button>
@@ -169,7 +166,7 @@
         let notaAvaliacao = 0, timerCorrida = null, segundosCorrida = 15;
         let mapaLeaflet = null, marcadorMotorista = null;
 
-        // ========== 🔥 PREÇO DINÂMICO (CORRIGIDO) ==========
+        // ========== 🔥 PREÇO DINÂMICO (FUNCIONANDO) ==========
         let marcadoresDinamicos = [];
         let verificacaoDinamicoInterval = null;
         let watchdogDinamicoInterval = null;
@@ -190,12 +187,16 @@
 
         function mostrarIndicadoresDinamicos() {
             if (!mapaLeaflet) {
-                setTimeout(mostrarIndicadoresDinamicos, 1000);
+                console.warn('⏳ Mapa não existe, tentando em 500ms...');
+                setTimeout(mostrarIndicadoresDinamicos, 500);
                 return;
             }
-            // Remove apenas se já existirem (evita duplicar)
-            if (marcadoresDinamicos.length > 0) return;
+            if (marcadoresDinamicos.length > 0) {
+                console.log('🔥 Foguinhos já estão visíveis');
+                return;
+            }
             
+            console.log('🔥 Criando foguinhos no mapa...');
             posicoesDinamicas.forEach(pos => {
                 const m = L.marker(pos, {
                     icon: iconeDinamico,
@@ -208,63 +209,65 @@
                 });
                 marcadoresDinamicos.push(m);
             });
-            console.log('🔥 Foguinhos exibidos');
+            console.log(`🔥 ${marcadoresDinamicos.length} foguinhos exibidos`);
         }
 
         function removerIndicadoresDinamicos() {
             if (marcadoresDinamicos.length === 0) return;
+            console.log('🗑️ Removendo foguinhos...');
             marcadoresDinamicos.forEach(m => {
                 if (mapaLeaflet) mapaLeaflet.removeLayer(m);
             });
             marcadoresDinamicos = [];
-            console.log('🔥 Foguinhos removidos');
         }
 
         async function verificarPrecoDinamico() {
             try {
+                console.log('🔍 Verificando preço dinâmico...');
                 const r = await fetch(`${API_URL}/configuracoes`);
                 const config = await r.json();
+                console.log('📊 Config:', config);
                 const ativo = parseInt(config.dinamico_ativo || 0) === 1;
                 
                 if (ativo && !dinamicoAtivo) {
+                    console.log('🔥 ATIVANDO foguinhos');
                     dinamicoAtivo = true;
                     mostrarIndicadoresDinamicos();
                 } else if (!ativo && dinamicoAtivo) {
+                    console.log('❌ DESATIVANDO foguinhos');
                     dinamicoAtivo = false;
                     removerIndicadoresDinamicos();
+                } else {
+                    console.log('⏺️ Estado mantido (ativo=' + dinamicoAtivo + ')');
                 }
             } catch (e) {
-                // Se falhar, não altera o estado (mantém os foguinhos se já estavam ativos)
+                console.error('❌ Erro ao verificar preço dinâmico:', e);
             }
         }
 
-        // Watchdog: a cada 5 segundos garante que os foguinhos estão visíveis se dinamicoAtivo for true
         function iniciarWatchdogDinamico() {
             if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
             watchdogDinamicoInterval = setInterval(() => {
-                if (dinamicoAtivo && marcadoresDinamicos.length === 0) {
-                    console.log('🔍 Watchdog: recriando foguinhos...');
+                if (dinamicoAtivo && marcadoresDinamicos.length === 0 && mapaLeaflet) {
+                    console.warn('🔍 Watchdog: recriando foguinhos...');
                     mostrarIndicadoresDinamicos();
                 }
-            }, 5000);
+            }, 3000);
         }
 
         function iniciarVerificacaoDinamico() {
             pararVerificacaoDinamico();
-            verificarPrecoDinamico();
+            // Primeira verificação com delay para garantir que o mapa existe
+            setTimeout(() => {
+                verificarPrecoDinamico();
+                iniciarWatchdogDinamico();
+            }, 1000);
             verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 15000);
-            iniciarWatchdogDinamico();
         }
 
         function pararVerificacaoDinamico() {
-            if (verificacaoDinamicoInterval) {
-                clearInterval(verificacaoDinamicoInterval);
-                verificacaoDinamicoInterval = null;
-            }
-            if (watchdogDinamicoInterval) {
-                clearInterval(watchdogDinamicoInterval);
-                watchdogDinamicoInterval = null;
-            }
+            if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
+            if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; }
             removerIndicadoresDinamicos();
             dinamicoAtivo = false;
         }
@@ -272,14 +275,17 @@
         // ========== MAPA ==========
         function iniciarMapa() {
             if (mapaLeaflet) return;
+            console.log('🗺️ Criando mapa...');
             mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false })
                 .setView([posicaoAtual.lat, posicaoAtual.lng], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
             marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], {
                 icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] })
             }).addTo(mapaLeaflet);
-            // Se dinâmico estiver ativo, recria indicadores
-            if (dinamicoAtivo) mostrarIndicadoresDinamicos();
+            if (dinamicoAtivo) {
+                console.log('🗺️ Mapa recriado, recolocando foguinhos...');
+                setTimeout(() => mostrarIndicadoresDinamicos(), 300);
+            }
         }
 
         function atualizarPosicaoMapa(lat, lng) {
@@ -288,7 +294,6 @@
                 marcadorMotorista.setLatLng([lat, lng]);
                 mapaLeaflet.setView([lat, lng], 16, { animate: false });
             }
-            // Garante que os indicadores continuem visíveis (watchdog já cuida, mas não custa)
         }
 
         // ========== SOM ==========
@@ -303,17 +308,13 @@
             if (!navigator.geolocation) return;
             iniciarMapa();
             navigator.geolocation.watchPosition((pos) => {
-                posicaoAtual.lat = pos.coords.latitude;
-                posicaoAtual.lng = pos.coords.longitude;
+                posicaoAtual.lat = pos.coords.latitude; posicaoAtual.lng = pos.coords.longitude;
                 atualizarPosicaoMapa(posicaoAtual.lat, posicaoAtual.lng);
                 if (estado.aceito && corrida) {
                     socket.emit('localizacao_motorista', {
                         corrida_id: corrida.corrida_id || corrida.id,
-                        lat: posicaoAtual.lat,
-                        lng: posicaoAtual.lng,
-                        motorista_id: usuario.id,
-                        motorista_nome: usuario.nome,
-                        motorista_foto: usuario.foto_perfil || ''
+                        lat: posicaoAtual.lat, lng: posicaoAtual.lng,
+                        motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || ''
                     });
                 }
             }, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 });
