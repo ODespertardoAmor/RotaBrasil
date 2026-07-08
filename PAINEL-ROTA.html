@@ -403,7 +403,7 @@
             </div>
         </div>
     </div>
-
+   
     <!-- MODAL SALDO -->
     <div class="modal-overlay" id="modalSaldo">
         <div class="modal-box">
@@ -416,6 +416,38 @@
             </div>
         </div>
     </div>
+    <!-- Seção Tarifas -->
+<div id="section-tarifas" class="content-section">
+    <h5><i class="bi bi-sliders"></i> Configuração de Tarifas</h5>
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Bandeirada (R$)</label>
+                    <input type="number" id="bandeirada" class="form-control" step="0.01" value="5.00">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Preço por Km (R$)</label>
+                    <input type="number" id="preco_km" class="form-control" step="0.01" value="2.50">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Multiplicador Dinâmico</label>
+                    <input type="number" id="multiplicador_dinamico" class="form-control" step="0.1" value="1.0">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Ativar Preço Dinâmico</label>
+                    <select id="dinamico_ativo" class="form-select">
+                        <option value="0">Desativado</option>
+                        <option value="1">Ativado</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary mt-3" onclick="salvarTarifas()">
+                <i class="bi bi-check-circle"></i> Salvar Tarifas
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- TOAST -->
     <div class="toast-container" id="toastContainer"></div>
@@ -691,6 +723,30 @@
         document.getElementById('modalValor').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') confirmarSaldo();
         });
+        // Carregar configurações ao abrir a seção
+async function carregarTarifas() {
+    const res = await fetch(`${API_BASE}/configuracoes`);
+    const data = await res.json();
+    document.getElementById('bandeirada').value = data.bandeirada || 5.0;
+    document.getElementById('preco_km').value = data.preco_km || 2.5;
+    document.getElementById('multiplicador_dinamico').value = data.multiplicador_dinamico || 1.0;
+    document.getElementById('dinamico_ativo').value = data.dinamico_ativo || 0;
+}
+
+async function salvarTarifas() {
+    const dados = {
+        bandeirada: parseFloat(document.getElementById('bandeirada').value),
+        preco_km: parseFloat(document.getElementById('preco_km').value),
+        multiplicador_dinamico: parseFloat(document.getElementById('multiplicador_dinamico').value),
+        dinamico_ativo: parseInt(document.getElementById('dinamico_ativo').value)
+    };
+    await fetch(`${API_BASE}/admin/configuracoes`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados)
+    });
+    mostrarToast('Tarifas salvas!');
+}
     </script>
 </body>
 </html>
