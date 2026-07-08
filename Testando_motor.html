@@ -284,7 +284,52 @@
     document.getElementById('botoesFixos').style.display = 'none';
     clearInterval(timerCorrida);
     iniciarTemporizador();
-});
+});function iniciarTemporizador() {
+    segundosCorrida = 15;
+    atualizarBtnRecusar();
+    if (timerCorrida) clearInterval(timerCorrida); // Limpa timer anterior se existir
+    timerCorrida = setInterval(() => {
+        segundosCorrida--;
+        atualizarBtnRecusar();
+        if (segundosCorrida <= 0) {
+            clearInterval(timerCorrida);
+            timerCorrida = null;
+            recusarCorrida();
+        }
+    }, 1000);
+}
+
+function atualizarBtnRecusar() {
+    const btn = document.getElementById('btnRecusar');
+    if (btn) {
+        btn.textContent = `❌ RECUSAR (${segundosCorrida}s)`;
+        if (segundosCorrida <= 5) {
+            btn.style.background = '#F53F3F';
+            btn.style.animation = 'piscar 0.5s infinite';
+        }
+    }
+}
+
+function recusarCorrida() {
+    if (timerCorrida) {
+        clearInterval(timerCorrida);
+        timerCorrida = null;
+    }
+    document.getElementById('cardCorrida').style.display = 'none';
+    document.getElementById('paradasContainer').innerHTML = '';
+    document.getElementById('perfilPassageiro').innerHTML = '';
+    corrida = null;
+    pararSomAlerta();
+    document.getElementById('botoesFixos').style.display = 'block';
+    
+    // Reseta o botão recusar
+    const btn = document.getElementById('btnRecusar');
+    if (btn) {
+        btn.textContent = '❌ RECUSAR (15s)';
+        btn.style.background = '';
+        btn.style.animation = '';
+    }
+}
         // ========== ACEITAR ==========
         async function aceitarCorrida() { clearInterval(timerCorrida); pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
 
