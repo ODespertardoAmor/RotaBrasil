@@ -115,7 +115,12 @@ class Avaliacao(db.Model):
     nota = db.Column(db.Integer)
     comentario = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+class Configuracao(db.Model):
+    __tablename__ = 'configuracoes'
+    id = db.Column(db.Integer, primary_key=True)
+    chave = db.Column(db.String(50), unique=True, nullable=False)
+    valor = db.Column(db.Float, nullable=False)
+    descricao = db.Column(db.String(200))
 # ==========================================
 # FUNÇÕES AUXILIARES
 # ==========================================
