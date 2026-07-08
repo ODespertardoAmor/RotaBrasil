@@ -163,7 +163,7 @@
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         
         .modal-carteira { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999; }
-        .janela-modal { position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:999;display:flex;justify-content:center;align-items:center;padding:20px; }
+        .janela-modal { position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:99999;display:flex;justify-content:center;align-items:center;padding:20px; }
         .conteudo-modal { background:var(--cor-card);width:100%;max-width:400px;padding:24px;border-radius:16px;text-align:center;border:1px solid var(--cor-borda); }
         .estrelas-selecao { margin:15px 0;font-size:30px;cursor:pointer;color:var(--cor-card-claro); }
         .estrela.ativa { color:var(--cor-alerta); }
@@ -234,8 +234,8 @@
             <h4>Resumo da Viagem</h4>
             <p>Distância: <strong id="txtDistancia">--</strong></p>
             <p>Tempo: <strong id="txtTempo">--</strong></p>
-            <p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span></p>
-            <span id="badgeDinamico" style="display:none; background:#FF7D00; color:#000; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:700; margin-left:8px;"></span>
+            <p class="preco-final">Valor: <span id="txtValor">R$ 0,00</span>
+            <span id="badgeDinamico" style="display:none; background:#FF7D00; color:#000; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:700; margin-left:8px;"></span></p>
             <div class="opcoes-pagamento">
                 <div class="btn-pagamento btn-pix selecionado" onclick="selecionarPagamento('pix')" id="btnPix">💳 Pix<small>Saldo na conta</small></div>
                 <div class="btn-pagamento btn-dinheiro" onclick="selecionarPagamento('dinheiro')" id="btnDinheiro">💵 Dinheiro<small>Pagar ao motorista</small></div>
@@ -295,7 +295,7 @@
         let paradas = [];
         let motoristaChegou = false;
 
-        // ========== 🗺️ MAPA DE MOTORISTAS ==========
+        // ========== MAPA DE MOTORISTAS ==========
         let mapaMotoristas = null, marcadoresMotoristas = [], marcadorPassageiroMapa = null;
 
         function criarMapaMotoristas(lat, lng) {
@@ -352,7 +352,7 @@
             });
         }
 
-        // ========== 🗺️ MAPA DA CORRIDA ==========
+        // ========== MAPA DA CORRIDA ==========
         let mapaLeaflet = null, markerPassageiro = null, markerMotorista = null, linhaRota = null;
         const iconeCarro = L.divIcon({ html: '<div style="font-size:35px;">🚗</div>', className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
         const iconePassageiro = L.divIcon({ html: '<div style="font-size:28px;">📍</div>', className: '', iconSize: [30, 30], iconAnchor: [15, 30] });
@@ -430,8 +430,6 @@
             
             const foto = document.querySelector('.foto-motorista-card');
             if (foto) foto.classList.add('chegou');
-            
-            console.log('✅ MOTORISTA CHEGOU!');
         }
 
         // ========== SUGESTÕES ==========
@@ -487,56 +485,50 @@
             atualizarPosicaoMotorista(dados.lat, dados.lng);
         });
 
-        // Atualize o evento socket.on("corrida_aceita") no passageiro:
-socket.on("corrida_aceita", async (dados) => {
-    console.log('🚗 Corrida aceita!', dados);
-    corridaAtual = { ...corridaAtual, ...dados };
-    if (corridaAtual.id || dados.corrida_id) { 
-        socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); 
-        iniciarPolling(); 
-    }
-    
-    document.getElementById('mapaMotoristasContainer').style.display = 'none';
-    document.querySelector('.btn-ver-mapa').style.display = 'none';
-    
-    const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-    const badge = formaPagamento === 'dinheiro' ? '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>' : '<span class="badge-pagamento badge-pix">💳 Pix</span>';
-    
-    document.getElementById('cardStatus').style.display = 'block';
-    
-    // 🔥 Busca perfil completo do motorista
-    let perfilHtml = '';
-    try {
-        const motoristaId = dados.motorista_id;
-        const res = await fetch(`${API}/perfil/${motoristaId}`);
-        const perfil = await res.json();
-        
-        if (perfil.id) {
-            let badges = '';
-            if (perfil.is_novo) {
-                badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> ';
+        socket.on("corrida_aceita", async (dados) => {
+            console.log('🚗 Corrida aceita!', dados);
+            corridaAtual = { ...corridaAtual, ...dados };
+            if (corridaAtual.id || dados.corrida_id) { 
+                socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); 
+                iniciarPolling(); 
             }
-            badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span>`;
-            badges += `<span style="color:#94A3B8; font-size:11px;"> | 🏁 ${perfil.corridas_realizadas} corridas</span>`;
             
-            perfilHtml = `
-                <div style="margin:8px 0;">
-                    <p style="font-size:11px; color:#94A3B8;">${badges}</p>
-                </div>
-            `;
-        }
-    } catch (e) {}
-    
-    document.getElementById('conteudoStatus').innerHTML = `
-        <h3>🚗 Motorista a Caminho! ${badge}</h3>
-        <img src="${foto}" class="foto-motorista-card" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
-        <p><b>${dados.motorista_nome || 'Motorista'}</b></p>
-        ${perfilHtml}
-        <p>🚘 ${dados.carro || ''} • <span class="placa-badge">${dados.placa || ''}</span></p>
-        <br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
-    
-    inicializarMapaCorrida();
-});
+            document.getElementById('mapaMotoristasContainer').style.display = 'none';
+            document.querySelector('.btn-ver-mapa').style.display = 'none';
+            
+            const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+            const badge = formaPagamento === 'dinheiro' ? '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>' : '<span class="badge-pagamento badge-pix">💳 Pix</span>';
+            
+            document.getElementById('cardStatus').style.display = 'block';
+            
+            let perfilHtml = '';
+            try {
+                const motoristaId = dados.motorista_id;
+                const res = await fetch(`${API}/perfil/${motoristaId}`);
+                const perfil = await res.json();
+                
+                if (perfil.id) {
+                    let badges = '';
+                    if (perfil.is_novo) {
+                        badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> ';
+                    }
+                    badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span>`;
+                    badges += `<span style="color:#94A3B8; font-size:11px;"> | 🏁 ${perfil.corridas_realizadas} corridas</span>`;
+                    
+                    perfilHtml = `<div style="margin:8px 0;"><p style="font-size:11px; color:#94A3B8;">${badges}</p></div>`;
+                }
+            } catch (e) {}
+            
+            document.getElementById('conteudoStatus').innerHTML = `
+                <h3>🚗 Motorista a Caminho! ${badge}</h3>
+                <img src="${foto}" class="foto-motorista-card" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                <p><b>${dados.motorista_nome || 'Motorista'}</b></p>
+                ${perfilHtml}
+                <p>🚘 ${dados.carro || ''} • <span class="placa-badge">${dados.placa || ''}</span></p>
+                <br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
+            
+            inicializarMapaCorrida();
+        });
 
         socket.on("viagem_finalizada", (d) => { pararPolling(); corridaIdAvaliacao = corridaAtual?.id || d.corrida_id; motoristaIdAvaliacao = d.motorista_id || corridaAtual?.motorista_id; document.getElementById('modalAvaliacao').style.display = 'flex'; resetarInterface(); });
         socket.on("corrida_cancelada", () => { pararPolling(); resetarInterface(); alert("Corrida cancelada."); });
@@ -683,18 +675,26 @@ socket.on("corrida_aceita", async (dados) => {
                 const data = await r.json();
                 if (data.erro) throw new Error(data.erro);
                 distancia = data.distancia; valorFinal = data.valor;
-            } catch (e) { distancia = calcularDistancia(latOrigem, lonOrigem, latDestino, lonDestino); valorFinal = distancia * 3.5 + 5; }
+                
+                // 🔥 Badge de preço dinâmico
+                const badge = document.getElementById('badgeDinamico');
+                if (data.dinamico_ativo) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = `🔥 ${data.multiplicador}x`;
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {
+                distancia = calcularDistancia(latOrigem, lonOrigem, latDestino, lonDestino);
+                valorFinal = distancia * 3.5 + 5;
+                document.getElementById('badgeDinamico').style.display = 'none';
+            }
             if (paradas.length > 0) valorFinal += paradas.length * 3;
             document.getElementById('txtDistancia').textContent = distancia.toFixed(1) + ' km';
             document.getElementById('txtTempo').textContent = Math.round(distancia * 3 + paradas.length * 5) + ' min';
             document.getElementById('txtValor').textContent = 'R$ ' + valorFinal.toFixed(2);
         }
-         if (data.dinamico_ativo) {
-    document.getElementById('badgeDinamico').style.display = 'inline-block';
-    document.getElementById('badgeDinamico').textContent = `🔥 Demanda alta: ${data.multiplicador}x`;
-} else {
-    document.getElementById('badgeDinamico').style.display = 'none';
-}
+
         async function chamarCorrida() {
             if (!latOrigem || !latDestino || valorFinal <= 0) return alert("Calcule o valor primeiro!");
             document.getElementById('avisoSaldo').style.display = 'none';
@@ -728,7 +728,16 @@ socket.on("corrida_aceita", async (dados) => {
 
         // ========== INIT ==========
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('#estrelasContainer .estrela').forEach(e => { e.addEventListener('click', function() { notaAvaliacao = parseInt(this.dataset.nota); document.querySelectorAll('#estrelasContainer .estrela').forEach((el, i) => { el.classList.toggle('ativa', i < notaAvaliacao); }); }); });
+            // Configurar estrelas da avaliação
+            document.querySelectorAll('#estrelasContainer .estrela').forEach(e => {
+                e.addEventListener('click', function() {
+                    notaAvaliacao = parseInt(this.dataset.nota);
+                    document.querySelectorAll('#estrelasContainer .estrela').forEach((el, i) => {
+                        el.classList.toggle('ativa', i < notaAvaliacao);
+                    });
+                });
+            });
+            
             const t = localStorage.getItem("token_passageiro"), u = localStorage.getItem("user_passageiro");
             if (t && u) { try { token = t; passageiro = JSON.parse(u); document.getElementById('loginCard').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; atualizarAvatarNome(); verificarSaldo(); iniciarMapaPassageiro(); carregarMinhasAvaliacoes(); } catch (e) { localStorage.clear(); } }
         });
