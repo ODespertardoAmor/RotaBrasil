@@ -600,6 +600,7 @@
                 document.getElementById('btnOffline').style.display = 'none';
                 const s = document.getElementById('statusMotorista');
                 s.className = 'status-bolinha offline';
+                iniciarVerificacaoDinamico()
                 s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>';
                 socket.emit('motorista_offline', { id: usuario.id });
                 if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
