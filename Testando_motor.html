@@ -79,7 +79,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 92%;
+    width: 90%;
     max-width: 400px;
     background: var(--card);
     border-radius: 16px;
@@ -88,13 +88,21 @@
     z-index: 200;
     display: none;
     animation: sobe 0.3s ease;
-    max-height: 80vh;
-    overflow-y: auto;
+    /* 🔥 Altura automática, sem limite rígido */
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
 }
 
 @keyframes sobe {
     from { opacity: 0; transform: translate(-50%, -50%) translateY(30px); }
     to { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+}
+
+/* Animação de piscar para o botão de recusar */
+@keyframes piscar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
         @keyframes piscar {
     0%, 100% { opacity: 1; }
