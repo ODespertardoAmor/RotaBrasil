@@ -229,6 +229,23 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        /* Animação de flutuação para os ícones dinâmicos */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Popup do preço dinâmico */
+.popup-dinamico .leaflet-popup-content-wrapper {
+    background: #FF7D00;
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    text-align: center;
+}
+.popup-dinamico .leaflet-popup-tip {
+    background: #FF7D00;
+}
     </style>
 </head>
 <body>
@@ -543,18 +560,21 @@
         }
 
         function telaPrincipal() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('header').style.display = 'flex';
-            document.getElementById('barra').style.display = 'block';
-            document.getElementById('botoesFixos').style.display = 'block';
-            document.getElementById('areaAcoes').style.display = 'none';
-        }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('header').style.display = 'flex';
+    document.getElementById('barra').style.display = 'block';
+    document.getElementById('botoesFixos').style.display = 'block';
+    document.getElementById('areaAcoes').style.display = 'none';
+    
+    // 🔥 Inicia verificação de preço dinâmico
+    iniciarVerificacaoDinamico();
+}
 
         function sair() {
             if (estado.aceito && !confirm('Corrida em andamento!')) return;
             localStorage.clear(); limparTudo(); window.location.reload();
+            pararVerificacaoDinamico(); // 🔥 Para
         }
-
         // ========== ONLINE / OFFLINE ==========
         async function ficarOnline() {
             if (!usuario || !token) return mostrarErro("Faça login!");
@@ -942,6 +962,90 @@
                 });
             });
         };
+        // ========== 🔥 INDICADORES DE PREÇO DINÂMICO NO MAPA ==========
+let marcadoresDinamicos = [];
+let verificacaoDinamicoInterval = null;
+
+// Ícone para os indicadores
+const iconeDinamico = L.divIcon({
+    html: '<div style="font-size:24px; animation: float 2s ease-in-out infinite;">🔥</div>',
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+});
+
+// Posições espalhadas pelo mapa (São Paulo)
+const posicoesDinamicas = [
+    [-23.5505, -46.6333],
+    [-23.5610, -46.6560],
+    [-23.5400, -46.6100],
+    [-23.5700, -46.6400],
+    [-23.5300, -46.6200],
+    [-23.5550, -46.6450],
+    [-23.5450, -46.6250],
+    [-23.5600, -46.6150],
+];
+
+function verificarPrecoDinamico() {
+    fetch(`${API_URL}/configuracoes`)
+        .then(r => r.json())
+        .then(config => {
+            const ativo = parseInt(config.dinamico_ativo || 0) === 1;
+            
+            if (ativo && marcadoresDinamicos.length === 0) {
+                // Ativa os indicadores
+                mostrarIndicadoresDinamicos();
+            } else if (!ativo && marcadoresDinamicos.length > 0) {
+                // Remove os indicadores
+                removerIndicadoresDinamicos();
+            }
+        })
+        .catch(() => {}); // Silencioso se falhar
+}
+
+function mostrarIndicadoresDinamicos() {
+    if (!mapaLeaflet) return;
+    
+    posicoesDinamicas.forEach((pos, i) => {
+        const marcador = L.marker(pos, {
+            icon: iconeDinamico,
+            interactive: false,
+            zIndexOffset: 1000
+        }).addTo(mapaLeaflet);
+        
+        // Popup ao clicar (opcional)
+        marcador.bindPopup('<b>🔥 Preço Dinâmico Ativo!</b><br>Corridas com valor aumentado nesta região.', {
+            closeButton: false,
+            className: 'popup-dinamico'
+        });
+        
+        marcadoresDinamicos.push(marcador);
+    });
+    
+    console.log('🔥 Indicadores de preço dinâmico ATIVADOS');
+}
+
+function removerIndicadoresDinamicos() {
+    marcadoresDinamicos.forEach(m => mapaLeaflet?.removeLayer(m));
+    marcadoresDinamicos = [];
+    console.log('🔕 Indicadores de preço dinâmico REMOVIDOS');
+}
+
+// Inicia verificação a cada 30 segundos
+function iniciarVerificacaoDinamico() {
+    verificarPrecoDinamico(); // Verifica imediatamente
+    if (verificacaoDinamicoInterval) clearInterval(verificacaoDinamicoInterval);
+    verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 30000);
+}
+
+// Para a verificação
+function pararVerificacaoDinamico() {
+    if (verificacaoDinamicoInterval) {
+        clearInterval(verificacaoDinamicoInterval);
+        verificacaoDinamicoInterval = null;
+    }
+    removerIndicadoresDinamicos();
+}
     </script>
 </body>
 </html>
