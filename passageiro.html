@@ -486,25 +486,56 @@
             atualizarPosicaoMotorista(dados.lat, dados.lng);
         });
 
-        socket.on("corrida_aceita", (dados) => {
-            console.log('🚗 Corrida aceita!', dados);
-            corridaAtual = { ...corridaAtual, ...dados };
-            if (corridaAtual.id || dados.corrida_id) { socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); iniciarPolling(); }
+        // Atualize o evento socket.on("corrida_aceita") no passageiro:
+socket.on("corrida_aceita", async (dados) => {
+    console.log('🚗 Corrida aceita!', dados);
+    corridaAtual = { ...corridaAtual, ...dados };
+    if (corridaAtual.id || dados.corrida_id) { 
+        socket.emit("entrar_na_sala", { corrida_id: corridaAtual.id || dados.corrida_id }); 
+        iniciarPolling(); 
+    }
+    
+    document.getElementById('mapaMotoristasContainer').style.display = 'none';
+    document.querySelector('.btn-ver-mapa').style.display = 'none';
+    
+    const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+    const badge = formaPagamento === 'dinheiro' ? '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>' : '<span class="badge-pagamento badge-pix">💳 Pix</span>';
+    
+    document.getElementById('cardStatus').style.display = 'block';
+    
+    // 🔥 Busca perfil completo do motorista
+    let perfilHtml = '';
+    try {
+        const motoristaId = dados.motorista_id;
+        const res = await fetch(`${API}/perfil/${motoristaId}`);
+        const perfil = await res.json();
+        
+        if (perfil.id) {
+            let badges = '';
+            if (perfil.is_novo) {
+                badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> ';
+            }
+            badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span>`;
+            badges += `<span style="color:#94A3B8; font-size:11px;"> | 🏁 ${perfil.corridas_realizadas} corridas</span>`;
             
-            document.getElementById('mapaMotoristasContainer').style.display = 'none';
-            document.querySelector('.btn-ver-mapa').style.display = 'none';
-            
-            const foto = dados.motorista_foto || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-            const badge = formaPagamento === 'dinheiro' ? '<span class="badge-pagamento badge-dinheiro">💵 Dinheiro</span>' : '<span class="badge-pagamento badge-pix">💳 Pix</span>';
-            document.getElementById('cardStatus').style.display = 'block';
-            document.getElementById('conteudoStatus').innerHTML = `
-                <h3>🚗 Motorista a Caminho! ${badge}</h3>
-                <img src="${foto}" class="foto-motorista-card" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
-                <p><b>${dados.motorista_nome || 'Motorista'}</b></p>
-                <p>🚘 ${dados.carro || ''} • <span class="placa-badge">${dados.placa || ''}</span></p>
-                <br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
-            inicializarMapaCorrida();
-        });
+            perfilHtml = `
+                <div style="margin:8px 0;">
+                    <p style="font-size:11px; color:#94A3B8;">${badges}</p>
+                </div>
+            `;
+        }
+    } catch (e) {}
+    
+    document.getElementById('conteudoStatus').innerHTML = `
+        <h3>🚗 Motorista a Caminho! ${badge}</h3>
+        <img src="${foto}" class="foto-motorista-card" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+        <p><b>${dados.motorista_nome || 'Motorista'}</b></p>
+        ${perfilHtml}
+        <p>🚘 ${dados.carro || ''} • <span class="placa-badge">${dados.placa || ''}</span></p>
+        <br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
+    
+    inicializarMapaCorrida();
+});
 
         socket.on("viagem_finalizada", (d) => { pararPolling(); corridaIdAvaliacao = corridaAtual?.id || d.corrida_id; motoristaIdAvaliacao = d.motorista_id || corridaAtual?.motorista_id; document.getElementById('modalAvaliacao').style.display = 'flex'; resetarInterface(); });
         socket.on("corrida_cancelada", () => { pararPolling(); resetarInterface(); alert("Corrida cancelada."); });
