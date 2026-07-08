@@ -261,60 +261,95 @@ def historico():
 # ==========================================
 # CORRIDAS
 # ==========================================
-
 @app.route("/calcular_corrida", methods=["POST", "OPTIONS"])
 def calcular_corrida():
     if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
+        response = jsonify({"status": "ok"})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        return response
     
-    dados = request.get_json()
-    lat_origem = float(dados.get("lat_origem", 0))
-    lon_origem = float(dados.get("lon_origem", 0))
-    lat_destino = float(dados.get("lat_destino", 0))
-    lon_destino = float(dados.get("lon_destino", 0))
-    
-    # Tenta OpenRouteService
     try:
-        url = "https://api.openrouteservice.org/v2/directions/driving-car"
-        headers = {"Authorization": ORS_API_KEY, "Content-Type": "application/json"}
-        body = {"coordinates": [[lon_origem, lat_origem], [lon_destino, lat_destino]]}
-        resp = requests.post(url, json=body, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            dados_rota = resp.json()
-            if dados_rota.get("routes"):
-                dist_m = dados_rota["routes"][0]["summary"]["distance"]
-                dist_km = dist_m / 1000
-                tempo_s = dados_rota["routes"][0]["summary"]["duration"]
-                tempo_min = tempo_s / 60
-                valor = BANDEIRADA + (dist_km * VALOR_KM)
-                return jsonify({"distancia": round(dist_km, 2), "valor": round(valor, 2), "tempo": round(tempo_min, 0), "fonte": "ORS"})
-    except: pass
-    
-    # Tenta OSRM
-    try:
-        url = f"http://router.project-osrm.org/route/v1/driving/{lon_origem},{lat_origem};{lon_destino},{lat_destino}?overview=false"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            dados_rota = resp.json()
-            if dados_rota.get("routes"):
-                dist_m = dados_rota["routes"][0]["distance"]
-                dist_km = dist_m / 1000
-                tempo_s = dados_rota["routes"][0]["duration"]
-                tempo_min = tempo_s / 60
-                valor = BANDEIRADA + (dist_km * VALOR_KM)
-                return jsonify({"distancia": round(dist_km, 2), "valor": round(valor, 2), "tempo": round(tempo_min, 0), "fonte": "OSRM"})
-    except: pass
-    
-    # Fallback: Haversine
-    R = 6371
-    lat1, lon1 = math.radians(lat_origem), math.radians(lon_origem)
-    lat2, lon2 = math.radians(lat_destino), math.radians(lon_destino)
-    dlat, dlon = lat2 - lat1, lon2 - lon1
-    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-    dist_km = R * 2 * math.asin(math.sqrt(a))
-    tempo_min = (dist_km / 30) * 60
-    valor = BANDEIRADA + (dist_km * VALOR_KM)
-    return jsonify({"distancia": round(dist_km, 2), "valor": round(valor, 2), "tempo": round(tempo_min, 0), "fonte": "Haversine"})
+        dados = request.get_json()
+        lat_origem = float(dados["lat_origem"])
+        lon_origem = float(dados["lon_origem"])
+        lat_destino = float(dados["lat_destino"])
+        lon_destino = float(dados["lon_destino"])
+        
+        # --- Cálculo da distância (seu código existente) ---
+        # Tenta OpenRouteService, OSRM, fallback Haversine...
+        distancia_km = 0
+        tempo_minutos = 0
+        fonte = "Haversine"
+        try:
+            url = "https://api.openrouteservice.org/v2/directions/driving-car"
+            headers = {"Authorization": ORS_API_KEY, "Content-Type": "application/json"}
+            body = {"coordinates": [[lon_origem, lat_origem], [lon_destino, lat_destino]]}
+            response = requests.post(url, json=body, headers=headers, timeout=10)
+            if response.status_code == 200:
+                dados_rota = response.json()
+                if dados_rota.get("routes"):
+                    distancia_metros = dados_rota["routes"][0]["summary"]["distance"]
+                    distancia_km = distancia_metros / 1000
+                    tempo_segundos = dados_rota["routes"][0]["summary"]["duration"]
+                    tempo_minutos = tempo_segundos / 60
+                    fonte = "ORS"
+        except:
+            pass
+        
+        if distancia_km == 0:
+            try:
+                url = f"http://router.project-osrm.org/route/v1/driving/{lon_origem},{lat_origem};{lon_destino},{lat_destino}?overview=false"
+                resp = requests.get(url, timeout=10)
+                if resp.status_code == 200:
+                    dados_rota = resp.json()
+                    if dados_rota.get("routes"):
+                        distancia_metros = dados_rota["routes"][0]["distance"]
+                        distancia_km = distancia_metros / 1000
+                        tempo_segundos = dados_rota["routes"][0]["duration"]
+                        tempo_minutos = tempo_segundos / 60
+                        fonte = "OSRM"
+            except:
+                pass
+        
+        if distancia_km == 0:
+            # Haversine
+            R = 6371
+            lat1, lon1, lat2, lon2 = map(math.radians, [lat_origem, lon_origem, lat_destino, lon_destino])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = math.sin(dlat/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2)**2
+            distancia_km = R * 2 * math.asin(math.sqrt(a))
+            tempo_minutos = (distancia_km / 30) * 60
+        
+        # 🔥 Busca as configurações do banco
+        configs = Configuracao.query.all()
+        config_dict = {c.chave: c.valor for c in configs}
+        
+        bandeirada = config_dict.get('bandeirada', 5.0)
+        preco_km = config_dict.get('preco_km', 2.5)
+        multiplicador = config_dict.get('multiplicador_dinamico', 1.0)
+        dinamico_ativo = int(config_dict.get('dinamico_ativo', 0))
+        
+        # Calcula o valor
+        valor = bandeirada + (distancia_km * preco_km)
+        if dinamico_ativo == 1 and multiplicador > 1.0:
+            valor *= multiplicador
+        
+        return jsonify({
+            "distancia": round(distancia_km, 2),
+            "valor": round(valor, 2),
+            "tempo": round(tempo_minutos, 0),
+            "fonte": fonte,
+            "dinamico_ativo": dinamico_ativo == 1,
+            "multiplicador": multiplicador if dinamico_ativo == 1 else 1.0,
+            "bandeirada": bandeirada,
+            "preco_km": preco_km
+        })
+        
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
 @app.route("/nova_corrida", methods=["POST"])
 @jwt_required()
