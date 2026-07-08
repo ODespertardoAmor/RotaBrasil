@@ -1177,7 +1177,42 @@ def home():
 @app.route("/teste")
 def teste():
     return jsonify({"status": "online", "mensagem": "API Rota Brasil funcionando!"})
-
+@app.route('/perfil/<int:usuario_id>', methods=['GET'])
+def perfil_usuario(usuario_id):
+    """Retorna estatísticas do perfil do usuário"""
+    try:
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+        
+        # Número de corridas realizadas (como passageiro ou motorista)
+        if usuario.tipo == 'passageiro':
+            corridas_realizadas = Corrida.query.filter_by(passageiro_id=usuario_id).count()
+            corridas_finalizadas = Corrida.query.filter_by(passageiro_id=usuario_id, status='finalizada').count()
+        else:
+            corridas_realizadas = Corrida.query.filter_by(motorista_id=usuario_id).count()
+            corridas_finalizadas = Corrida.query.filter_by(motorista_id=usuario_id, status='finalizada').count()
+        
+        # Média de avaliações recebidas
+        media_avaliacoes = db.session.query(db.func.avg(Avaliacao.nota)).filter_by(avaliado_id=usuario_id).scalar() or 5.0
+        
+        # É novo? (menos de 3 corridas)
+        is_novo = corridas_realizadas < 3
+        
+        return jsonify({
+            'id': usuario.id,
+            'nome': usuario.nome,
+            'tipo': usuario.tipo,
+            'foto_perfil': usuario.foto_perfil or '',
+            'corridas_realizadas': corridas_realizadas,
+            'corridas_finalizadas': corridas_finalizadas,
+            'media_avaliacoes': round(float(media_avaliacoes), 1),
+            'is_novo': is_novo,
+            'carro': usuario.carro or '',
+            'placa': usuario.placa or ''
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
 # ==========================================
 # INICIAR
 # ==========================================
