@@ -122,20 +122,28 @@
         <div id="statusMotorista" class="status-bolinha offline"><i class="fas fa-circle"></i> <span>Offline</span></div>
     </div>
 
-    <!-- CARD NOVA CORRIDA LIMPO -->
-    <div id="cardCorrida" class="card-corrida">
-        <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
-        <div class="linha"><span>📍 Origem</span> <span id="cOrigem">-</span></div>
-        <div id="paradasContainer"></div>
-        <div class="linha"><span>🏁 Destino</span> <span id="cDestino">-</span></div>
-        <div class="linha"><span>📏 Distância</span> <span id="cDistancia">-</span></div>
-        <div class="linha"><span>💵 Valor</span> <span id="cValor" class="valor-grande">-</span></div>
-        <div class="linha linha-destacada" id="linhaPagamento" style="display:none;"><span>💰 Pagamento</span> <span id="cPagamento">-</span></div>
-        <div class="grupo-botoes">
-            <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
-            <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
-        </div>
+    <!-- CARD NOVA CORRIDA -->
+<div id="cardCorrida" class="card-corrida">
+    <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
+    
+    <!-- 🔥 NOME DO PASSAGEIRO + PERFIL -->
+    <div class="linha" style="border-bottom:none; padding-bottom:2px;">
+        <span>👤 Passageiro</span>
+        <span id="cPassageiro">-</span>
     </div>
+    <div id="perfilPassageiro" style="text-align:right; font-size:12px; margin-bottom:8px; color:#94A3B8;"></div>
+    
+    <div class="linha"><span>📍 Origem</span> <span id="cOrigem">-</span></div>
+    <div id="paradasContainer"></div>
+    <div class="linha"><span>🏁 Destino</span> <span id="cDestino">-</span></div>
+    <div class="linha"><span>📏 Distância</span> <span id="cDistancia">-</span></div>
+    <div class="linha"><span>💵 Valor</span> <span id="cValor" class="valor-grande">-</span></div>
+    <div class="linha linha-destacada" id="linhaPagamento" style="display:none;"><span>💰 Pagamento</span> <span id="cPagamento">-</span></div>
+    <div class="grupo-botoes">
+        <button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button>
+        <button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button>
+    </div>
+</div>
 
     <div class="barra-inferior" id="barra" style="display:none;">
         <div id="botoesFixos">
