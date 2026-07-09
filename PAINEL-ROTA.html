@@ -79,12 +79,30 @@
     </style>
 </head>
 <body>
-
+  <!-- TELA DE LOGIN DO PAINEL -->
+<div id="loginPainel" style="position:fixed; inset:0; background:#0F172A; display:flex; align-items:center; justify-content:center; z-index:99999;">
+    <div style="background:#1E293B; border:1px solid #334155; border-radius:16px; padding:30px; text-align:center; width:90%; max-width:400px;">
+        <div style="font-size:50px; margin-bottom:15px;">🔐</div>
+        <h2 style="color:#F1F5F9; margin-bottom:10px;">Painel Admin</h2>
+        <p style="color:#94A3B8; font-size:14px; margin-bottom:20px;">Digite a senha para acessar</p>
+        
+        <input type="password" id="senhaPainel" placeholder="Senha de acesso" 
+               style="width:100%; padding:14px; background:#0F172A; border:1px solid #334155; border-radius:10px; color:white; font-size:16px; text-align:center; margin-bottom:15px;">
+        
+        <button onclick="entrarPainel()" style="width:100%; padding:14px; background:#3B82F6; color:white; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer;">
+            🔓 Entrar no Painel
+        </button>
+        
+        <p id="erroPainel" style="color:#EF4444; font-size:13px; margin-top:10px; display:none;">Senha incorreta!</p>
+    </div>
+</div>
     <div class="top-bar">
         <h1>🚗 Rota Brasil</h1>
         <div><span class="status-dot"></span><span style="color:#10B981; font-weight:600;">Online</span></div>
     </div>
-
+   <button onclick="logoutPainel()" style="background:#EF4444; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
+    🚪 Sair
+</button>
     <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-people-fill"></i></div><div class="stat-info"><h3 id="totalUsuarios">0</h3><p>Usuários</p></div></div>
         <div class="stat-card"><div class="stat-icon green"><i class="bi bi-car-front-fill"></i></div><div class="stat-info"><h3 id="motoristasOnline">0</h3><p>Motoristas Online</p></div></div>
@@ -374,6 +392,82 @@
 
         document.getElementById('modalSaldo').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
         document.getElementById('modalValor').addEventListener('keypress', function(e) { if (e.key === 'Enter') confirmarSaldo(); });
+        // ========== LOGIN DO PAINEL ==========
+const API = 'https://rotabrasil-tobu.onrender.com';
+
+async function entrarPainel() {
+    const senha = document.getElementById('senhaPainel').value;
+    if (!senha) {
+        document.getElementById('erroPainel').textContent = 'Digite a senha!';
+        document.getElementById('erroPainel').style.display = 'block';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API}/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senha })
+        });
+        
+        const data = await res.json();
+        
+        if (data.sucesso) {
+            // Salva o token
+            localStorage.setItem('admin_token', data.token);
+            // Esconde a tela de login
+            document.getElementById('loginPainel').style.display = 'none';
+            // Carrega os dados
+            carregarDashboard();
+            carregarMotoristas();
+            toast('✅ Acesso liberado!');
+        } else {
+            document.getElementById('erroPainel').textContent = data.erro || 'Senha incorreta!';
+            document.getElementById('erroPainel').style.display = 'block';
+        }
+    } catch (e) {
+        document.getElementById('erroPainel').textContent = 'Erro de conexão';
+        document.getElementById('erroPainel').style.display = 'block';
+    }
+}
+
+// Tecla Enter para enviar
+document.getElementById('senhaPainel')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') entrarPainel();
+});
+
+// Verifica se já está logado
+function verificarLogin() {
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+        // Verifica se o token ainda é válido
+        fetch(`${API}/admin/verificar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.valido) {
+                document.getElementById('loginPainel').style.display = 'none';
+                carregarDashboard();
+                carregarMotoristas();
+            } else {
+                localStorage.removeItem('admin_token');
+            }
+        })
+        .catch(() => {
+            localStorage.removeItem('admin_token');
+        });
+    }
+}
+
+// Verifica ao carregar a página
+verificarLogin();
+        function logoutPainel() {
+    localStorage.removeItem('admin_token');
+    window.location.reload();
+}
     </script>
 </body>
 </html>
