@@ -236,10 +236,81 @@
         async function ficarOffline() { try { await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha offline'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>'; socket.emit('motorista_offline', { id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); } catch (e) {} }
 
         // ========== NOVA CORRIDA ==========
-        socket.on('nova_corrida', async (dados) => { if (estado.aceito) return; corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; iniciarSomAlertaRepetido(); document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente"; document.getElementById('cOrigem').textContent = dados.origem || '-'; document.getElementById('cDestino').textContent = dados.destino || '-'; document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...'; document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`; const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix'; const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento'); lp.style.display = 'flex'; if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; } else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; } const pc = document.getElementById('paradasContainer'); const paradas = dados.paradas || []; if (paradas.length > 0) { let h = ''; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`; }); pc.innerHTML = h; } else { pc.innerHTML = ''; } const perfilEl = document.getElementById('perfilPassageiro'); perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>'; if (dados.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { let badges = ''; if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> '; badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; perfilEl.innerHTML = badges; } else { perfilEl.innerHTML = ''; } } catch (e) { perfilEl.innerHTML = ''; } } else { perfilEl.innerHTML = ''; }
-        // 🔥 Mostra linha de preço dinâmico se ativo
-        if (dinamicoAtivo && multiplicadorAtual > 1.0) { document.getElementById('linhaDinamico').style.display = 'flex'; document.getElementById('cDinamico').textContent = multiplicadorAtual.toFixed(1) + 'x'; } else { document.getElementById('linhaDinamico').style.display = 'none'; }
-        document.getElementById('cardCorrida').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'none'; iniciarTemporizador(); });
+        // ========== NOVA CORRIDA ==========
+socket.on('nova_corrida', async (dados) => {
+    if (estado.aceito) return;
+    console.log('📥 NOVA CORRIDA RECEBIDA:', dados);
+    
+    corrida = dados;
+    estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
+    iniciarSomAlertaRepetido();
+    
+    document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
+    document.getElementById('cOrigem').textContent = dados.origem || '-';
+    document.getElementById('cDestino').textContent = dados.destino || '-';
+    document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...';
+    document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
+    
+    // Pagamento
+    const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
+    const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento');
+    lp.style.display = 'flex';
+    if (fpg === 'dinheiro' || fpg === 'cash') {
+        cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>';
+        lp.style.background = 'rgba(234,179,8,0.2)';
+    } else {
+        cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>';
+        lp.style.background = 'rgba(22,93,255,0.15)';
+    }
+    
+    // Paradas
+    const pc = document.getElementById('paradasContainer');
+    const paradas = dados.paradas || [];
+    if (paradas.length > 0) {
+        let h = '';
+        paradas.forEach((p, i) => {
+            const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
+            h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`;
+        });
+        pc.innerHTML = h;
+    } else {
+        pc.innerHTML = '';
+    }
+    
+    // Perfil do passageiro
+    const perfilEl = document.getElementById('perfilPassageiro');
+    perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>';
+    if (dados.passageiro_id) {
+        try {
+            const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`);
+            const perfil = await res.json();
+            if (perfil.id) {
+                let badges = '';
+                if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> ';
+                badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `;
+                badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`;
+                perfilEl.innerHTML = badges;
+            } else {
+                perfilEl.innerHTML = '';
+            }
+        } catch (e) { perfilEl.innerHTML = ''; }
+    } else {
+        perfilEl.innerHTML = '';
+    }
+    
+    // 🔥 Preço dinâmico (AGORA DENTRO DO SOCKET.ON)
+    if (dinamicoAtivo && multiplicadorAtual > 1.0) {
+        document.getElementById('linhaDinamico').style.display = 'flex';
+        document.getElementById('cDinamico').textContent = multiplicadorAtual.toFixed(1) + 'x';
+    } else {
+        document.getElementById('linhaDinamico').style.display = 'none';
+    }
+    
+    document.getElementById('cardCorrida').style.display = 'block';
+    document.getElementById('botoesFixos').style.display = 'none';
+    iniciarTemporizador();
+});
+        
         function iniciarTemporizador() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } segundosCorrida = 15; atualizarBtnRecusar(); timerCorrida = setInterval(() => { segundosCorrida--; atualizarBtnRecusar(); if (segundosCorrida <= 0) { clearInterval(timerCorrida); timerCorrida = null; recusarCorrida(); } }, 1000); }
         function atualizarBtnRecusar() { const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = `❌ RECUSAR (${segundosCorrida}s)`; if (segundosCorrida <= 5) { btn.style.background = '#F53F3F'; btn.style.animation = 'piscar 0.5s infinite'; } else { btn.style.background = ''; btn.style.animation = ''; } } }
         function recusarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; document.getElementById('linhaDinamico').style.display = 'none'; corrida = null; pararSomAlerta(); document.getElementById('botoesFixos').style.display = 'block'; const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
