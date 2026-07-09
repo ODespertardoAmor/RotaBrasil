@@ -15,7 +15,10 @@
             --borda: #363E4D; --texto: #F5F7FA;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow-x: hidden; overflow-y: auto; user-select: none; position: relative; }
+        body {
+            background: var(--fundo); color: var(--texto); height: 100vh;
+            overflow-x: hidden; overflow-y: auto; user-select: none; position: relative;
+        }
         #loginScreen { position: absolute; inset: 0; background: var(--fundo); display: flex; flex-direction: column; justify-content: center; padding: 20px; z-index: 9999; }
         .logo { text-align: center; margin-bottom: 30px; }
         .logo h1 { font-size: 38px; font-weight: 900; background: linear-gradient(90deg, #165DFF, #7B2CFF); -webkit-background-clip: text; color: transparent; }
@@ -81,7 +84,7 @@
     </style>
 </head>
 <body>
-    <!-- Modais (carteira, card passageiro, alerta, avaliação, login) - mantidos iguais -->
+    <!-- Modal Carteira -->
     <div id="painelCarteiraMotorista" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999;">
         <h2>💵 Carteira do Motorista</h2><p>Saldo: <strong id="saldoMotorista">R$ 0,00</strong></p>
         <button class="btn-warning" style="margin:5px 0;">🏦 Solicitar Saque</button>
@@ -89,6 +92,7 @@
         <button class="btn-danger" onclick="document.getElementById('painelCarteiraMotorista').style.display='none'" style="margin:5px 0;">❌ Fechar</button>
     </div>
 
+    <!-- Card Passageiro Chegada -->
     <div id="cardPassageiroChegada" class="card-chegada">
         <img id="fotoChegada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E">
         <h3 id="nomeChegada">Passageiro</h3>
@@ -100,11 +104,14 @@
     <div id="alertaCancel" class="alerta-cancelamento"><h2><i class="fas fa-times-circle"></i> CORRIDA CANCELADA!</h2><p>O passageiro cancelou a corrida.</p><button onclick="document.getElementById('alertaCancel').style.display='none'" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border-radius:8px;">OK</button></div>
     <div id="modalAvaliacao" class="avaliacao-modal"><h2>🏁 CORRIDA FINALIZADA!</h2><p style="color:#86909C; margin:10px 0;">Avalie o passageiro:</p><div id="estrelasAvaliacao" class="estrelas"><span class="estrela" data-valor="1">★</span><span class="estrela" data-valor="2">★</span><span class="estrela" data-valor="3">★</span><span class="estrela" data-valor="4">★</span><span class="estrela" data-valor="5">★</span></div><textarea id="comentarioAvaliacao" placeholder="Comentário..." style="width:100%; background:#272E3B; border:1px solid var(--borda); border-radius:8px; padding:10px; color:white; min-height:60px; resize:none;"></textarea><button class="btn-success" onclick="enviarAvaliacao()">✅ ENVIAR AVALIAÇÃO</button></div>
 
+    <!-- Login -->
     <div id="loginScreen"><div class="logo"><h1>ROTA BRASIL 🇧🇷</h1><p style="color:#86909C;">Painel do Motorista</p></div><div class="card"><input type="text" id="nome" placeholder="👤 Nome Completo"><input type="email" id="email" placeholder="📧 E-mail"><input type="password" id="senha" placeholder="🔒 Senha"><input type="tel" id="telefone" placeholder="📱 WhatsApp"><input type="text" id="carro" placeholder="🚘 Modelo / Cor"><input type="text" id="placa" placeholder="🔖 Placa"><button class="btn-primary" onclick="cadastrar()"><i class="fas fa-user-plus"></i> Criar Conta</button><button class="btn-success" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button><div id="statusLogin" class="status-text"></div></div></div>
 
+    <!-- Mapa -->
     <div id="mapaLeaflet"></div>
     <div class="header" id="header" style="display:none;"><div style="font-weight:800; font-size:18px;">ROTA BRASIL 🇧🇷</div><div id="statusMotorista" class="status-bolinha offline"><i class="fas fa-circle"></i> <span>Offline</span></div></div>
 
+    <!-- Card Nova Corrida -->
     <div id="cardCorrida" class="card-corrida">
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
         <div class="linha" style="border-bottom:none; padding-bottom:2px;"><span>👤 Passageiro</span> <span id="cPassageiro">-</span></div>
@@ -118,6 +125,7 @@
         <div class="grupo-botoes"><button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button><button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button></div>
     </div>
 
+    <!-- Barra Inferior -->
     <div class="barra-inferior" id="barra" style="display:none;">
         <div id="botoesFixos">
             <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
@@ -164,161 +172,75 @@
         let posicaoAtual = { lat: -23.5645, lng: -46.6523 };
         let envioLocalizacaoInterval = null;
         let notaAvaliacao = 0, timerCorrida = null, segundosCorrida = 15;
+
+        // ========== MAPA (NUNCA RECRIAR) ==========
         let mapaLeaflet = null, marcadorMotorista = null;
 
-        // ========== 🔥 PREÇO DINÂMICO (FUNCIONANDO) ==========
-        // ========== 🔥 PREÇO DINÂMICO (TRAVADO - NUNCA SOME) ==========
-let marcadoresDinamicos = [];
-let watchdogDinamicoInterval = null;
-let dinamicoAtivo = false;
-
-const iconeDinamico = L.divIcon({
-    html: '<div style="font-size:28px; animation: float 2s ease-in-out infinite; filter: drop-shadow(0 0 6px #FF7D00);">🔥</div>',
-    className: '',
-    iconSize: [35, 35],
-    iconAnchor: [17, 17]
-});
-
-const posicoesDinamicas = [
-    [-23.5505, -46.6333], [-23.5610, -46.6560], [-23.5400, -46.6100],
-    [-23.5700, -46.6400], [-23.5300, -46.6200], [-23.5550, -46.6450],
-    [-23.5450, -46.6250], [-23.5600, -46.6150]
-];
-
-function mostrarIndicadoresDinamicos() {
-    if (!mapaLeaflet) {
-        setTimeout(mostrarIndicadoresDinamicos, 500);
-        return;
-    }
-    // Remove duplicados
-    removerIndicadoresDuplicados();
-    if (marcadoresDinamicos.length > 0) return;
-    
-    posicoesDinamicas.forEach(pos => {
-        const m = L.marker(pos, {
-            icon: iconeDinamico,
-            interactive: false,
-            zIndexOffset: 1000
-        }).addTo(mapaLeaflet);
-        m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', {
-            closeButton: false,
-            className: 'popup-dinamico'
-        });
-        marcadoresDinamicos.push(m);
-    });
-    console.log('🔥 ' + marcadoresDinamicos.length + ' foguinhos exibidos');
-}
-
-function removerIndicadoresDuplicados() {
-    // Remove marcadores que não estão mais no mapa
-    marcadoresDinamicos = marcadoresDinamicos.filter(m => {
-        const noMapa = mapaLeaflet && mapaLeaflet.hasLayer(m);
-        if (!noMapa) console.log('🗑️ Removendo foguinho órfão');
-        return noMapa;
-    });
-}
-
-function removerIndicadoresDinamicos() {
-    marcadoresDinamicos.forEach(m => {
-        if (mapaLeaflet) mapaLeaflet.removeLayer(m);
-    });
-    marcadoresDinamicos = [];
-}
-
-// 🔥 VERIFICA E ATIVA UMA ÚNICA VEZ (DEPOIS NUNCA MAIS DESATIVA)
-async function verificarPrecoDinamico() {
-    // Se já está ativo, não faz nada (mantém os foguinhos)
-    if (dinamicoAtivo) {
-        // Apenas garante que estão visíveis
-        if (marcadoresDinamicos.length === 0 && mapaLeaflet) {
-            mostrarIndicadoresDinamicos();
-        }
-        return;
-    }
-    
-    try {
-        const r = await fetch(`${API_URL}/configuracoes`);
-        const config = await r.json();
-        const ativo = parseInt(config.dinamico_ativo || 0) === 1;
-        
-        if (ativo) {
-            console.log('🔥 PREÇO DINÂMICO ATIVADO - TRAVANDO FOGUINHOS!');
-            dinamicoAtivo = true;
-            mostrarIndicadoresDinamicos();
-            // 🛑 Para de verificar a API depois de ativado
-            pararVerificacaoAPI();
-            // Inicia apenas o watchdog para garantir que continuam visíveis
-            iniciarWatchdogDinamico();
-        }
-    } catch (e) {
-        // Silencioso
-    }
-}
-
-function iniciarWatchdogDinamico() {
-    if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
-    watchdogDinamicoInterval = setInterval(() => {
-        if (dinamicoAtivo && marcadoresDinamicos.length === 0 && mapaLeaflet) {
-            console.warn('🔍 Watchdog: recriando foguinhos...');
-            mostrarIndicadoresDinamicos();
-        }
-    }, 2000); // Verifica a cada 2 segundos
-}
-
-let verificacaoDinamicoInterval = null;
-
-function iniciarVerificacaoAPI() {
-    if (verificacaoDinamicoInterval) clearInterval(verificacaoDinamicoInterval);
-    verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 15000);
-}
-
-function pararVerificacaoAPI() {
-    if (verificacaoDinamicoInterval) {
-        clearInterval(verificacaoDinamicoInterval);
-        verificacaoDinamicoInterval = null;
-        console.log('⏹️ Verificação da API parada (foguinhos travados)');
-    }
-}
-
-function iniciarVerificacaoDinamico() {
-    pararVerificacaoDinamico();
-    verificarPrecoDinamico();
-    iniciarVerificacaoAPI();
-}
-
-function pararVerificacaoDinamico() {
-    pararVerificacaoAPI();
-    if (watchdogDinamicoInterval) {
-        clearInterval(watchdogDinamicoInterval);
-        watchdogDinamicoInterval = null;
-    }
-    removerIndicadoresDinamicos();
-    dinamicoAtivo = false;
-}
-
-        // ========== MAPA ==========
         function iniciarMapa() {
             if (mapaLeaflet) return;
-            console.log('🗺️ Criando mapa...');
-            mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false })
-                .setView([posicaoAtual.lat, posicaoAtual.lng], 16);
+            mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false }).setView([posicaoAtual.lat, posicaoAtual.lng], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
-            marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], {
-                icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] })
-            }).addTo(mapaLeaflet);
-            if (dinamicoAtivo) {
-                console.log('🗺️ Mapa recriado, recolocando foguinhos...');
-                setTimeout(() => mostrarIndicadoresDinamicos(), 300);
-            }
+            marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], { icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] }) }).addTo(mapaLeaflet);
+            if (dinamicoAtivo) setTimeout(() => mostrarIndicadoresDinamicos(), 300);
         }
 
         function atualizarPosicaoMapa(lat, lng) {
-            if (!mapaLeaflet) iniciarMapa();
-            if (marcadorMotorista) {
-                marcadorMotorista.setLatLng([lat, lng]);
-                mapaLeaflet.setView([lat, lng], 16, { animate: false });
-            }
+            if (!mapaLeaflet) { iniciarMapa(); return; }
+            if (marcadorMotorista) { marcadorMotorista.setLatLng([lat, lng]); mapaLeaflet.setView([lat, lng], 16, { animate: false }); }
         }
+
+        // ========== 🔥 PREÇO DINÂMICO (TRAVADO - NUNCA SOME) ==========
+        let marcadoresDinamicos = [], watchdogDinamicoInterval = null, verificacaoDinamicoInterval = null, dinamicoAtivo = false;
+        const iconeDinamico = L.divIcon({ html: '<div style="font-size:28px; animation: float 2s ease-in-out infinite; filter: drop-shadow(0 0 6px #FF7D00);">🔥</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] });
+        const posicoesDinamicas = [[-23.5505,-46.6333],[-23.5610,-46.6560],[-23.5400,-46.6100],[-23.5700,-46.6400],[-23.5300,-46.6200],[-23.5550,-46.6450],[-23.5450,-46.6250],[-23.5600,-46.6150]];
+
+        function mostrarIndicadoresDinamicos() {
+            if (!mapaLeaflet) { setTimeout(mostrarIndicadoresDinamicos, 500); return; }
+            marcadoresDinamicos = marcadoresDinamicos.filter(m => mapaLeaflet.hasLayer(m));
+            if (marcadoresDinamicos.length >= posicoesDinamicas.length) return;
+            marcadoresDinamicos.forEach(m => { if (mapaLeaflet.hasLayer(m)) mapaLeaflet.removeLayer(m); });
+            marcadoresDinamicos = [];
+            posicoesDinamicas.forEach(pos => {
+                const m = L.marker(pos, { icon: iconeDinamico, interactive: false, zIndexOffset: 1000 }).addTo(mapaLeaflet);
+                m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', { closeButton: false, className: 'popup-dinamico' });
+                marcadoresDinamicos.push(m);
+            });
+        }
+
+        function removerIndicadoresDinamicos() {
+            marcadoresDinamicos.forEach(m => { if (mapaLeaflet && mapaLeaflet.hasLayer(m)) mapaLeaflet.removeLayer(m); });
+            marcadoresDinamicos = [];
+        }
+
+        async function verificarPrecoDinamico() {
+            if (dinamicoAtivo) { if (mapaLeaflet && marcadoresDinamicos.length < posicoesDinamicas.length) mostrarIndicadoresDinamicos(); return; }
+            try {
+                const r = await fetch(`${API_URL}/configuracoes`);
+                const config = await r.json();
+                if (parseInt(config.dinamico_ativo || 0) === 1) {
+                    console.log('🔥 ATIVANDO PREÇO DINÂMICO!');
+                    dinamicoAtivo = true;
+                    mostrarIndicadoresDinamicos();
+                    pararVerificacaoAPI();
+                    iniciarWatchdogDinamico();
+                }
+            } catch (e) {}
+        }
+
+        function iniciarWatchdogDinamico() {
+            if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
+            watchdogDinamicoInterval = setInterval(() => {
+                if (dinamicoAtivo && mapaLeaflet && marcadoresDinamicos.filter(m => mapaLeaflet.hasLayer(m)).length < posicoesDinamicas.length) {
+                    mostrarIndicadoresDinamicos();
+                }
+            }, 2000);
+        }
+
+        function iniciarVerificacaoAPI() { if (verificacaoDinamicoInterval) clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 10000); }
+        function pararVerificacaoAPI() { if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; } }
+        function iniciarVerificacaoDinamico() { pararTudoDinamico(); setTimeout(() => verificarPrecoDinamico(), 2000); iniciarVerificacaoAPI(); }
+        function pararTudoDinamico() { pararVerificacaoAPI(); if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; } }
+        function pararVerificacaoDinamico() { pararTudoDinamico(); removerIndicadoresDinamicos(); dinamicoAtivo = false; }
 
         // ========== SOM ==========
         const somAlerta = document.getElementById('somAlerta'), somAlto = document.getElementById('somAlto'), somSucesso = document.getElementById('somSucesso'), somDinheiro = document.getElementById('somDinheiro');
@@ -328,72 +250,19 @@ function pararVerificacaoDinamico() {
         function pararSomAlerta() { somAlerta.pause(); somAlerta.currentTime = 0; somAlerta.loop = false; }
 
         // ========== GPS ==========
-        function iniciarGPS() {
-            if (!navigator.geolocation) return;
-            iniciarMapa();
-            navigator.geolocation.watchPosition((pos) => {
-                posicaoAtual.lat = pos.coords.latitude; posicaoAtual.lng = pos.coords.longitude;
-                atualizarPosicaoMapa(posicaoAtual.lat, posicaoAtual.lng);
-                if (estado.aceito && corrida) {
-                    socket.emit('localizacao_motorista', {
-                        corrida_id: corrida.corrida_id || corrida.id,
-                        lat: posicaoAtual.lat, lng: posicaoAtual.lng,
-                        motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || ''
-                    });
-                }
-            }, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 });
-        }
+        function iniciarGPS() { if (!navigator.geolocation) return; iniciarMapa(); navigator.geolocation.watchPosition((pos) => { posicaoAtual.lat = pos.coords.latitude; posicaoAtual.lng = pos.coords.longitude; atualizarPosicaoMapa(posicaoAtual.lat, posicaoAtual.lng); if (estado.aceito && corrida) { socket.emit('localizacao_motorista', { corrida_id: corrida.corrida_id || corrida.id, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); } }, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }); }
 
         // ========== LOGIN ==========
         function statusLogin(t, tipo) { const el = document.getElementById('statusLogin'); el.textContent = t; el.className = `status-text ${tipo}`; }
-        async function cadastrar() {
-            const d = { nome: document.getElementById('nome').value.trim(), email: document.getElementById('email').value.trim().toLowerCase(), senha: document.getElementById('senha').value.trim(), telefone: document.getElementById('telefone').value.trim(), carro: document.getElementById('carro').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), tipo: "motorista" };
-            if (Object.values(d).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro");
-            if (d.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro");
-            statusLogin("⏳ Cadastrando...", "");
-            try { const r = await fetch(`${API_URL}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); statusLogin("✅ Criada! Entrando...", "ok"); setTimeout(() => entrar(d.email, d.senha), 1000); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
-        }
-        async function entrar(emailTxt = null, senhaTxt = null) {
-            const email = emailTxt || document.getElementById('email').value.trim().toLowerCase(), senha = senhaTxt || document.getElementById('senha').value.trim();
-            if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro");
-            statusLogin("⏳ Entrando...", "");
-            try { const r = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); if (ret.user.tipo !== "motorista") throw new Error("Conta não é de motorista"); token = ret.token; usuario = ret.user; localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario)); telaPrincipal(); iniciarGPS(); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); }
-        }
+        async function cadastrar() { const d = { nome: document.getElementById('nome').value.trim(), email: document.getElementById('email').value.trim().toLowerCase(), senha: document.getElementById('senha').value.trim(), telefone: document.getElementById('telefone').value.trim(), carro: document.getElementById('carro').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), tipo: "motorista" }; if (Object.values(d).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro"); if (d.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro"); statusLogin("⏳ Cadastrando...", ""); try { const r = await fetch(`${API_URL}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); statusLogin("✅ Criada! Entrando...", "ok"); setTimeout(() => entrar(d.email, d.senha), 1000); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); } }
+        async function entrar(emailTxt = null, senhaTxt = null) { const email = emailTxt || document.getElementById('email').value.trim().toLowerCase(), senha = senhaTxt || document.getElementById('senha').value.trim(); if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro"); statusLogin("⏳ Entrando...", ""); try { const r = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); if (ret.user.tipo !== "motorista") throw new Error("Conta não é de motorista"); token = ret.token; usuario = ret.user; localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario)); telaPrincipal(); iniciarGPS(); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); } }
         function telaPrincipal() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('header').style.display = 'flex'; document.getElementById('barra').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'block'; document.getElementById('areaAcoes').style.display = 'none'; iniciarVerificacaoDinamico(); }
         function sair() { pararVerificacaoDinamico(); if (estado.aceito && !confirm('Corrida em andamento!')) return; localStorage.clear(); limparTudo(); window.location.reload(); }
         async function ficarOnline() { if (!usuario || !token) return mostrarErro("Faça login!"); try { await fetch(`${API_URL}/ficar_online/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }); document.getElementById('btnOnline').style.display = 'none'; document.getElementById('btnOffline').style.display = 'block'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha online'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>'; socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); } catch (e) { mostrarErro("Erro de conexão"); } }
         async function ficarOffline() { try { await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha offline'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>'; socket.emit('motorista_offline', { id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); } catch (e) {} }
 
         // ========== NOVA CORRIDA ==========
-        socket.on('nova_corrida', async (dados) => {
-            if (estado.aceito) return;
-            corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false };
-            iniciarSomAlertaRepetido();
-            document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente";
-            document.getElementById('cOrigem').textContent = dados.origem || '-';
-            document.getElementById('cDestino').textContent = dados.destino || '-';
-            document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...';
-            document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`;
-            const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix';
-            const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento');
-            lp.style.display = 'flex';
-            if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; }
-            else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; }
-            const pc = document.getElementById('paradasContainer');
-            const paradas = dados.paradas || [];
-            if (paradas.length > 0) { let h = ''; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`; }); pc.innerHTML = h; } else { pc.innerHTML = ''; }
-            const perfilEl = document.getElementById('perfilPassageiro');
-            perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>';
-            if (dados.passageiro_id) {
-                try { const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`); const perfil = await res.json();
-                    if (perfil.id) { let badges = ''; if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> '; badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; perfilEl.innerHTML = badges; } else { perfilEl.innerHTML = ''; }
-                } catch (e) { perfilEl.innerHTML = ''; }
-            } else { perfilEl.innerHTML = ''; }
-            document.getElementById('cardCorrida').style.display = 'block';
-            document.getElementById('botoesFixos').style.display = 'none';
-            iniciarTemporizador();
-        });
-
+        socket.on('nova_corrida', async (dados) => { if (estado.aceito) return; corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; iniciarSomAlertaRepetido(); document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente"; document.getElementById('cOrigem').textContent = dados.origem || '-'; document.getElementById('cDestino').textContent = dados.destino || '-'; document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...'; document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`; const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix'; const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento'); lp.style.display = 'flex'; if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; } else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; } const pc = document.getElementById('paradasContainer'); const paradas = dados.paradas || []; if (paradas.length > 0) { let h = ''; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`; }); pc.innerHTML = h; } else { pc.innerHTML = ''; } const perfilEl = document.getElementById('perfilPassageiro'); perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>'; if (dados.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { let badges = ''; if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> '; badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; perfilEl.innerHTML = badges; } else { perfilEl.innerHTML = ''; } } catch (e) { perfilEl.innerHTML = ''; } } else { perfilEl.innerHTML = ''; } document.getElementById('cardCorrida').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'none'; iniciarTemporizador(); });
         function iniciarTemporizador() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } segundosCorrida = 15; atualizarBtnRecusar(); timerCorrida = setInterval(() => { segundosCorrida--; atualizarBtnRecusar(); if (segundosCorrida <= 0) { clearInterval(timerCorrida); timerCorrida = null; recusarCorrida(); } }, 1000); }
         function atualizarBtnRecusar() { const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = `❌ RECUSAR (${segundosCorrida}s)`; if (segundosCorrida <= 5) { btn.style.background = '#F53F3F'; btn.style.animation = 'piscar 0.5s infinite'; } else { btn.style.background = ''; btn.style.animation = ''; } } }
         function recusarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; corrida = null; pararSomAlerta(); document.getElementById('botoesFixos').style.display = 'block'; const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
@@ -404,26 +273,10 @@ function pararVerificacaoDinamico() {
         // ========== GPS HÍBRIDO ==========
         function executarIrAtePassageiro() { if (!estado.aceito || estado.pegouPassageiro) return; estado.pegouPassageiro = true; abrirGPSHibrido('origem'); document.getElementById('containerAcoesCorrida').innerHTML = ''; mostrarCardPassageiro(); }
         function executarIniciarViagem() { if (!estado.pegouPassageiro || estado.viagemIniciada) return; estado.viagemIniciada = true; document.getElementById('cardPassageiroChegada').style.display = 'none'; abrirGPSHibrido('destino'); document.getElementById('etapaTexto').className = 'etapa etapa3'; document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)); socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id }); falar("Viagem iniciada!"); }
-
-        function abrirGPSHibrido(tipoDestino) {
-            const paradas = corrida.paradas || []; const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
-            let destinoFinal = tipoDestino === 'origem' ? ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino));
-            let waypoints = ''; paradas.forEach(p => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); if (e) waypoints += encodeURIComponent(e) + '|'; }); waypoints = waypoints.replace(/\|$/, '');
-            const googleUrl = waypoints ? `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate` : `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`;
-            window.location.href = googleUrl;
-        }
+        function abrirGPSHibrido(tipoDestino) { const paradas = corrida.paradas || []; const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`; let destinoFinal = tipoDestino === 'origem' ? ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino)); let waypoints = ''; paradas.forEach(p => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); if (e) waypoints += encodeURIComponent(e) + '|'; }); waypoints = waypoints.replace(/\|$/, ''); const googleUrl = waypoints ? `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate` : `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`; window.location.href = googleUrl; }
 
         // ========== CARD PASSAGEIRO ==========
-        async function mostrarCardPassageiro() {
-            if (!corrida) return;
-            const fotoPadrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E";
-            const fp = corrida.foto_passageiro || corrida.foto_perfil || fotoPadrao;
-            document.getElementById('fotoChegada').src = fp; document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro'; document.getElementById('cardPassageiroChegada').style.display = 'block';
-            if (corrida.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${corrida.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { if (perfil.foto_perfil) document.getElementById('fotoChegada').src = perfil.foto_perfil; let infoHtml = ''; if (perfil.is_novo) infoHtml += '<span style="background:#FF007F; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">🆕 NOVO</span> '; infoHtml += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; infoHtml += `<span style="color:#94A3B8; font-size:12px;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; document.getElementById('nomeChegada').innerHTML = `${corrida.passageiro_nome || 'Passageiro'}<div style="font-size:12px; margin-top:4px;">${infoHtml}</div>`; } } catch (e) {} }
-            const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = '';
-            const paradas = corrida.paradas || []; if (paradas.length > 0) { let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;"><p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas:</p>'; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); pHtml += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`; }); pHtml += '</div>'; ct.innerHTML = pHtml; }
-            ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)); document.getElementById('btnLigarChegada').style.display = 'flex';
-        }
+        async function mostrarCardPassageiro() { if (!corrida) return; const fotoPadrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E"; const fp = corrida.foto_passageiro || corrida.foto_perfil || fotoPadrao; document.getElementById('fotoChegada').src = fp; document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro'; document.getElementById('cardPassageiroChegada').style.display = 'block'; if (corrida.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${corrida.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { if (perfil.foto_perfil) document.getElementById('fotoChegada').src = perfil.foto_perfil; let infoHtml = ''; if (perfil.is_novo) infoHtml += '<span style="background:#FF007F; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">🆕 NOVO</span> '; infoHtml += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; infoHtml += `<span style="color:#94A3B8; font-size:12px;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; document.getElementById('nomeChegada').innerHTML = `${corrida.passageiro_nome || 'Passageiro'}<div style="font-size:12px; margin-top:4px;">${infoHtml}</div>`; } } catch (e) {} } const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = ''; const paradas = corrida.paradas || []; if (paradas.length > 0) { let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;"><p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas:</p>'; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); pHtml += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`; }); pHtml += '</div>'; ct.innerHTML = pHtml; } ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)); document.getElementById('btnLigarChegada').style.display = 'flex'; }
 
         // ========== FINALIZAR ==========
         async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
