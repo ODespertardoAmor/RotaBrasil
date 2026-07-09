@@ -1314,7 +1314,15 @@ def admin_verificar():
     except:
         pass
     
-    return jsonify({'valido': False}), 401    
+    return jsonify({'valido': False}), 401 
+@app.route('/criar_tabela_config', methods=['GET'])
+def criar_tabela_config():
+    """Cria a tabela de configurações se não existir"""
+    try:
+        db.create_all()
+        return jsonify({'status': 'Tabelas criadas/verificadas com sucesso!'})
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500    
 # ==========================================
 # INICIAR
 # ==========================================
