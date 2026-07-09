@@ -1284,7 +1284,37 @@ def admin_configuracoes():
             nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
             db.session.add(nova)
     db.session.commit()
-    return jsonify({'status': 'ok'})        
+    return jsonify({'status': 'ok'})
+# Senha do painel admin (configure aqui)
+SENHA_PAINEL = "minha_senha_secreta_123"  # 🔥 MUDE ESTA SENHA!
+
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    """Verifica a senha do painel admin"""
+    dados = request.get_json()
+    senha = dados.get('senha', '')
+    
+    if senha == SENHA_PAINEL:
+        # Gera um token simples
+        token = base64.b64encode(f"admin:{senha}:{datetime.utcnow().timestamp()}".encode()).decode()
+        return jsonify({'sucesso': True, 'token': token})
+    else:
+        return jsonify({'sucesso': False, 'erro': 'Senha incorreta'}), 401
+
+@app.route('/admin/verificar', methods=['POST'])
+def admin_verificar():
+    """Verifica se o token é válido"""
+    dados = request.get_json()
+    token = dados.get('token', '')
+    
+    try:
+        decoded = base64.b64decode(token).decode()
+        if decoded.startswith('admin:'):
+            return jsonify({'valido': True})
+    except:
+        pass
+    
+    return jsonify({'valido': False}), 401    
 # ==========================================
 # INICIAR
 # ==========================================
