@@ -6,7 +6,6 @@
     <title>📊 Painel Admin | Rota Brasil</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
             --bg-dark: #0F172A; --card-bg: #1E293B; --border: #334155;
@@ -15,13 +14,35 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #0F172A; color: #F1F5F9; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+        
+        /* TELA DE LOGIN */
+        #loginPainel {
+            position: fixed; inset: 0; background: #0F172A;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999;
+        }
+        .login-box {
+            background: #1E293B; border: 1px solid #334155;
+            border-radius: 16px; padding: 30px; text-align: center;
+            width: 90%; max-width: 400px;
+        }
+        .login-box input {
+            width: 100%; padding: 14px; background: #0F172A;
+            border: 1px solid #334155; border-radius: 10px;
+            color: white; font-size: 16px; text-align: center; margin-bottom: 15px;
+        }
+        .login-box button {
+            width: 100%; padding: 14px; background: #3B82F6;
+            color: white; border: none; border-radius: 10px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+        
         .top-bar { background: #1E293B; border-bottom: 1px solid #334155; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .top-bar h1 { font-size: 20px; font-weight: 700; background: linear-gradient(135deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .top-bar .status-dot { width: 10px; height: 10px; background: #10B981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 20px 25px; }
-        .stat-card { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px; transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px; }
         .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
         .stat-icon.blue { background: rgba(59,130,246,0.2); color: #3B82F6; }
         .stat-icon.green { background: rgba(16,185,129,0.2); color: #10B981; }
@@ -41,7 +62,7 @@
         .table-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         .table-header h3 { font-size: 16px; margin: 0; }
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px 20px; font-size: 12px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+        th { text-align: left; padding: 12px 20px; font-size: 12px; color: #94A3B8; text-transform: uppercase; border-bottom: 1px solid #334155; }
         td { padding: 12px 20px; font-size: 14px; border-bottom: 1px solid rgba(51,65,85,0.5); }
         tr:hover { background: rgba(255,255,255,0.02); }
         .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
@@ -54,7 +75,7 @@
         .badge-pix { background: rgba(59,130,246,0.2); color: #3B82F6; }
         .badge-dinheiro { background: rgba(245,158,11,0.2); color: #F59E0B; }
         .avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid #334155; }
-        .btn { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+        .btn { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
         .btn-sm { padding: 5px 10px; font-size: 11px; }
         .btn-success { background: #10B981; color: white; }
         .btn-danger { background: #EF4444; color: white; }
@@ -69,110 +90,96 @@
         .toast-success { background: #10B981; color: white; }
         .toast-error { background: #EF4444; color: white; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
-        /* 🔥 TARIFAS */
         .tarifas-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
         .tarifas-form label { color: #94A3B8; font-size: 13px; font-weight: 600; display: block; margin-bottom: 5px; }
         .tarifas-form input, .tarifas-form select { width: 100%; padding: 10px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 15px; }
-        .tarifas-form input:focus, .tarifas-form select:focus { outline: none; border-color: #3B82F6; }
-        @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tabs { overflow-x: auto; flex-wrap: nowrap; } .tarifas-form { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tarifas-form { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-  <!-- TELA DE LOGIN DO PAINEL -->
-<div id="loginPainel" style="position:fixed; inset:0; background:#0F172A; display:flex; align-items:center; justify-content:center; z-index:99999;">
-    <div style="background:#1E293B; border:1px solid #334155; border-radius:16px; padding:30px; text-align:center; width:90%; max-width:400px;">
-        <div style="font-size:50px; margin-bottom:15px;">🔐</div>
-        <h2 style="color:#F1F5F9; margin-bottom:10px;">Painel Admin</h2>
-        <p style="color:#94A3B8; font-size:14px; margin-bottom:20px;">Digite a senha para acessar</p>
-        
-        <input type="password" id="senhaPainel" placeholder="Senha de acesso" 
-               style="width:100%; padding:14px; background:#0F172A; border:1px solid #334155; border-radius:10px; color:white; font-size:16px; text-align:center; margin-bottom:15px;">
-        
-        <button onclick="entrarPainel()" style="width:100%; padding:14px; background:#3B82F6; color:white; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer;">
-            🔓 Entrar no Painel
-        </button>
-        
-        <p id="erroPainel" style="color:#EF4444; font-size:13px; margin-top:10px; display:none;">Senha incorreta!</p>
-    </div>
-</div>
-    <div class="top-bar">
-        <h1>🚗 Rota Brasil</h1>
-        <div><span class="status-dot"></span><span style="color:#10B981; font-weight:600;">Online</span></div>
-    </div>
-   <button onclick="logoutPainel()" style="background:#EF4444; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
-    🚪 Sair
-</button>
-    <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-people-fill"></i></div><div class="stat-info"><h3 id="totalUsuarios">0</h3><p>Usuários</p></div></div>
-        <div class="stat-card"><div class="stat-icon green"><i class="bi bi-car-front-fill"></i></div><div class="stat-info"><h3 id="motoristasOnline">0</h3><p>Motoristas Online</p></div></div>
-        <div class="stat-card"><div class="stat-icon yellow"><i class="bi bi-geo-alt-fill"></i></div><div class="stat-info"><h3 id="corridasAtivas">0</h3><p>Corridas Ativas</p></div></div>
-        <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-check-circle-fill"></i></div><div class="stat-info"><h3 id="corridasFinalizadas">0</h3><p>Finalizadas Hoje</p></div></div>
-        <div class="stat-card"><div class="stat-icon red"><i class="bi bi-cash-stack"></i></div><div class="stat-info"><h3 id="faturamento">R$ 0</h3><p>Faturamento Hoje</p></div></div>
+
+    <!-- 🔐 TELA DE LOGIN -->
+    <div id="loginPainel">
+        <div class="login-box">
+            <div style="font-size:50px; margin-bottom:15px;">🔐</div>
+            <h2 style="color:#F1F5F9; margin-bottom:10px;">Painel Admin</h2>
+            <p style="color:#94A3B8; font-size:14px; margin-bottom:20px;">Digite a senha para acessar</p>
+            <input type="password" id="senhaPainel" placeholder="Senha de acesso">
+            <button onclick="entrarPainel()">🔓 Entrar no Painel</button>
+            <p id="erroPainel" style="color:#EF4444; font-size:13px; margin-top:10px; display:none;">Senha incorreta!</p>
+        </div>
     </div>
 
-    <!-- 🔥 TABS COM TARIFAS -->
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="motoristas">🚗 Motoristas</button>
-        <button class="tab-btn" data-tab="passageiros">👤 Passageiros</button>
-        <button class="tab-btn" data-tab="corridas">📍 Corridas</button>
-        <button class="tab-btn" data-tab="avaliacoes">⭐ Avaliações</button>
-        <button class="tab-btn" data-tab="transacoes">💰 Transações</button>
-        <button class="tab-btn" data-tab="tarifas">🔧 Tarifas</button>
-    </div>
-
-    <div class="content">
-        <!-- Motoristas -->
-        <div class="tab-content active" id="tab-motoristas">
-            <div class="table-container"><div class="table-header"><h3>Motoristas</h3><button class="btn btn-primary btn-sm" onclick="carregarMotoristas()">🔄 Atualizar</button></div>
-                <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Carro</th><th>Placa</th><th>Status</th><th>Ações</th></tr></thead>
-                <tbody id="listaMotoristas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+    <!-- CONTEÚDO DO PAINEL (inicialmente oculto) -->
+    <div id="conteudoPainel" style="display:none;">
+        <div class="top-bar">
+            <h1>🚗 Rota Brasil</h1>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span class="status-dot"></span>
+                <span style="color:#10B981; font-weight:600;">Online</span>
+                <button onclick="logoutPainel()" style="background:#EF4444; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">🚪 Sair</button>
             </div>
         </div>
 
-        <!-- Passageiros -->
-        <div class="tab-content" id="tab-passageiros">
-            <div class="table-container"><div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
-                <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
-                <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
-            </div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-people-fill"></i></div><div class="stat-info"><h3 id="totalUsuarios">0</h3><p>Usuários</p></div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="bi bi-car-front-fill"></i></div><div class="stat-info"><h3 id="motoristasOnline">0</h3><p>Motoristas Online</p></div></div>
+            <div class="stat-card"><div class="stat-icon yellow"><i class="bi bi-geo-alt-fill"></i></div><div class="stat-info"><h3 id="corridasAtivas">0</h3><p>Corridas Ativas</p></div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-check-circle-fill"></i></div><div class="stat-info"><h3 id="corridasFinalizadas">0</h3><p>Finalizadas Hoje</p></div></div>
+            <div class="stat-card"><div class="stat-icon red"><i class="bi bi-cash-stack"></i></div><div class="stat-info"><h3 id="faturamento">R$ 0</h3><p>Faturamento Hoje</p></div></div>
         </div>
 
-        <!-- Corridas -->
-        <div class="tab-content" id="tab-corridas">
-            <div class="table-container"><div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
-                <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
-                <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
-            </div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="motoristas">🚗 Motoristas</button>
+            <button class="tab-btn" data-tab="passageiros">👤 Passageiros</button>
+            <button class="tab-btn" data-tab="corridas">📍 Corridas</button>
+            <button class="tab-btn" data-tab="avaliacoes">⭐ Avaliações</button>
+            <button class="tab-btn" data-tab="transacoes">💰 Transações</button>
+            <button class="tab-btn" data-tab="tarifas">🔧 Tarifas</button>
         </div>
 
-        <!-- Avaliações -->
-        <div class="tab-content" id="tab-avaliacoes">
-            <div class="table-container"><div class="table-header"><h3>Avaliações</h3></div>
-                <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
-                <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+        <div class="content">
+            <div class="tab-content active" id="tab-motoristas">
+                <div class="table-container"><div class="table-header"><h3>Motoristas</h3><button class="btn btn-primary btn-sm" onclick="carregarMotoristas()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Carro</th><th>Placa</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="listaMotoristas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                </div>
             </div>
-        </div>
-
-        <!-- Transações -->
-        <div class="tab-content" id="tab-transacoes">
-            <div class="table-container"><div class="table-header"><h3>Transações</h3></div>
-                <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
-                <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+            <div class="tab-content" id="tab-passageiros">
+                <div class="table-container"><div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
+                    <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                </div>
             </div>
-        </div>
-
-        <!-- 🔥 TARIFAS (agora dentro do sistema de tabs) -->
-        <div class="tab-content" id="tab-tarifas">
-            <div class="table-container">
-                <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
-                <div class="tarifas-form">
-                    <div><label>Bandeirada (R$)</label><input type="number" id="bandeirada" step="0.01" value="5.00"></div>
-                    <div><label>Preço por Km (R$)</label><input type="number" id="preco_km" step="0.01" value="2.50"></div>
-                    <div><label>Multiplicador Dinâmico</label><input type="number" id="multiplicador_dinamico" step="0.1" value="1.0"><small style="color:#94A3B8;">Ex: 1.5 = 50% de aumento</small></div>
-                    <div><label>Ativar Preço Dinâmico</label><select id="dinamico_ativo"><option value="0">❌ Desativado</option><option value="1">🔥 Ativado</option></select></div>
-                    <div style="grid-column: 1 / -1;">
-                        <button class="btn btn-primary" onclick="salvarTarifas()" style="width:100%;">💾 Salvar Tarifas</button>
+            <div class="tab-content" id="tab-corridas">
+                <div class="table-container"><div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
+                    <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-avaliacoes">
+                <div class="table-container"><div class="table-header"><h3>Avaliações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
+                    <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-transacoes">
+                <div class="table-container"><div class="table-header"><h3>Transações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
+                    <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-tarifas">
+                <div class="table-container">
+                    <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
+                    <div class="tarifas-form">
+                        <div><label>Bandeirada (R$)</label><input type="number" id="bandeirada" step="0.01" value="5.00"></div>
+                        <div><label>Preço por Km (R$)</label><input type="number" id="preco_km" step="0.01" value="2.50"></div>
+                        <div><label>Multiplicador Dinâmico</label><input type="number" id="multiplicador_dinamico" step="0.1" value="1.0"></div>
+                        <div><label>Ativar Preço Dinâmico</label><select id="dinamico_ativo"><option value="0">❌ Desativado</option><option value="1">🔥 Ativado</option></select></div>
+                        <div style="grid-column: 1 / -1;">
+                            <button class="btn btn-primary" onclick="salvarTarifas()" style="width:100%;">💾 Salvar Tarifas</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -182,7 +189,7 @@
     <!-- Modal Saldo -->
     <div class="modal-overlay" id="modalSaldo">
         <div class="modal-box">
-            <h3 id="modalTitulo">💰 Adicionar Saldo</h3>
+            <h3>💰 Adicionar Saldo</h3>
             <p id="modalUsuario" style="color:#94A3B8;"></p>
             <input type="number" id="modalValor" placeholder="R$ 0,00" step="0.01" min="0.01">
             <div style="display:flex;gap:10px;margin-top:15px;">
@@ -191,10 +198,10 @@
             </div>
         </div>
     </div>
-
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
+        // ========== CONFIG (UMA ÚNICA DECLARAÇÃO) ==========
         const API = 'https://rotabrasil-tobu.onrender.com';
         let usuarioSaldoId = null;
 
@@ -207,6 +214,70 @@
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
         }
 
+        // ========== LOGIN ==========
+        async function entrarPainel() {
+            const senha = document.getElementById('senhaPainel').value;
+            if (!senha) {
+                document.getElementById('erroPainel').textContent = 'Digite a senha!';
+                document.getElementById('erroPainel').style.display = 'block';
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha })
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    localStorage.setItem('admin_token', data.token);
+                    document.getElementById('loginPainel').style.display = 'none';
+                    document.getElementById('conteudoPainel').style.display = 'block';
+                    carregarDashboard();
+                    carregarMotoristas();
+                    toast('✅ Acesso liberado!');
+                } else {
+                    document.getElementById('erroPainel').textContent = data.erro || 'Senha incorreta!';
+                    document.getElementById('erroPainel').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('erroPainel').textContent = 'Erro de conexão';
+                document.getElementById('erroPainel').style.display = 'block';
+            }
+        }
+
+        function verificarLogin() {
+            const token = localStorage.getItem('admin_token');
+            if (token) {
+                fetch(`${API}/admin/verificar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.valido) {
+                        document.getElementById('loginPainel').style.display = 'none';
+                        document.getElementById('conteudoPainel').style.display = 'block';
+                        carregarDashboard();
+                        carregarMotoristas();
+                    } else {
+                        localStorage.removeItem('admin_token');
+                    }
+                })
+                .catch(() => { localStorage.removeItem('admin_token'); });
+            }
+        }
+
+        function logoutPainel() {
+            localStorage.removeItem('admin_token');
+            window.location.reload();
+        }
+
+        document.getElementById('senhaPainel')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') entrarPainel();
+        });
+
         // ========== TABS ==========
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -215,8 +286,6 @@
                 btn.classList.add('active');
                 const tab = btn.dataset.tab;
                 document.getElementById('tab-' + tab).classList.add('active');
-                
-                // 🔥 Carrega dados ao clicar na aba
                 if (tab === 'motoristas') carregarMotoristas();
                 if (tab === 'passageiros') carregarPassageiros();
                 if (tab === 'corridas') carregarCorridas();
@@ -236,7 +305,7 @@
                 document.getElementById('corridasAtivas').textContent = data.estatisticas?.corridas_ativas || data.corridas_ativas?.length || 0;
                 document.getElementById('corridasFinalizadas').textContent = data.estatisticas?.corridas_finalizadas_hoje || data.corridas_finalizadas?.length || 0;
                 document.getElementById('faturamento').textContent = data.totalFaturamento || `R$ ${(data.estatisticas?.faturamento_hoje || 0).toFixed(2)}`;
-            } catch (e) { console.error('Erro dashboard:', e); }
+            } catch (e) {}
         }
 
         async function carregarMotoristas() {
@@ -245,15 +314,8 @@
                 const data = await res.json();
                 const tbody = document.getElementById('listaMotoristas');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>'; return; }
-                tbody.innerHTML = data.map(m => `
-                    <tr><td>#${m.id}</td>
-                        <td><img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=35&background=334155&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
-                        <td><strong>${m.nome}</strong></td><td style="color:#94A3B8;">${m.email}</td>
-                        <td>${m.carro || '-'}</td><td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa || '-'}</span></td>
-                        <td><span class="badge ${m.online ? 'badge-online' : 'badge-offline'}">${m.online ? '🟢 Online' : '🔴 Offline'}</span></td>
-                        <td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')">💵</button>
-                        <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button></td></tr>`).join('');
-            } catch (e) { document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>'; }
+                tbody.innerHTML = data.map(m => `<tr><td>#${m.id}</td><td><img src="${m.foto_perfil||'https://ui-avatars.com/api/?name='+encodeURIComponent(m.nome)+'&size=35&background=334155&color=fff'}" class="avatar" onerror="this.style.display='none'"></td><td><strong>${m.nome}</strong></td><td style="color:#94A3B8;">${m.email}</td><td>${m.carro||'-'}</td><td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa||'-'}</span></td><td><span class="badge ${m.online?'badge-online':'badge-offline'}">${m.online?'🟢 Online':'🔴 Offline'}</span></td><td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id},'${m.nome}','motorista')">💵</button><button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button></td></tr>`).join('');
+            } catch (e) {}
         }
 
         async function carregarPassageiros() {
@@ -262,12 +324,7 @@
                 const data = await res.json();
                 const tbody = document.getElementById('listaPassageiros');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>'; return; }
-                tbody.innerHTML = data.map(p => `
-                    <tr><td>#${p.id}</td>
-                        <td><img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=35&background=3B82F6&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
-                        <td><strong>${p.nome}</strong></td><td style="color:#94A3B8;">${p.email}</td><td>${p.telefone || '-'}</td>
-                        <td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id}, '${p.nome}', 'passageiro')">💵</button>
-                        <button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})">🗑</button></td></tr>`).join('');
+                tbody.innerHTML = data.map(p => `<tr><td>#${p.id}</td><td><img src="${p.foto_perfil||'https://ui-avatars.com/api/?name='+encodeURIComponent(p.nome)+'&size=35&background=3B82F6&color=fff'}" class="avatar" onerror="this.style.display='none'"></td><td><strong>${p.nome}</strong></td><td style="color:#94A3B8;">${p.email}</td><td>${p.telefone||'-'}</td><td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id},'${p.nome}','passageiro')">💵</button><button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})">🗑</button></td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -277,13 +334,7 @@
                 const data = await res.json();
                 const tbody = document.getElementById('listaCorridas');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhuma corrida</td></tr>'; return; }
-                tbody.innerHTML = data.map(c => `
-                    <tr><td>#${c.id}</td><td>${c.passageiro_nome || '-'}</td><td>${c.motorista_nome || 'Aguardando'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem || '-'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino || '-'}</td>
-                        <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                        <td><span class="badge ${c.forma_pagamento === 'dinheiro' ? 'badge-dinheiro' : 'badge-pix'}">${c.forma_pagamento === 'dinheiro' ? '💵' : '💳'} ${c.forma_pagamento || 'pix'}</span></td>
-                        <td><span class="badge badge-${c.status || 'pendente'}">${c.status || 'pendente'}</span></td></tr>`).join('');
+                tbody.innerHTML = data.map(c => `<tr><td>#${c.id}</td><td>${c.passageiro_nome||'-'}</td><td>${c.motorista_nome||'Aguardando'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem||'-'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino||'-'}</td><td><strong>R$ ${(c.valor||0).toFixed(2)}</strong></td><td><span class="badge ${c.forma_pagamento==='dinheiro'?'badge-dinheiro':'badge-pix'}">${c.forma_pagamento==='dinheiro'?'💵':'💳'} ${c.forma_pagamento||'pix'}</span></td><td><span class="badge badge-${c.status||'pendente'}">${c.status||'pendente'}</span></td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -293,7 +344,7 @@
                 const data = await res.json();
                 const tbody = document.getElementById('listaAvaliacoes');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748B;">Nenhuma avaliação</td></tr>'; return; }
-                tbody.innerHTML = data.map(a => `<tr><td>#${a.id}</td><td>Corrida #${a.corrida_id || '-'}</td><td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td><td style="color:#94A3B8;">${a.comentario || 'Sem comentário'}</td></tr>`).join('');
+                tbody.innerHTML = data.map(a => `<tr><td>#${a.id}</td><td>Corrida #${a.corrida_id||'-'}</td><td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td><td style="color:#94A3B8;">${a.comentario||'Sem comentário'}</td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -303,24 +354,19 @@
                 const data = await res.json();
                 const tbody = document.getElementById('listaTransacoes');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Nenhuma transação</td></tr>'; return; }
-                tbody.innerHTML = data.map(t => `<tr><td>#${t.id}</td><td>Usuário #${t.usuario_id}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo === 'credito' || t.tipo === 'recarga' ? '+' : '-'} R$ ${(t.valor || 0).toFixed(2)}</td><td style="color:#94A3B8;">${t.descricao || '-'}</td></tr>`).join('');
+                tbody.innerHTML = data.map(t => `<tr><td>#${t.id}</td><td>Usuário #${t.usuario_id}</td><td style="color:${t.tipo==='credito'||t.tipo==='recarga'?'#10B981':'#EF4444'};">${t.tipo}</td><td style="color:${t.tipo==='credito'||t.tipo==='recarga'?'#10B981':'#EF4444'};">${t.tipo==='credito'||t.tipo==='recarga'?'+':'-'} R$ ${(t.valor||0).toFixed(2)}</td><td style="color:#94A3B8;">${t.descricao||'-'}</td></tr>`).join('');
             } catch (e) {}
         }
 
-        // ========== 🔥 TARIFAS ==========
         async function carregarTarifas() {
             try {
                 const res = await fetch(`${API}/configuracoes`);
                 const data = await res.json();
-                console.log('📊 Tarifas carregadas:', data);
                 document.getElementById('bandeirada').value = data.bandeirada || 5.0;
                 document.getElementById('preco_km').value = data.preco_km || 2.5;
                 document.getElementById('multiplicador_dinamico').value = data.multiplicador_dinamico || 1.0;
                 document.getElementById('dinamico_ativo').value = data.dinamico_ativo || 0;
-            } catch (e) {
-                console.error('Erro ao carregar tarifas:', e);
-                toast('Erro ao carregar tarifas', 'error');
-            }
+            } catch (e) { toast('Erro ao carregar tarifas', 'error'); }
         }
 
         async function salvarTarifas() {
@@ -330,42 +376,18 @@
                 multiplicador_dinamico: parseFloat(document.getElementById('multiplicador_dinamico').value),
                 dinamico_ativo: parseInt(document.getElementById('dinamico_ativo').value)
             };
-            
-            console.log('💾 Salvando tarifas:', dados);
-            
             try {
-                const res = await fetch(`${API}/admin/configuracoes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                
-                if (res.ok) {
-                    toast('✅ Tarifas salvas com sucesso!', 'success');
-                } else {
-                    const err = await res.json();
-                    toast('❌ Erro: ' + (err.erro || 'Falha ao salvar'), 'error');
-                }
-            } catch (e) {
-                console.error('Erro ao salvar:', e);
-                toast('❌ Erro de conexão', 'error');
-            }
+                const res = await fetch(`${API}/admin/configuracoes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+                if (res.ok) toast('✅ Tarifas salvas!');
+                else toast('❌ Erro ao salvar', 'error');
+            } catch (e) { toast('❌ Erro de conexão', 'error'); }
         }
 
-        // ========== EXCLUIR ==========
-        async function excluirMotorista(id) {
-            if (!confirm(`Excluir motorista #${id}?`)) return;
-            try { await fetch(`${API}/admin/excluir_motorista/${id}`, { method: 'DELETE' }); toast('Motorista excluído!'); carregarMotoristas(); carregarDashboard(); } catch (e) { toast('Erro ao excluir', 'error'); }
-        }
-        async function excluirPassageiro(id) {
-            if (!confirm(`Excluir passageiro #${id}?`)) return;
-            try { await fetch(`${API}/admin/excluir_passageiro/${id}`, { method: 'DELETE' }); toast('Passageiro excluído!'); carregarPassageiros(); carregarDashboard(); } catch (e) { toast('Erro ao excluir', 'error'); }
-        }
+        async function excluirMotorista(id) { if (!confirm(`Excluir motorista #${id}?`)) return; try { await fetch(`${API}/admin/excluir_motorista/${id}`, { method: 'DELETE' }); toast('Motorista excluído!'); carregarMotoristas(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
+        async function excluirPassageiro(id) { if (!confirm(`Excluir passageiro #${id}?`)) return; try { await fetch(`${API}/admin/excluir_passageiro/${id}`, { method: 'DELETE' }); toast('Passageiro excluído!'); carregarPassageiros(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
 
-        // ========== SALDO ==========
         function abrirModalSaldo(id, nome, tipo) {
             usuarioSaldoId = id;
-            document.getElementById('modalTitulo').textContent = '💰 Adicionar Saldo';
             document.getElementById('modalUsuario').textContent = `${nome} (${tipo})`;
             document.getElementById('modalValor').value = '';
             document.getElementById('modalSaldo').classList.add('show');
@@ -379,95 +401,15 @@
                 const res = await fetch(`${API}/admin/adicionar_saldo/${usuarioSaldoId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor }) });
                 const data = await res.json();
                 if (res.ok) { toast(`✅ R$ ${valor.toFixed(2)} adicionado!`); fecharModal(); carregarMotoristas(); carregarPassageiros(); carregarDashboard(); }
-                else { toast('❌ ' + (data.erro || 'Erro'), 'error'); }
+                else toast('❌ ' + (data.erro || 'Erro'), 'error');
             } catch (e) { toast('Erro de conexão', 'error'); }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📊 Painel Admin Rota Brasil');
-            carregarDashboard();
-            carregarMotoristas();
-            setInterval(() => { carregarDashboard(); carregarMotoristas(); }, 30000);
-        });
-
         document.getElementById('modalSaldo').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
         document.getElementById('modalValor').addEventListener('keypress', function(e) { if (e.key === 'Enter') confirmarSaldo(); });
-        // ========== LOGIN DO PAINEL ==========
-const API = 'https://rotabrasil-tobu.onrender.com';
 
-async function entrarPainel() {
-    const senha = document.getElementById('senhaPainel').value;
-    if (!senha) {
-        document.getElementById('erroPainel').textContent = 'Digite a senha!';
-        document.getElementById('erroPainel').style.display = 'block';
-        return;
-    }
-    
-    try {
-        const res = await fetch(`${API}/admin/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ senha })
-        });
-        
-        const data = await res.json();
-        
-        if (data.sucesso) {
-            // Salva o token
-            localStorage.setItem('admin_token', data.token);
-            // Esconde a tela de login
-            document.getElementById('loginPainel').style.display = 'none';
-            // Carrega os dados
-            carregarDashboard();
-            carregarMotoristas();
-            toast('✅ Acesso liberado!');
-        } else {
-            document.getElementById('erroPainel').textContent = data.erro || 'Senha incorreta!';
-            document.getElementById('erroPainel').style.display = 'block';
-        }
-    } catch (e) {
-        document.getElementById('erroPainel').textContent = 'Erro de conexão';
-        document.getElementById('erroPainel').style.display = 'block';
-    }
-}
-
-// Tecla Enter para enviar
-document.getElementById('senhaPainel')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') entrarPainel();
-});
-
-// Verifica se já está logado
-function verificarLogin() {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-        // Verifica se o token ainda é válido
-        fetch(`${API}/admin/verificar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.valido) {
-                document.getElementById('loginPainel').style.display = 'none';
-                carregarDashboard();
-                carregarMotoristas();
-            } else {
-                localStorage.removeItem('admin_token');
-            }
-        })
-        .catch(() => {
-            localStorage.removeItem('admin_token');
-        });
-    }
-}
-
-// Verifica ao carregar a página
-verificarLogin();
-        function logoutPainel() {
-    localStorage.removeItem('admin_token');
-    window.location.reload();
-}
+        // ========== INIT ==========
+        verificarLogin();
     </script>
 </body>
 </html>
