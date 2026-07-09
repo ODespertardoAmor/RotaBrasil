@@ -405,7 +405,7 @@ def nova_corrida():
     motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
     for m in motoristas:
         socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
-    #socketio.emit("nova_corrida", dados_chamada)
+    socketio.emit("nova_corrida", dados_chamada)
     
     print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f} | Paradas: {len(paradas)}")
     
@@ -439,10 +439,8 @@ def aceitar_corrida(id):
         "carro": motorista.carro,
         "placa": motorista.placa
     }
-    motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
-    for m in motoristas:
-        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
-        #socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
+    
+    socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
     return jsonify({"sucesso": True, "corrida_id": corrida.id, "status": "aceita"}), 200
 
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
@@ -1255,13 +1253,40 @@ def perfil_usuario(usuario_id):
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
-  
+# Obter configurações atuais (qualquer um pode acessar)
+@app.route('/configuracoes', methods=['GET'])
+def get_configuracoes():
+    configs = Configuracao.query.all()
+    dados = {}
+    for c in configs:
+        dados[c.chave] = c.valor
+    # Valores padrão caso não existam
+    defaults = {
+        'bandeirada': 5.0,
+        'preco_km': 2.5,
+        'multiplicador_dinamico': 1.0,
+        'dinamico_ativo': 0  # 0 ou 1
+    }
+    for k, v in defaults.items():
+        if k not in dados:
+            dados[k] = v
+    return jsonify(dados)
 
-# ==≠≠==≠=Atualizar configurações (admin)
-import base64
-
-# Senha do painel admin (ALTERE AQUI!)
-SENHA_PAINEL = "ROTA156478brasil"
+# Atualizar configurações (admin)
+@app.route('/admin/configuracoes', methods=['POST'])
+def admin_configuracoes():
+    dados = request.get_json()
+    for chave, valor in dados.items():
+        config = Configuracao.query.filter_by(chave=chave).first()
+        if config:
+            config.valor = float(valor)
+        else:
+            nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
+            db.session.add(nova)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+# Senha do painel admin (configure aqui)
+SENHA_PAINEL = "minha_senha_secreta_123"  # 🔥 MUDE ESTA SENHA!
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
@@ -1271,8 +1296,7 @@ def admin_login():
     
     if senha == SENHA_PAINEL:
         # Gera um token simples
-        token_str = f"admin:{senha}:{datetime.utcnow().timestamp()}"
-        token = base64.b64encode(token_str.encode()).decode()
+        token = base64.b64encode(f"admin:{senha}:{datetime.utcnow().timestamp()}".encode()).decode()
         return jsonify({'sucesso': True, 'token': token})
     else:
         return jsonify({'sucesso': False, 'erro': 'Senha incorreta'}), 401
@@ -1290,66 +1314,7 @@ def admin_verificar():
     except:
         pass
     
-    return jsonify({'valido': False}), 401
-# ========== CONFIGURAÇÕES ==========
-
-@app.route('/configuracoes', methods=['GET'])
-def get_configuracoes():
-    """Retorna as configurações atuais"""
-    try:
-        configs = Configuracao.query.all()
-        dados = {}
-        for c in configs:
-            dados[c.chave] = c.valor
-        
-        # Valores padrão caso não existam
-        defaults = {
-            'bandeirada': 5.0,
-            'preco_km': 2.5,
-            'multiplicador_dinamico': 1.0,
-            'dinamico_ativo': 0
-        }
-        for k, v in defaults.items():
-            if k not in dados:
-                dados[k] = v
-        
-        return jsonify(dados)
-    except Exception as e:
-        # Se a tabela não existir, retorna padrões
-        return jsonify({
-            'bandeirada': 5.0,
-            'preco_km': 2.5,
-            'multiplicador_dinamico': 1.0,
-            'dinamico_ativo': 0
-        })
-
-@app.route('/admin/configuracoes', methods=['POST', 'OPTIONS'])
-def admin_configuracoes():
-    """Salva as configurações de tarifas"""
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'})
-    
-    dados = request.get_json()
-    print(f"📥 Recebido para salvar: {dados}")
-    
-    try:
-        for chave, valor in dados.items():
-            config = Configuracao.query.filter_by(chave=chave).first()
-            if config:
-                config.valor = float(valor)
-                print(f"📝 Atualizado: {chave} = {valor}")
-            else:
-                nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
-                db.session.add(nova)
-                print(f"➕ Criado: {chave} = {valor}")
-        
-        db.session.commit()
-        print("✅ Configurações salvas com sucesso!")
-        return jsonify({'status': 'ok', 'mensagem': 'Configurações salvas!'})
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Erro: {e}")
-        return jsonify({'erro': str(e)}), 500    
+    return jsonify({'valido': False}), 401    
 # ==========================================
 # INICIAR
 # ==========================================
