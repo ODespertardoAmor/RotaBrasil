@@ -15,10 +15,7 @@
             --borda: #363E4D; --texto: #F5F7FA;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
-        body {
-            background: var(--fundo); color: var(--texto); height: 100vh;
-            overflow-x: hidden; overflow-y: auto; user-select: none; position: relative;
-        }
+        body { background: var(--fundo); color: var(--texto); height: 100vh; overflow-x: hidden; overflow-y: auto; user-select: none; position: relative; }
         #loginScreen { position: absolute; inset: 0; background: var(--fundo); display: flex; flex-direction: column; justify-content: center; padding: 20px; z-index: 9999; }
         .logo { text-align: center; margin-bottom: 30px; }
         .logo h1 { font-size: 38px; font-weight: 900; background: linear-gradient(90deg, #165DFF, #7B2CFF); -webkit-background-clip: text; color: transparent; }
@@ -78,26 +75,10 @@
         .linha-parada { background: rgba(234,179,8,0.1); padding: 6px 8px; border-radius: 6px; margin: 3px 0; font-size: 13px; display: flex; justify-content: space-between; }
         .linha-parada span:last-child { color: #EAB308; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @keyframes piscar { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        /* 🔥 Animação dos foguinhos */
+        @keyframes floatFogo { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-15px) scale(1.2); } }
         .popup-dinamico .leaflet-popup-content-wrapper { background: #FF7D00; color: white; border-radius: 10px; font-weight: bold; text-align: center; }
         .popup-dinamico .leaflet-popup-tip { background: #FF7D00; }
-        /* 🔥 FOGUINHO GARANTIDO */
-.foguinho-marcador {
-    background: transparent !important;
-    border: none !important;
-}
-.foguinho-icone {
-    font-size: 35px;
-    animation: floatFogo 1.5s ease-in-out infinite;
-    filter: drop-shadow(0 0 8px #FF7D00);
-    display: block;
-    text-align: center;
-    line-height: 1;
-}
-@keyframes floatFogo {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-12px); }
-}
     </style>
 </head>
 <body>
@@ -190,7 +171,7 @@
         let envioLocalizacaoInterval = null;
         let notaAvaliacao = 0, timerCorrida = null, segundosCorrida = 15;
 
-        // ========== MAPA (NUNCA RECRIAR) ==========
+        // ========== MAPA ==========
         let mapaLeaflet = null, marcadorMotorista = null;
 
         function iniciarMapa() {
@@ -198,7 +179,6 @@
             mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false }).setView([posicaoAtual.lat, posicaoAtual.lng], 16);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
             marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], { icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] }) }).addTo(mapaLeaflet);
-            if (dinamicoAtivo) setTimeout(() => mostrarIndicadoresDinamicos(), 300);
         }
 
         function atualizarPosicaoMapa(lat, lng) {
@@ -206,107 +186,42 @@
             if (marcadorMotorista) { marcadorMotorista.setLatLng([lat, lng]); mapaLeaflet.setView([lat, lng], 16, { animate: false }); }
         }
 
-        // ========== 🔥 PREÇO DINÂMICO (TRAVADO - NUNCA SOME) ==========
-        let marcadoresDinamicos = [], watchdogDinamicoInterval = null, verificacaoDinamicoInterval = null, dinamicoAtivo = false;
-        const iconeDinamico = L.divIcon({ html: '<div style="font-size:28px; animation: float 2s ease-in-out infinite; filter: drop-shadow(0 0 6px #FF7D00);">🔥</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] });
-        const posicoesDinamicas = [[-23.5505,-46.6333],[-23.5610,-46.6560],[-23.5400,-46.6100],[-23.5700,-46.6400],[-23.5300,-46.6200],[-23.5550,-46.6450],[-23.5450,-46.6250],[-23.5600,-46.6150]];
+        // ========== 🔥 PREÇO DINÂMICO (HTML GARANTIDO) ==========
+        let foguinhosHTML = [], watchdogDinamicoInterval = null, verificacaoDinamicoInterval = null, dinamicoAtivo = false;
+        const posicoesDinamicas = [
+            { top: '15%', left: '20%' }, { top: '25%', left: '60%' }, { top: '40%', left: '35%' }, { top: '55%', left: '70%' },
+            { top: '35%', left: '15%' }, { top: '20%', left: '50%' }, { top: '60%', left: '40%' }, { top: '45%', left: '80%' }
+        ];
 
-        function mostrarIndicadoresDinamicos() {
-    if (!mapaLeaflet) {
-        console.warn('⏳ Mapa não existe, tentando em 500ms...');
-        setTimeout(mostrarIndicadoresDinamicos, 500);
-        return;
-    }
-
-    // Limpa marcadores antigos
-    marcadoresDinamicos.forEach(m => {
-        try { mapaLeaflet.removeLayer(m); } catch(e) {}
-    });
-    marcadoresDinamicos = [];
-
-    console.log('🔥 Criando foguinhos...');
-    
-    posicoesDinamicas.forEach((pos, i) => {
-        // Criar ícone HTML simples e garantido
-        const iconeDinamico = L.divIcon({
-    html: `<div class="foguinho-icone">🔥</div>`,
-    className: 'foguinho-marcador',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
-});
-async function verificarPrecoDinamico() {
-    if (dinamicoAtivo) {
-        console.log('⏺️ Já ativo, verificando visibilidade...');
-        if (mapaLeaflet) {
-            const visiveis = marcadoresDinamicos.filter(m => {
-                try { return mapaLeaflet.hasLayer(m); } catch(e) { return false; }
-            }).length;
-            console.log(`👀 Foguinhos visíveis: ${visiveis}/${posicoesDinamicas.length}`);
-            if (visiveis < posicoesDinamicas.length) {
-                console.log('🔧 Recolocando foguinhos...');
-                mostrarIndicadoresDinamicos();
-            }
+        function criarFoguinhosHTML() {
+            removerFoguinhosHTML();
+            posicoesDinamicas.forEach((pos, i) => {
+                const f = document.createElement('div');
+                f.id = `foguinho-${i}`;
+                f.style.cssText = `position:fixed; top:${pos.top}; left:${pos.left}; font-size:35px; z-index:50; animation: floatFogo 1.5s ease-in-out infinite; filter: drop-shadow(0 0 10px #FF7D00); pointer-events:none; user-select:none;`;
+                f.textContent = '🔥';
+                document.body.appendChild(f);
+                foguinhosHTML.push(f);
+            });
         }
-        return;
-    }
-    
-    try {
-        console.log('🔍 Verificando API de configurações...');
-        const r = await fetch(`${API_URL}/configuracoes`);
-        const config = await r.json();
-        console.log('📊 Config:', JSON.stringify(config));
-        
-        const ativo = parseInt(config.dinamico_ativo || 0) === 1;
-        console.log('📊 dinâmico_ativo =', config.dinamico_ativo, '| ativo =', ativo);
-        
-        if (ativo) {
-            console.log('🔥 ATIVANDO PREÇO DINÂMICO!');
-            dinamicoAtivo = true;
-            mostrarIndicadoresDinamicos();
-            pararVerificacaoAPI();
-            iniciarWatchdogDinamico();
-        } else {
-            console.log('❌ Preço dinâmico DESATIVADO no servidor');
-        }
-    } catch (e) {
-        console.error('❌ Erro:', e.message);
-    }
-}
-        
 
-        const m = L.marker(pos, {
-            icon: icone,
-            interactive: false,
-            zIndexOffset: 1000
-        }).addTo(mapaLeaflet);
-
-        m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', {
-            closeButton: false,
-            className: 'popup-dinamico'
-        });
-
-        marcadoresDinamicos.push(m);
-        console.log(`🔥 Foguinho ${i+1} criado em ${pos[0]}, ${pos[1]}`);
-    });
-
-    console.log(`✅ Total: ${marcadoresDinamicos.length} foguinhos no mapa`);
-}
-
-        function removerIndicadoresDinamicos() {
-            marcadoresDinamicos.forEach(m => { if (mapaLeaflet && mapaLeaflet.hasLayer(m)) mapaLeaflet.removeLayer(m); });
-            marcadoresDinamicos = [];
+        function removerFoguinhosHTML() {
+            foguinhosHTML.forEach(f => { if (f && f.parentNode) f.parentNode.removeChild(f); });
+            foguinhosHTML = [];
         }
 
         async function verificarPrecoDinamico() {
-            if (dinamicoAtivo) { if (mapaLeaflet && marcadoresDinamicos.length < posicoesDinamicas.length) mostrarIndicadoresDinamicos(); return; }
+            if (dinamicoAtivo) {
+                if (foguinhosHTML.length === 0) criarFoguinhosHTML();
+                return;
+            }
             try {
                 const r = await fetch(`${API_URL}/configuracoes`);
                 const config = await r.json();
                 if (parseInt(config.dinamico_ativo || 0) === 1) {
-                    console.log('🔥 ATIVANDO PREÇO DINÂMICO!');
                     dinamicoAtivo = true;
-                    mostrarIndicadoresDinamicos();
-                    pararVerificacaoAPI();
+                    criarFoguinhosHTML();
+                    if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
                     iniciarWatchdogDinamico();
                 }
             } catch (e) {}
@@ -314,18 +229,21 @@ async function verificarPrecoDinamico() {
 
         function iniciarWatchdogDinamico() {
             if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
-            watchdogDinamicoInterval = setInterval(() => {
-                if (dinamicoAtivo && mapaLeaflet && marcadoresDinamicos.filter(m => mapaLeaflet.hasLayer(m)).length < posicoesDinamicas.length) {
-                    mostrarIndicadoresDinamicos();
-                }
-            }, 2000);
+            watchdogDinamicoInterval = setInterval(() => { if (dinamicoAtivo && foguinhosHTML.length < posicoesDinamicas.length) criarFoguinhosHTML(); }, 3000);
         }
 
-        function iniciarVerificacaoAPI() { if (verificacaoDinamicoInterval) clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 10000); }
-        function pararVerificacaoAPI() { if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; } }
-        function iniciarVerificacaoDinamico() { pararTudoDinamico(); setTimeout(() => verificarPrecoDinamico(), 2000); iniciarVerificacaoAPI(); }
-        function pararTudoDinamico() { pararVerificacaoAPI(); if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; } }
-        function pararVerificacaoDinamico() { pararTudoDinamico(); removerIndicadoresDinamicos(); dinamicoAtivo = false; }
+        function iniciarVerificacaoDinamico() {
+            pararTudoDinamico();
+            setTimeout(() => verificarPrecoDinamico(), 2000);
+            verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 10000);
+        }
+
+        function pararTudoDinamico() {
+            if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
+            if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; }
+        }
+
+        function pararVerificacaoDinamico() { pararTudoDinamico(); removerFoguinhosHTML(); dinamicoAtivo = false; }
 
         // ========== SOM ==========
         const somAlerta = document.getElementById('somAlerta'), somAlto = document.getElementById('somAlto'), somSucesso = document.getElementById('somSucesso'), somDinheiro = document.getElementById('somDinheiro');
@@ -355,7 +273,7 @@ async function verificarPrecoDinamico() {
         // ========== ACEITAR ==========
         async function aceitarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
 
-        // ========== GPS HÍBRIDO ==========
+        // ========== GPS ==========
         function executarIrAtePassageiro() { if (!estado.aceito || estado.pegouPassageiro) return; estado.pegouPassageiro = true; abrirGPSHibrido('origem'); document.getElementById('containerAcoesCorrida').innerHTML = ''; mostrarCardPassageiro(); }
         function executarIniciarViagem() { if (!estado.pegouPassageiro || estado.viagemIniciada) return; estado.viagemIniciada = true; document.getElementById('cardPassageiroChegada').style.display = 'none'; abrirGPSHibrido('destino'); document.getElementById('etapaTexto').className = 'etapa etapa3'; document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)); socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id }); falar("Viagem iniciada!"); }
         function abrirGPSHibrido(tipoDestino) { const paradas = corrida.paradas || []; const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`; let destinoFinal = tipoDestino === 'origem' ? ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino)); let waypoints = ''; paradas.forEach(p => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); if (e) waypoints += encodeURIComponent(e) + '|'; }); waypoints = waypoints.replace(/\|$/, ''); const googleUrl = waypoints ? `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate` : `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`; window.location.href = googleUrl; }
