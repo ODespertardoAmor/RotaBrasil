@@ -1261,7 +1261,7 @@ def perfil_usuario(usuario_id):
 import base64
 
 # Senha do painel admin (ALTERE AQUI!)
-SENHA_PAINEL = "admin123"
+SENHA_PAINEL = "ROTA156478brasil"
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
