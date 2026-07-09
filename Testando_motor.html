@@ -75,22 +75,19 @@
         .linha-parada { background: rgba(234,179,8,0.1); padding: 6px 8px; border-radius: 6px; margin: 3px 0; font-size: 13px; display: flex; justify-content: space-between; }
         .linha-parada span:last-child { color: #EAB308; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @keyframes piscar { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        /* 🔥 Animação dos foguinhos */
-        @keyframes floatFogo { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-15px) scale(1.2); } }
+        @keyframes floatFogo { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-15px) scale(1.1); } }
+        @keyframes fadeInOut { 0%, 100% { opacity: 0; } 20%, 80% { opacity: 1; } }
         .popup-dinamico .leaflet-popup-content-wrapper { background: #FF7D00; color: white; border-radius: 10px; font-weight: bold; text-align: center; }
         .popup-dinamico .leaflet-popup-tip { background: #FF7D00; }
     </style>
 </head>
 <body>
-    <!-- Modal Carteira -->
     <div id="painelCarteiraMotorista" style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:20px; color:white; display:none; z-index:99999;">
         <h2>💵 Carteira do Motorista</h2><p>Saldo: <strong id="saldoMotorista">R$ 0,00</strong></p>
         <button class="btn-warning" style="margin:5px 0;">🏦 Solicitar Saque</button>
         <button class="btn-primary" style="margin:5px 0;">📜 Histórico</button>
         <button class="btn-danger" onclick="document.getElementById('painelCarteiraMotorista').style.display='none'" style="margin:5px 0;">❌ Fechar</button>
     </div>
-
-    <!-- Card Passageiro Chegada -->
     <div id="cardPassageiroChegada" class="card-chegada">
         <img id="fotoChegada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E">
         <h3 id="nomeChegada">Passageiro</h3>
@@ -101,15 +98,9 @@
     <div id="avisoErro" class="erro-tela"></div>
     <div id="alertaCancel" class="alerta-cancelamento"><h2><i class="fas fa-times-circle"></i> CORRIDA CANCELADA!</h2><p>O passageiro cancelou a corrida.</p><button onclick="document.getElementById('alertaCancel').style.display='none'" style="background:white; color:var(--perigo); margin-top:15px; padding:10px 20px; border-radius:8px;">OK</button></div>
     <div id="modalAvaliacao" class="avaliacao-modal"><h2>🏁 CORRIDA FINALIZADA!</h2><p style="color:#86909C; margin:10px 0;">Avalie o passageiro:</p><div id="estrelasAvaliacao" class="estrelas"><span class="estrela" data-valor="1">★</span><span class="estrela" data-valor="2">★</span><span class="estrela" data-valor="3">★</span><span class="estrela" data-valor="4">★</span><span class="estrela" data-valor="5">★</span></div><textarea id="comentarioAvaliacao" placeholder="Comentário..." style="width:100%; background:#272E3B; border:1px solid var(--borda); border-radius:8px; padding:10px; color:white; min-height:60px; resize:none;"></textarea><button class="btn-success" onclick="enviarAvaliacao()">✅ ENVIAR AVALIAÇÃO</button></div>
-
-    <!-- Login -->
     <div id="loginScreen"><div class="logo"><h1>ROTA BRASIL 🇧🇷</h1><p style="color:#86909C;">Painel do Motorista</p></div><div class="card"><input type="text" id="nome" placeholder="👤 Nome Completo"><input type="email" id="email" placeholder="📧 E-mail"><input type="password" id="senha" placeholder="🔒 Senha"><input type="tel" id="telefone" placeholder="📱 WhatsApp"><input type="text" id="carro" placeholder="🚘 Modelo / Cor"><input type="text" id="placa" placeholder="🔖 Placa"><button class="btn-primary" onclick="cadastrar()"><i class="fas fa-user-plus"></i> Criar Conta</button><button class="btn-success" onclick="entrar()"><i class="fas fa-sign-in-alt"></i> Entrar</button><div id="statusLogin" class="status-text"></div></div></div>
-
-    <!-- Mapa -->
     <div id="mapaLeaflet"></div>
     <div class="header" id="header" style="display:none;"><div style="font-weight:800; font-size:18px;">ROTA BRASIL 🇧🇷</div><div id="statusMotorista" class="status-bolinha offline"><i class="fas fa-circle"></i> <span>Offline</span></div></div>
-
-    <!-- Card Nova Corrida -->
     <div id="cardCorrida" class="card-corrida">
         <h3 style="text-align:center; margin-bottom:15px; color:var(--alerta);"><i class="fas fa-bell"></i> NOVA CORRIDA</h3>
         <div class="linha" style="border-bottom:none; padding-bottom:2px;"><span>👤 Passageiro</span> <span id="cPassageiro">-</span></div>
@@ -118,12 +109,14 @@
         <div id="paradasContainer"></div>
         <div class="linha"><span>🏁 Destino</span> <span id="cDestino">-</span></div>
         <div class="linha"><span>📏 Distância</span> <span id="cDistancia">-</span></div>
+        <div class="linha" id="linhaDinamico" style="display:none; background:rgba(255,125,0,0.2); border-radius:6px; padding:6px 8px; margin:3px 0;">
+            <span>🔥 Preço Dinâmico</span>
+            <span id="cDinamico" style="color:#FF7D00; font-weight:800;">1.0x</span>
+        </div>
         <div class="linha"><span>💵 Valor</span> <span id="cValor" class="valor-grande">-</span></div>
         <div class="linha linha-destacada" id="linhaPagamento" style="display:none;"><span>💰 Pagamento</span> <span id="cPagamento">-</span></div>
         <div class="grupo-botoes"><button class="btn-success" onclick="aceitarCorrida()">✅ ACEITAR</button><button class="btn-danger" id="btnRecusar" onclick="recusarCorrida()">❌ RECUSAR (15s)</button></div>
     </div>
-
-    <!-- Barra Inferior -->
     <div class="barra-inferior" id="barra" style="display:none;">
         <div id="botoesFixos">
             <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
@@ -137,7 +130,6 @@
             <button id="btnCancelarCorrida" class="btn-danger" onclick="cancelarCorrida()" style="margin-top:10px; display:none;"><i class="fas fa-times"></i> ❌ CANCELAR CORRIDA</button>
         </div>
     </div>
-
     <audio id="somAlerta" preload="auto" loop src="https://larissacamila.github.io/comandos/chamarRota.mp3"></audio>
     <audio id="somAlto" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/chamada.mp3"></audio>
     <audio id="somSucesso" preload="auto" src="https://rotabrasil-v1cf.onrender.com/static/sounds/sucesso.mp3"></audio>
@@ -145,21 +137,19 @@
 
     <script>
         // ========== BOTÃO DESLIZAR ==========
-        function criarBotaoDeslizar(texto, icone, cor, callback) {
-            const container = document.createElement('div'); container.className = 'container-deslize';
-            const progresso = document.createElement('div'); progresso.className = 'progresso-deslize';
-            const trilha = document.createElement('div'); trilha.className = 'trilha-deslize';
-            trilha.innerHTML = `<i class="${icone}"></i> ${texto}`;
-            const pino = document.createElement('div'); pino.className = 'pino-deslize';
-            pino.innerHTML = '→'; pino.style.background = cor;
-            container.appendChild(progresso); container.appendChild(trilha); container.appendChild(pino);
-            let arrastando = false, concluido = false, callbackExecutado = false;
-            const larguraMax = () => container.offsetWidth - pino.offsetWidth - 6;
-            pino.addEventListener('pointerdown', (e) => { if (concluido || callbackExecutado) return; arrastando = true; pino.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation(); });
-            pino.addEventListener('pointermove', (e) => { if (!arrastando || concluido || callbackExecutado) return; const rect = container.getBoundingClientRect(); let x = e.clientX - rect.left - (pino.offsetWidth / 2); x = Math.max(3, Math.min(x, larguraMax())); pino.style.left = x + 'px'; progresso.style.width = (x + pino.offsetWidth/2) + 'px'; if (x >= larguraMax() - 10 && !callbackExecutado) { concluido = true; arrastando = false; callbackExecutado = true; pino.classList.add('concluido'); container.classList.add('concluido'); pino.style.left = larguraMax() + 'px'; progresso.style.width = '100%'; pino.innerHTML = '✓'; if (callback) setTimeout(() => callback(), 300); } e.preventDefault(); e.stopPropagation(); });
-            pino.addEventListener('pointerup', () => { if (!arrastando) return; arrastando = false; if (!concluido && !callbackExecutado) { pino.style.transition = 'left 0.3s ease'; pino.style.left = '3px'; progresso.style.transition = 'width 0.3s ease'; progresso.style.width = '0px'; setTimeout(() => { pino.style.transition = 'left 0.1s ease'; progresso.style.transition = 'width 0.1s ease'; }, 300); } });
-            container.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
-            return container;
+        function criarBotaoDeslizar(t, i, c, cb) {
+            const ct = document.createElement('div'); ct.className = 'container-deslize';
+            const pg = document.createElement('div'); pg.className = 'progresso-deslize';
+            const tr = document.createElement('div'); tr.className = 'trilha-deslize'; tr.innerHTML = `<i class="${i}"></i> ${t}`;
+            const pn = document.createElement('div'); pn.className = 'pino-deslize'; pn.innerHTML = '→'; pn.style.background = c;
+            ct.appendChild(pg); ct.appendChild(tr); ct.appendChild(pn);
+            let ar = false, cl = false, ce = false;
+            const lm = () => ct.offsetWidth - pn.offsetWidth - 6;
+            pn.addEventListener('pointerdown', (e) => { if (cl || ce) return; ar = true; pn.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation(); });
+            pn.addEventListener('pointermove', (e) => { if (!ar || cl || ce) return; const r = ct.getBoundingClientRect(); let x = e.clientX - r.left - (pn.offsetWidth / 2); x = Math.max(3, Math.min(x, lm())); pn.style.left = x + 'px'; pg.style.width = (x + pn.offsetWidth/2) + 'px'; if (x >= lm() - 10 && !ce) { cl = true; ar = false; ce = true; pn.classList.add('concluido'); ct.classList.add('concluido'); pn.style.left = lm() + 'px'; pg.style.width = '100%'; pn.innerHTML = '✓'; if (cb) setTimeout(() => cb(), 300); } e.preventDefault(); e.stopPropagation(); });
+            pn.addEventListener('pointerup', () => { if (!ar) return; ar = false; if (!cl && !ce) { pn.style.transition = 'left 0.3s ease'; pn.style.left = '3px'; pg.style.transition = 'width 0.3s ease'; pg.style.width = '0px'; setTimeout(() => { pn.style.transition = 'left 0.1s ease'; pg.style.transition = 'width 0.1s ease'; }, 300); } });
+            ct.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
+            return ct;
         }
 
         // ========== CONFIG ==========
@@ -170,80 +160,61 @@
         let posicaoAtual = { lat: -23.5645, lng: -46.6523 };
         let envioLocalizacaoInterval = null;
         let notaAvaliacao = 0, timerCorrida = null, segundosCorrida = 15;
-
-        // ========== MAPA ==========
         let mapaLeaflet = null, marcadorMotorista = null;
 
-        function iniciarMapa() {
-            if (mapaLeaflet) return;
-            mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false }).setView([posicaoAtual.lat, posicaoAtual.lng], 16);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet);
-            marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], { icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] }) }).addTo(mapaLeaflet);
-        }
-
-        function atualizarPosicaoMapa(lat, lng) {
-            if (!mapaLeaflet) { iniciarMapa(); return; }
-            if (marcadorMotorista) { marcadorMotorista.setLatLng([lat, lng]); mapaLeaflet.setView([lat, lng], 16, { animate: false }); }
-        }
-
-        // ========== 🔥 PREÇO DINÂMICO (HTML GARANTIDO) ==========
-        let foguinhosHTML = [], watchdogDinamicoInterval = null, verificacaoDinamicoInterval = null, dinamicoAtivo = false;
-        const posicoesDinamicas = [
-            { top: '15%', left: '20%' }, { top: '25%', left: '60%' }, { top: '40%', left: '35%' }, { top: '55%', left: '70%' },
-            { top: '35%', left: '15%' }, { top: '20%', left: '50%' }, { top: '60%', left: '40%' }, { top: '45%', left: '80%' }
+        // ========== 🔥 PREÇO DINÂMICO (PISCA-PISCA) ==========
+        let foguinhosHTML = [], intervaloPisca = null, verificacaoDinamicoInterval = null, dinamicoAtivo = false, multiplicadorAtual = 1.0;
+        const posicoesFogos = [
+            { top: '12%', left: '18%' }, { top: '22%', left: '58%' }, { top: '38%', left: '32%' }, { top: '52%', left: '68%' },
+            { top: '32%', left: '12%' }, { top: '18%', left: '48%' }, { top: '58%', left: '38%' }, { top: '42%', left: '78%' }
         ];
 
         function criarFoguinhosHTML() {
             removerFoguinhosHTML();
-            posicoesDinamicas.forEach((pos, i) => {
-                const f = document.createElement('div');
-                f.id = `foguinho-${i}`;
-                f.style.cssText = `position:fixed; top:${pos.top}; left:${pos.left}; font-size:35px; z-index:50; animation: floatFogo 1.5s ease-in-out infinite; filter: drop-shadow(0 0 10px #FF7D00); pointer-events:none; user-select:none;`;
-                f.textContent = '🔥';
-                document.body.appendChild(f);
-                foguinhosHTML.push(f);
+            const mt = multiplicadorAtual.toFixed(1);
+            posicoesFogos.forEach((pos, i) => {
+                const ct = document.createElement('div');
+                ct.id = `fog-${i}`;
+                ct.style.cssText = `position:fixed; top:${pos.top}; left:${pos.left}; z-index:50; pointer-events:none; user-select:none; text-align:center; animation: fadeInOut 8s ease-in-out infinite; animation-delay:${i * 0.3}s;`;
+                ct.innerHTML = `<div style="font-size:30px; filter:drop-shadow(0 0 8px #FF7D00); animation:floatFogo 1.5s ease-in-out infinite;">🔥</div><div style="font-size:16px; font-weight:900; color:#FF7D00; text-shadow:0 0 10px #FF7D00; background:rgba(0,0,0,0.7); border-radius:12px; padding:2px 8px; margin-top:-5px;">${mt}x</div>`;
+                document.body.appendChild(ct);
+                foguinhosHTML.push(ct);
             });
         }
 
-        function removerFoguinhosHTML() {
-            foguinhosHTML.forEach(f => { if (f && f.parentNode) f.parentNode.removeChild(f); });
-            foguinhosHTML = [];
-        }
+        function removerFoguinhosHTML() { foguinhosHTML.forEach(f => { if (f && f.parentNode) f.parentNode.removeChild(f); }); foguinhosHTML = []; }
 
         async function verificarPrecoDinamico() {
-            if (dinamicoAtivo) {
-                if (foguinhosHTML.length === 0) criarFoguinhosHTML();
-                return;
-            }
+            if (dinamicoAtivo) return;
             try {
                 const r = await fetch(`${API_URL}/configuracoes`);
-                const config = await r.json();
-                if (parseInt(config.dinamico_ativo || 0) === 1) {
+                const c = await r.json();
+                const ativo = parseInt(c.dinamico_ativo || 0) === 1;
+                multiplicadorAtual = parseFloat(c.multiplicador_dinamico || 1.0);
+                if (ativo) {
                     dinamicoAtivo = true;
                     criarFoguinhosHTML();
                     if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
-                    iniciarWatchdogDinamico();
                 }
             } catch (e) {}
         }
 
-        function iniciarWatchdogDinamico() {
-            if (watchdogDinamicoInterval) clearInterval(watchdogDinamicoInterval);
-            watchdogDinamicoInterval = setInterval(() => { if (dinamicoAtivo && foguinhosHTML.length < posicoesDinamicas.length) criarFoguinhosHTML(); }, 3000);
-        }
-
         function iniciarVerificacaoDinamico() {
-            pararTudoDinamico();
+            pararVerificacaoDinamico();
             setTimeout(() => verificarPrecoDinamico(), 2000);
-            verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 10000);
+            verificacaoDinamicoInterval = setInterval(verificarPrecoDinamico, 15000);
         }
 
-        function pararTudoDinamico() {
+        function pararVerificacaoDinamico() {
             if (verificacaoDinamicoInterval) { clearInterval(verificacaoDinamicoInterval); verificacaoDinamicoInterval = null; }
-            if (watchdogDinamicoInterval) { clearInterval(watchdogDinamicoInterval); watchdogDinamicoInterval = null; }
+            removerFoguinhosHTML();
+            dinamicoAtivo = false;
+            multiplicadorAtual = 1.0;
         }
 
-        function pararVerificacaoDinamico() { pararTudoDinamico(); removerFoguinhosHTML(); dinamicoAtivo = false; }
+        // ========== MAPA ==========
+        function iniciarMapa() { if (mapaLeaflet) return; mapaLeaflet = L.map('mapaLeaflet', { zoomControl: false, attributionControl: false }).setView([posicaoAtual.lat, posicaoAtual.lng], 16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaLeaflet); marcadorMotorista = L.marker([posicaoAtual.lat, posicaoAtual.lng], { icon: L.divIcon({ html: '<div style="font-size:30px;">🚗</div>', className: '', iconSize: [35, 35], iconAnchor: [17, 17] }) }).addTo(mapaLeaflet); }
+        function atualizarPosicaoMapa(la, ln) { if (!mapaLeaflet) { iniciarMapa(); return; } if (marcadorMotorista) { marcadorMotorista.setLatLng([la, ln]); mapaLeaflet.setView([la, ln], 16, { animate: false }); } }
 
         // ========== SOM ==========
         const somAlerta = document.getElementById('somAlerta'), somAlto = document.getElementById('somAlto'), somSucesso = document.getElementById('somSucesso'), somDinheiro = document.getElementById('somDinheiro');
@@ -256,47 +227,40 @@
         function iniciarGPS() { if (!navigator.geolocation) return; iniciarMapa(); navigator.geolocation.watchPosition((pos) => { posicaoAtual.lat = pos.coords.latitude; posicaoAtual.lng = pos.coords.longitude; atualizarPosicaoMapa(posicaoAtual.lat, posicaoAtual.lng); if (estado.aceito && corrida) { socket.emit('localizacao_motorista', { corrida_id: corrida.corrida_id || corrida.id, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); } }, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }); }
 
         // ========== LOGIN ==========
-        function statusLogin(t, tipo) { const el = document.getElementById('statusLogin'); el.textContent = t; el.className = `status-text ${tipo}`; }
+        function statusLogin(t, tp) { const el = document.getElementById('statusLogin'); el.textContent = t; el.className = `status-text ${tp}`; }
         async function cadastrar() { const d = { nome: document.getElementById('nome').value.trim(), email: document.getElementById('email').value.trim().toLowerCase(), senha: document.getElementById('senha').value.trim(), telefone: document.getElementById('telefone').value.trim(), carro: document.getElementById('carro').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), tipo: "motorista" }; if (Object.values(d).some(v => !v)) return statusLogin("❌ Preencha todos os campos!", "erro"); if (d.senha.length < 6) return statusLogin("❌ Senha mínimo 6 dígitos!", "erro"); statusLogin("⏳ Cadastrando...", ""); try { const r = await fetch(`${API_URL}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); statusLogin("✅ Criada! Entrando...", "ok"); setTimeout(() => entrar(d.email, d.senha), 1000); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); } }
-        async function entrar(emailTxt = null, senhaTxt = null) { const email = emailTxt || document.getElementById('email').value.trim().toLowerCase(), senha = senhaTxt || document.getElementById('senha').value.trim(); if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro"); statusLogin("⏳ Entrando...", ""); try { const r = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); if (ret.user.tipo !== "motorista") throw new Error("Conta não é de motorista"); token = ret.token; usuario = ret.user; localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario)); telaPrincipal(); iniciarGPS(); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); } }
+        async function entrar(em = null, sn = null) { const email = em || document.getElementById('email').value.trim().toLowerCase(), senha = sn || document.getElementById('senha').value.trim(); if (!email || !senha) return statusLogin("❌ Digite e-mail e senha!", "erro"); statusLogin("⏳ Entrando...", ""); try { const r = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) }); const ret = await r.json(); if (!r.ok) throw new Error(ret.erro || "Falha"); if (ret.user.tipo !== "motorista") throw new Error("Conta não é de motorista"); token = ret.token; usuario = ret.user; localStorage.setItem("token_motorista", token); localStorage.setItem("dados_motorista", JSON.stringify(usuario)); telaPrincipal(); iniciarGPS(); } catch (e) { statusLogin(`❌ ${e.message}`, "erro"); } }
         function telaPrincipal() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('header').style.display = 'flex'; document.getElementById('barra').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'block'; document.getElementById('areaAcoes').style.display = 'none'; iniciarVerificacaoDinamico(); }
         function sair() { pararVerificacaoDinamico(); if (estado.aceito && !confirm('Corrida em andamento!')) return; localStorage.clear(); limparTudo(); window.location.reload(); }
         async function ficarOnline() { if (!usuario || !token) return mostrarErro("Faça login!"); try { await fetch(`${API_URL}/ficar_online/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }); document.getElementById('btnOnline').style.display = 'none'; document.getElementById('btnOffline').style.display = 'block'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha online'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Online</span>'; socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); } catch (e) { mostrarErro("Erro de conexão"); } }
         async function ficarOffline() { try { await fetch(`${API_URL}/ficar_offline/${usuario.id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); document.getElementById('btnOnline').style.display = 'block'; document.getElementById('btnOffline').style.display = 'none'; const s = document.getElementById('statusMotorista'); s.className = 'status-bolinha offline'; s.innerHTML = '<i class="fas fa-circle"></i> <span>Offline</span>'; socket.emit('motorista_offline', { id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); } catch (e) {} }
 
         // ========== NOVA CORRIDA ==========
-        socket.on('nova_corrida', async (dados) => { if (estado.aceito) return; corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; iniciarSomAlertaRepetido(); document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente"; document.getElementById('cOrigem').textContent = dados.origem || '-'; document.getElementById('cDestino').textContent = dados.destino || '-'; document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...'; document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`; const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix'; const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento'); lp.style.display = 'flex'; if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; } else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; } const pc = document.getElementById('paradasContainer'); const paradas = dados.paradas || []; if (paradas.length > 0) { let h = ''; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`; }); pc.innerHTML = h; } else { pc.innerHTML = ''; } const perfilEl = document.getElementById('perfilPassageiro'); perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>'; if (dados.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { let badges = ''; if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> '; badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; perfilEl.innerHTML = badges; } else { perfilEl.innerHTML = ''; } } catch (e) { perfilEl.innerHTML = ''; } } else { perfilEl.innerHTML = ''; } document.getElementById('cardCorrida').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'none'; iniciarTemporizador(); });
+        socket.on('nova_corrida', async (dados) => { if (estado.aceito) return; corrida = dados; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; iniciarSomAlertaRepetido(); document.getElementById('cPassageiro').textContent = dados.passageiro_nome || "Cliente"; document.getElementById('cOrigem').textContent = dados.origem || '-'; document.getElementById('cDestino').textContent = dados.destino || '-'; document.getElementById('cDistancia').textContent = dados.distancia || 'Calculando...'; document.getElementById('cValor').textContent = `R$ ${parseFloat(dados.valor || 0).toFixed(2)}`; const fpg = dados.forma_pagamento || dados.formaPagamento || dados.pagamento || 'pix'; const lp = document.getElementById('linhaPagamento'), cp = document.getElementById('cPagamento'); lp.style.display = 'flex'; if (fpg === 'dinheiro' || fpg === 'cash') { cp.innerHTML = '<span class="badge-pagamento badge-dinheiro">💵 DINHEIRO</span>'; lp.style.background = 'rgba(234,179,8,0.2)'; } else { cp.innerHTML = '<span class="badge-pagamento badge-pix">💳 PIX / CARTEIRA</span>'; lp.style.background = 'rgba(22,93,255,0.15)'; } const pc = document.getElementById('paradasContainer'); const paradas = dados.paradas || []; if (paradas.length > 0) { let h = ''; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); h += `<div class="linha linha-parada"><span>📍 Parada ${i+1}</span><span>${e ? e.substring(0,35) : 'Parada '+(i+1)}</span></div>`; }); pc.innerHTML = h; } else { pc.innerHTML = ''; } const perfilEl = document.getElementById('perfilPassageiro'); perfilEl.innerHTML = '<span style="font-size:11px;">Carregando perfil...</span>'; if (dados.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${dados.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { let badges = ''; if (perfil.is_novo) badges += '<span style="background:#FF007F; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700;">🆕 NOVO</span> '; badges += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; badges += `<span style="color:#94A3B8;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; perfilEl.innerHTML = badges; } else { perfilEl.innerHTML = ''; } } catch (e) { perfilEl.innerHTML = ''; } } else { perfilEl.innerHTML = ''; }
+        // 🔥 Mostra linha de preço dinâmico se ativo
+        if (dinamicoAtivo && multiplicadorAtual > 1.0) { document.getElementById('linhaDinamico').style.display = 'flex'; document.getElementById('cDinamico').textContent = multiplicadorAtual.toFixed(1) + 'x'; } else { document.getElementById('linhaDinamico').style.display = 'none'; }
+        document.getElementById('cardCorrida').style.display = 'block'; document.getElementById('botoesFixos').style.display = 'none'; iniciarTemporizador(); });
         function iniciarTemporizador() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } segundosCorrida = 15; atualizarBtnRecusar(); timerCorrida = setInterval(() => { segundosCorrida--; atualizarBtnRecusar(); if (segundosCorrida <= 0) { clearInterval(timerCorrida); timerCorrida = null; recusarCorrida(); } }, 1000); }
         function atualizarBtnRecusar() { const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = `❌ RECUSAR (${segundosCorrida}s)`; if (segundosCorrida <= 5) { btn.style.background = '#F53F3F'; btn.style.animation = 'piscar 0.5s infinite'; } else { btn.style.background = ''; btn.style.animation = ''; } } }
-        function recusarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; corrida = null; pararSomAlerta(); document.getElementById('botoesFixos').style.display = 'block'; const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
+        function recusarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; document.getElementById('linhaDinamico').style.display = 'none'; corrida = null; pararSomAlerta(); document.getElementById('botoesFixos').style.display = 'block'; const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
 
-        // ========== ACEITAR ==========
+        // ========== ACEITAR / GPS / FINALIZAR ==========
         async function aceitarCorrida() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } pararSomAlerta(); if (!corrida || !token || !usuario) return mostrarErro("Erro"); const cid = corrida.corrida_id || corrida.id; const dm = { motorista_id: String(usuario.id), nome_motorista: usuario.nome, motorista_foto: usuario.foto_perfil || '', carro: usuario.carro || '', placa: usuario.placa || '', status: "aceito" }; try { const r = await fetch(`${API_URL}/aceitar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(dm) }); if (r.ok || r.status === 200 || r.status === 201) { estado.aceito = true; estado.pegouPassageiro = false; estado.viagemIniciada = false; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'block'; document.getElementById('btnCancelarCorrida').style.display = 'flex'; document.getElementById('etapaTexto').className = 'etapa etapa1'; document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro)); socket.emit('corrida_aceita', { ...dm, corrida_id: cid }); socket.emit("entrar_na_sala", { corrida_id: cid }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); envioLocalizacaoInterval = setInterval(() => { socket.emit('localizacao_motorista', { corrida_id: cid, lat: posicaoAtual.lat, lng: posicaoAtual.lng, motorista_id: usuario.id, motorista_nome: usuario.nome, motorista_foto: usuario.foto_perfil || '' }); }, 2000); somSucesso.play().catch(() => {}); falar("Corrida aceita!"); } } catch (e) { mostrarErro(e.message); } }
-
-        // ========== GPS ==========
         function executarIrAtePassageiro() { if (!estado.aceito || estado.pegouPassageiro) return; estado.pegouPassageiro = true; abrirGPSHibrido('origem'); document.getElementById('containerAcoesCorrida').innerHTML = ''; mostrarCardPassageiro(); }
         function executarIniciarViagem() { if (!estado.pegouPassageiro || estado.viagemIniciada) return; estado.viagemIniciada = true; document.getElementById('cardPassageiroChegada').style.display = 'none'; abrirGPSHibrido('destino'); document.getElementById('etapaTexto').className = 'etapa etapa3'; document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!'; const ct = document.getElementById('containerAcoesCorrida'); ct.innerHTML = ''; ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar)); socket.emit('viagem_iniciada', { corrida_id: corrida.corrida_id || corrida.id }); falar("Viagem iniciada!"); }
-        function abrirGPSHibrido(tipoDestino) { const paradas = corrida.paradas || []; const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`; let destinoFinal = tipoDestino === 'origem' ? ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino)); let waypoints = ''; paradas.forEach(p => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); if (e) waypoints += encodeURIComponent(e) + '|'; }); waypoints = waypoints.replace(/\|$/, ''); const googleUrl = waypoints ? `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate` : `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`; window.location.href = googleUrl; }
-
-        // ========== CARD PASSAGEIRO ==========
-        async function mostrarCardPassageiro() { if (!corrida) return; const fotoPadrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E"; const fp = corrida.foto_passageiro || corrida.foto_perfil || fotoPadrao; document.getElementById('fotoChegada').src = fp; document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro'; document.getElementById('cardPassageiroChegada').style.display = 'block'; if (corrida.passageiro_id) { try { const res = await fetch(`${API_URL}/perfil/${corrida.passageiro_id}`); const perfil = await res.json(); if (perfil.id) { if (perfil.foto_perfil) document.getElementById('fotoChegada').src = perfil.foto_perfil; let infoHtml = ''; if (perfil.is_novo) infoHtml += '<span style="background:#FF007F; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">🆕 NOVO</span> '; infoHtml += `<span style="color:#EAB308;">⭐ ${perfil.media_avaliacoes}</span> `; infoHtml += `<span style="color:#94A3B8; font-size:12px;">| 🏁 ${perfil.corridas_realizadas} corridas</span>`; document.getElementById('nomeChegada').innerHTML = `${corrida.passageiro_nome || 'Passageiro'}<div style="font-size:12px; margin-top:4px;">${infoHtml}</div>`; } } catch (e) {} } const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = ''; const paradas = corrida.paradas || []; if (paradas.length > 0) { let pHtml = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;"><p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas:</p>'; paradas.forEach((p, i) => { const e = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || ''); pHtml += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`; }); pHtml += '</div>'; ct.innerHTML = pHtml; } ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)); document.getElementById('btnLigarChegada').style.display = 'flex'; }
-
-        // ========== FINALIZAR ==========
+        function abrirGPSHibrido(td) { const p = corrida.paradas || []; const o = `${posicaoAtual.lat},${posicaoAtual.lng}`; let d = td === 'origem' ? ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino)); let w = ''; p.forEach(pp => { const e = typeof pp === 'string' ? pp : (pp.endereco || pp.endereço || pp.address || ''); if (e) w += encodeURIComponent(e) + '|'; }); w = w.replace(/\|$/, ''); const u = w ? `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&waypoints=${w}&travelmode=driving&dir_action=navigate` : `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving&dir_action=navigate`; window.location.href = u; }
+        async function mostrarCardPassageiro() { if (!corrida) return; const fp = corrida.foto_passageiro || corrida.foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23363E4D'/%3E%3Ctext x='40' y='50' text-anchor='middle' fill='white' font-size='35'%3E👤%3C/text%3E%3C/svg%3E"; document.getElementById('fotoChegada').src = fp; document.getElementById('nomeChegada').textContent = corrida.passageiro_nome || 'Passageiro'; document.getElementById('cardPassageiroChegada').style.display = 'block'; if (corrida.passageiro_id) { try { const r = await fetch(`${API_URL}/perfil/${corrida.passageiro_id}`); const pf = await r.json(); if (pf.id) { if (pf.foto_perfil) document.getElementById('fotoChegada').src = pf.foto_perfil; let ih = ''; if (pf.is_novo) ih += '<span style="background:#FF007F; color:white; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">🆕 NOVO</span> '; ih += `<span style="color:#EAB308;">⭐ ${pf.media_avaliacoes}</span> `; ih += `<span style="color:#94A3B8; font-size:12px;">| 🏁 ${pf.corridas_realizadas} corridas</span>`; document.getElementById('nomeChegada').innerHTML = `${corrida.passageiro_nome || 'Passageiro'}<div style="font-size:12px; margin-top:4px;">${ih}</div>`; } } catch (e) {} } const ct = document.getElementById('containerBtnEmbarque'); ct.innerHTML = ''; const ps = corrida.paradas || []; if (ps.length > 0) { let ph = '<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:8px; margin-bottom:10px; text-align:left;"><p style="font-weight:bold; color:#EAB308; margin-bottom:5px; font-size:13px;">📍 Paradas:</p>'; ps.forEach((pp, i) => { const e = typeof pp === 'string' ? pp : (pp.endereco || pp.endereço || pp.address || ''); ph += `<p style="font-size:12px; margin:2px 0;">🔹 ${i+1}ª: ${e.substring(0, 40)}</p>`; }); ph += '</div>'; ct.innerHTML = ph; } ct.appendChild(criarBotaoDeslizar('PASSAGEIRO EMBARCOU', 'fas fa-user-check', '#00B42A', executarIniciarViagem)); document.getElementById('btnLigarChegada').style.display = 'flex'; }
         async function executarFinalizar() { if (!estado.viagemIniciada || !corrida) return; const vf = parseFloat(corrida.valor || 0); const cid = corrida.corrida_id || corrida.id; try { const r = await fetch(`${API_URL}/finalizar_corrida/${cid}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: "finalizada", valor_final: vf, motorista_id: String(usuario.id), motorista_nome: usuario.nome }) }); if (r.ok || r.status === 200 || r.status === 201) { somDinheiro.play().catch(() => {}); falar("Corrida finalizada! R$ " + vf.toFixed(2)); socket.emit('viagem_finalizada', { corrida_id: cid, valor: vf, motorista_nome: usuario.nome, motorista_id: usuario.id }); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'block'; notaAvaliacao = 0; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; } } catch (e) { mostrarErro("Erro: " + e.message); } }
-
         function ligarCliente() { if (!corrida || !corrida.passageiro_telefone) return mostrarErro("Sem telefone"); const t = corrida.passageiro_telefone.replace(/\D/g, ''); if (confirm("📞 OK = LIGAR | CANCELAR = WHATSAPP")) window.location.href = `tel:${t}`; else window.open(`https://wa.me/${t}?text=Olá, sou seu motorista Rota Brasil!`, '_blank'); }
         async function enviarAvaliacao() { if (notaAvaliacao === 0) { alert("⚠️ Dê pelo menos 1 estrela!"); return; } const cid = corrida?.corrida_id || corrida?.id; try { if (cid) await fetch(`${API_URL}/avaliar`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ corrida_id: cid, passageiro_id: String(corrida?.passageiro_id), motorista_id: String(usuario.id), nota: notaAvaliacao, comentario: document.getElementById('comentarioAvaliacao').value }) }); } catch (e) {} document.getElementById('modalAvaliacao').style.display = 'none'; limparTudo(); }
         socket.on("corrida_cancelada", (d) => { if (corrida && (d?.corrida_id == (corrida.corrida_id || corrida.id))) { somAlto.play().catch(() => {}); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); limparTudo(); document.getElementById('alertaCancel').style.display = 'block'; falar("Passageiro cancelou!"); } });
-
-        function limparTudo() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; notaAvaliacao = 0; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'none'; document.getElementById('alertaCancel').style.display = 'none'; document.getElementById('cardPassageiroChegada').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('containerAcoesCorrida').innerHTML = ''; document.getElementById('containerBtnEmbarque').innerHTML = ''; document.getElementById('linhaPagamento').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; document.getElementById('botoesFixos').style.display = 'block'; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; }); pararSomAlerta(); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
+        function limparTudo() { if (timerCorrida) { clearInterval(timerCorrida); timerCorrida = null; } corrida = null; estado = { aceito: false, pegouPassageiro: false, viagemIniciada: false }; notaAvaliacao = 0; document.getElementById('cardCorrida').style.display = 'none'; document.getElementById('areaAcoes').style.display = 'none'; document.getElementById('modalAvaliacao').style.display = 'none'; document.getElementById('alertaCancel').style.display = 'none'; document.getElementById('cardPassageiroChegada').style.display = 'none'; document.getElementById('btnCancelarCorrida').style.display = 'none'; document.getElementById('containerAcoesCorrida').innerHTML = ''; document.getElementById('containerBtnEmbarque').innerHTML = ''; document.getElementById('linhaPagamento').style.display = 'none'; document.getElementById('linhaDinamico').style.display = 'none'; document.getElementById('paradasContainer').innerHTML = ''; document.getElementById('perfilPassageiro').innerHTML = ''; document.getElementById('botoesFixos').style.display = 'block'; document.querySelectorAll('.estrela').forEach(e => e.classList.remove('ativa')); document.getElementById('comentarioAvaliacao').value = ''; document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; }); pararSomAlerta(); if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval); const btn = document.getElementById('btnRecusar'); if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; } }
         async function cancelarCorrida() { if (!corrida) return; if (!confirm("Cancelar?")) return; const cid = corrida.corrida_id || corrida.id; try { await fetch(`${API_URL}/cancelar_corrida_motorista/${cid}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }); socket.emit('corrida_cancelada_motorista', { corrida_id: cid }); limparTudo(); } catch (e) { mostrarErro("Erro"); } }
         async function abrirCarteira() { document.getElementById('painelCarteiraMotorista').style.display = 'block'; try { const r = await fetch(`${API_URL}/carteira/saldo`, { headers: { Authorization: `Bearer ${token}` } }); const d = await r.json(); document.getElementById('saldoMotorista').textContent = `R$ ${(d.saldo || 0).toFixed(2)}`; } catch (e) {} }
-
         socket.on('connect', () => { if (usuario?.id && document.getElementById('statusMotorista').classList.contains('online')) socket.emit('motorista_online', { id: usuario.id, nome: usuario.nome }); });
         socket.on('disconnect', () => mostrarErro("Conexão perdida!"));
         socket.on('connect_error', () => mostrarErro("Servidor indisponível"));
 
-        // ========== INIT ==========
         window.onload = () => {
             const t = localStorage.getItem("token_motorista"), d = localStorage.getItem("dados_motorista");
             if (t && d) { try { usuario = JSON.parse(d); token = t; telaPrincipal(); iniciarGPS(); iniciarVerificacaoDinamico(); } catch { localStorage.clear(); } }
