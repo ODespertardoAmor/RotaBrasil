@@ -81,6 +81,23 @@
         @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
         .popup-dinamico .leaflet-popup-content-wrapper { background: #FF7D00; color: white; border-radius: 10px; font-weight: bold; text-align: center; }
         .popup-dinamico .leaflet-popup-tip { background: #FF7D00; }
+        /* 🔥 FOGUINHO GARANTIDO */
+.foguinho-marcador {
+    background: transparent !important;
+    border: none !important;
+}
+.foguinho-icone {
+    font-size: 35px;
+    animation: floatFogo 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px #FF7D00);
+    display: block;
+    text-align: center;
+    line-height: 1;
+}
+@keyframes floatFogo {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+}
     </style>
 </head>
 <body>
@@ -195,17 +212,85 @@
         const posicoesDinamicas = [[-23.5505,-46.6333],[-23.5610,-46.6560],[-23.5400,-46.6100],[-23.5700,-46.6400],[-23.5300,-46.6200],[-23.5550,-46.6450],[-23.5450,-46.6250],[-23.5600,-46.6150]];
 
         function mostrarIndicadoresDinamicos() {
-            if (!mapaLeaflet) { setTimeout(mostrarIndicadoresDinamicos, 500); return; }
-            marcadoresDinamicos = marcadoresDinamicos.filter(m => mapaLeaflet.hasLayer(m));
-            if (marcadoresDinamicos.length >= posicoesDinamicas.length) return;
-            marcadoresDinamicos.forEach(m => { if (mapaLeaflet.hasLayer(m)) mapaLeaflet.removeLayer(m); });
-            marcadoresDinamicos = [];
-            posicoesDinamicas.forEach(pos => {
-                const m = L.marker(pos, { icon: iconeDinamico, interactive: false, zIndexOffset: 1000 }).addTo(mapaLeaflet);
-                m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', { closeButton: false, className: 'popup-dinamico' });
-                marcadoresDinamicos.push(m);
-            });
+    if (!mapaLeaflet) {
+        console.warn('⏳ Mapa não existe, tentando em 500ms...');
+        setTimeout(mostrarIndicadoresDinamicos, 500);
+        return;
+    }
+
+    // Limpa marcadores antigos
+    marcadoresDinamicos.forEach(m => {
+        try { mapaLeaflet.removeLayer(m); } catch(e) {}
+    });
+    marcadoresDinamicos = [];
+
+    console.log('🔥 Criando foguinhos...');
+    
+    posicoesDinamicas.forEach((pos, i) => {
+        // Criar ícone HTML simples e garantido
+        const iconeDinamico = L.divIcon({
+    html: `<div class="foguinho-icone">🔥</div>`,
+    className: 'foguinho-marcador',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+});
+async function verificarPrecoDinamico() {
+    if (dinamicoAtivo) {
+        console.log('⏺️ Já ativo, verificando visibilidade...');
+        if (mapaLeaflet) {
+            const visiveis = marcadoresDinamicos.filter(m => {
+                try { return mapaLeaflet.hasLayer(m); } catch(e) { return false; }
+            }).length;
+            console.log(`👀 Foguinhos visíveis: ${visiveis}/${posicoesDinamicas.length}`);
+            if (visiveis < posicoesDinamicas.length) {
+                console.log('🔧 Recolocando foguinhos...');
+                mostrarIndicadoresDinamicos();
+            }
         }
+        return;
+    }
+    
+    try {
+        console.log('🔍 Verificando API de configurações...');
+        const r = await fetch(`${API_URL}/configuracoes`);
+        const config = await r.json();
+        console.log('📊 Config:', JSON.stringify(config));
+        
+        const ativo = parseInt(config.dinamico_ativo || 0) === 1;
+        console.log('📊 dinâmico_ativo =', config.dinamico_ativo, '| ativo =', ativo);
+        
+        if (ativo) {
+            console.log('🔥 ATIVANDO PREÇO DINÂMICO!');
+            dinamicoAtivo = true;
+            mostrarIndicadoresDinamicos();
+            pararVerificacaoAPI();
+            iniciarWatchdogDinamico();
+        } else {
+            console.log('❌ Preço dinâmico DESATIVADO no servidor');
+        }
+    } catch (e) {
+        console.error('❌ Erro:', e.message);
+    }
+}
+        
+
+        const m = L.marker(pos, {
+            icon: icone,
+            interactive: false,
+            zIndexOffset: 1000
+        }).addTo(mapaLeaflet);
+
+        m.bindPopup('<b style="color:#FF7D00;">🔥 Preço Dinâmico Ativo!</b>', {
+            closeButton: false,
+            className: 'popup-dinamico'
+        });
+
+        marcadoresDinamicos.push(m);
+        console.log(`🔥 Foguinho ${i+1} criado em ${pos[0]}, ${pos[1]}`);
+    });
+
+    console.log(`✅ Total: ${marcadoresDinamicos.length} foguinhos no mapa`);
+}
 
         function removerIndicadoresDinamicos() {
             marcadoresDinamicos.forEach(m => { if (mapaLeaflet && mapaLeaflet.hasLayer(m)) mapaLeaflet.removeLayer(m); });
