@@ -439,8 +439,10 @@ def aceitar_corrida(id):
         "carro": motorista.carro,
         "placa": motorista.placa
     }
-    
-    socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
+    motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
+    for m in motoristas:
+        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
+        #socketio.emit("corrida_aceita", dados_socket, room=f"corrida_{id}")
     return jsonify({"sucesso": True, "corrida_id": corrida.id, "status": "aceita"}), 200
 
 @app.route("/cancelar_corrida/<int:id>", methods=["POST"])
