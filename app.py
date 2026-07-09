@@ -1272,21 +1272,11 @@ def get_configuracoes():
             dados[k] = v
     return jsonify(dados)
 
-# Atualizar configurações (admin)
-@app.route('/admin/configuracoes', methods=['POST'])
-def admin_configuracoes():
-    dados = request.get_json()
-    for chave, valor in dados.items():
-        config = Configuracao.query.filter_by(chave=chave).first()
-        if config:
-            config.valor = float(valor)
-        else:
-            nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
-            db.session.add(nova)
-    db.session.commit()
-    return jsonify({'status': 'ok'})
-# Senha do painel admin (configure aqui)
-SENHA_PAINEL = "minha_senha_secreta_123"  # 🔥 MUDE ESTA SENHA!
+# ==≠≠==≠=Atualizar configurações (admin)
+import base64
+
+# Senha do painel admin (ALTERE AQUI!)
+SENHA_PAINEL = "admin123"
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
@@ -1296,7 +1286,8 @@ def admin_login():
     
     if senha == SENHA_PAINEL:
         # Gera um token simples
-        token = base64.b64encode(f"admin:{senha}:{datetime.utcnow().timestamp()}".encode()).decode()
+        token_str = f"admin:{senha}:{datetime.utcnow().timestamp()}"
+        token = base64.b64encode(token_str.encode()).decode()
         return jsonify({'sucesso': True, 'token': token})
     else:
         return jsonify({'sucesso': False, 'erro': 'Senha incorreta'}), 401
@@ -1314,7 +1305,7 @@ def admin_verificar():
     except:
         pass
     
-    return jsonify({'valido': False}), 401    
+    return jsonify({'valido': False}), 401
 # ==========================================
 # INICIAR
 # ==========================================
