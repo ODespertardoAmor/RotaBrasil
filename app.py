@@ -1276,26 +1276,31 @@ def get_configuracoes():
 @app.route('/admin/configuracoes', methods=['POST'])
 def admin_configuracoes():
     dados = request.get_json()
-    print(f"📥 Recebido para salvar: {dados}")  # 🔥 LOG
+    for chave, valor in dados.items():
+        config = Configuracao.query.filter_by(chave=chave).first()
+        if config:
+            config.valor = float(valor)
+        else:
+            nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
+            db.session.add(nova)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+# Senha do painel admin (configure aqui)
+SENHA_PAINEL = "minha_senha_secreta_123"  # 🔥 MUDE ESTA SENHA!
+
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    """Verifica a senha do painel admin"""
+    dados = request.get_json()
+    senha = dados.get('senha', '')
     
-    try:
-        for chave, valor in dados.items():
-            config = Configuracao.query.filter_by(chave=chave).first()
-            if config:
-                config.valor = float(valor)
-                print(f"📝 Atualizado: {chave} = {valor}")  # 🔥 LOG
-            else:
-                nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
-                db.session.add(nova)
-                print(f"➕ Criado: {chave} = {valor}")  # 🔥 LOG
-        
-        db.session.commit()
-        print("✅ Configurações salvas!")  # 🔥 LOG
-        return jsonify({'status': 'ok'})
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Erro: {e}")  # 🔥 LOG
-        return jsonify({'erro': str(e)}), 500
+    if senha == SENHA_PAINEL:
+        # Gera um token simples
+        token = base64.b64encode(f"admin:{senha}:{datetime.utcnow().timestamp()}".encode()).decode()
+        return jsonify({'sucesso': True, 'token': token})
+    else:
+        return jsonify({'sucesso': False, 'erro': 'Senha incorreta'}), 401
+
 @app.route('/admin/verificar', methods=['POST'])
 def admin_verificar():
     """Verifica se o token é válido"""
@@ -1309,15 +1314,7 @@ def admin_verificar():
     except:
         pass
     
-    return jsonify({'valido': False}), 401 
-@app.route('/criar_tabela_config', methods=['GET'])
-def criar_tabela_config():
-    """Cria a tabela de configurações se não existir"""
-    try:
-        db.create_all()
-        return jsonify({'status': 'Tabelas criadas/verificadas com sucesso!'})
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500    
+    return jsonify({'valido': False}), 401    
 # ==========================================
 # INICIAR
 # ==========================================
