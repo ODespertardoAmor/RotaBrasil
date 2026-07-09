@@ -1253,24 +1253,7 @@ def perfil_usuario(usuario_id):
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
-# Obter configurações atuais (qualquer um pode acessar)
-@app.route('/configuracoes', methods=['GET'])
-def get_configuracoes():
-    configs = Configuracao.query.all()
-    dados = {}
-    for c in configs:
-        dados[c.chave] = c.valor
-    # Valores padrão caso não existam
-    defaults = {
-        'bandeirada': 5.0,
-        'preco_km': 2.5,
-        'multiplicador_dinamico': 1.0,
-        'dinamico_ativo': 0  # 0 ou 1
-    }
-    for k, v in defaults.items():
-        if k not in dados:
-            dados[k] = v
-    return jsonify(dados)
+  
 
 # ==≠≠==≠=Atualizar configurações (admin)
 import base64
@@ -1306,6 +1289,65 @@ def admin_verificar():
         pass
     
     return jsonify({'valido': False}), 401
+# ========== CONFIGURAÇÕES ==========
+
+@app.route('/configuracoes', methods=['GET'])
+def get_configuracoes():
+    """Retorna as configurações atuais"""
+    try:
+        configs = Configuracao.query.all()
+        dados = {}
+        for c in configs:
+            dados[c.chave] = c.valor
+        
+        # Valores padrão caso não existam
+        defaults = {
+            'bandeirada': 5.0,
+            'preco_km': 2.5,
+            'multiplicador_dinamico': 1.0,
+            'dinamico_ativo': 0
+        }
+        for k, v in defaults.items():
+            if k not in dados:
+                dados[k] = v
+        
+        return jsonify(dados)
+    except Exception as e:
+        # Se a tabela não existir, retorna padrões
+        return jsonify({
+            'bandeirada': 5.0,
+            'preco_km': 2.5,
+            'multiplicador_dinamico': 1.0,
+            'dinamico_ativo': 0
+        })
+
+@app.route('/admin/configuracoes', methods=['POST', 'OPTIONS'])
+def admin_configuracoes():
+    """Salva as configurações de tarifas"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'})
+    
+    dados = request.get_json()
+    print(f"📥 Recebido para salvar: {dados}")
+    
+    try:
+        for chave, valor in dados.items():
+            config = Configuracao.query.filter_by(chave=chave).first()
+            if config:
+                config.valor = float(valor)
+                print(f"📝 Atualizado: {chave} = {valor}")
+            else:
+                nova = Configuracao(chave=chave, valor=float(valor), descricao=chave)
+                db.session.add(nova)
+                print(f"➕ Criado: {chave} = {valor}")
+        
+        db.session.commit()
+        print("✅ Configurações salvas com sucesso!")
+        return jsonify({'status': 'ok', 'mensagem': 'Configurações salvas!'})
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro: {e}")
+        return jsonify({'erro': str(e)}), 500    
 # ==========================================
 # INICIAR
 # ==========================================
