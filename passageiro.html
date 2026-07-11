@@ -9,7 +9,8 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+    <!-- Carrega a configuração da API -->
+    <script src="/config.js"></script>
     <style>
         :root {
             --cor-fundo: #0F172A; --cor-card: #1E293B; --cor-card-claro: #334155;
@@ -282,7 +283,7 @@
 
     <script>
         // ========== CONFIG ==========
-        const API = "https://rotabrasil-tobu.onrender.com";
+       // const API = "https://rotabrasil-tobu.onrender.com";
         const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
 
         let token, passageiro, corridaAtual;
