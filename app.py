@@ -1314,7 +1314,20 @@ def admin_verificar():
     except:
         pass
     
-    return jsonify({'valido': False}), 401    
+    return jsonify({'valido': False}), 401
+#=========Rota para retornar o url da api
+@app.route('/config.js')
+def config_js():
+    """Retorna um arquivo JavaScript com as configurações"""
+    api_url = os.environ.get('API_URL', 'https://rotabrasil-tobu.onrender.com')
+    
+    js_content = f"""
+// Configuração automática - NÃO EDITE
+const API_URL = "{api_url}";
+const SOCKET_URL = "{api_url}";
+console.log('🔧 API configurada para:', API_URL);
+"""
+    return js_content, 200, {'Content-Type': 'application/javascript'}
 # ==========================================
 # INICIAR
 # ==========================================
