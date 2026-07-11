@@ -33,6 +33,10 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key-rota-brasil")
 
+
+# Lê a variável de ambiente
+API_URL = os.environ.get('API_URL', 'https://rotabrasil-tobu.onrender.com')
+
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 socketio = SocketIO(app, cors_allowed_origins="*", transports=['websocket', 'polling'])
