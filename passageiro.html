@@ -9,8 +9,17 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Carrega a configuração da API -->
-    <script src="/config.js"></script>
+    <!-- Configuração da API - carrega do servidor se disponível -->
+
+<script src="/config.js" onerror="console.log('config.js não disponível, usando fallback')"></script>
+<script>
+    // Sobrescreve API se API_URL foi carregada com sucesso
+    if (typeof API_URL !== 'undefined') {
+        // Usa a URL do servidor
+        API = API_URL;
+    }
+    console.log('🔧 API:', API);
+</script>
     <style>
         :root {
             --cor-fundo: #0F172A; --cor-card: #1E293B; --cor-card-claro: #334155;
@@ -283,7 +292,7 @@
 
     <script>
         // ========== CONFIG ==========
-        const API = window.API_URL
+        
        // const API = "https://rotabrasil-tobu.onrender.com";
         const socket = io(API, { transports: ['websocket', 'polling'], reconnection: true, timeout: 20000 });
 
