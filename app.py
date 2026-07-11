@@ -1322,16 +1322,8 @@ def admin_verificar():
 #=========Rota para retornar o url da api
 @app.route('/config.js')
 def config_js():
-    """Retorna um arquivo JavaScript com as configurações"""
     api_url = os.environ.get('API_URL', 'https://rotabrasil-tobu.onrender.com')
-    
-    js_content = f"""
-// Configuração automática - NÃO EDITE
-const API_URL = "{api_url}";
-const SOCKET_URL = "{api_url}";
-console.log('🔧 API configurada para:', API_URL);
-"""
-    return js_content, 200, {'Content-Type': 'application/javascript'}
+    return f"var API_URL = '{api_url}';", 200, {'Content-Type': 'application/javascript'}
 # ==========================================
 # INICIAR
 # ==========================================
