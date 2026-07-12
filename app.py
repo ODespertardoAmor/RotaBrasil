@@ -409,8 +409,8 @@ def nova_corrida():
     
     motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
     for m in motoristas:
-        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
-    socketio.emit("nova_corrida", dados_chamada)
+        #socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
+        socketio.emit("nova_corrida", dados_chamada)
     
     print(f"🆕 Corrida #{nova.id} | 💰 {forma_pagamento} | R$ {valor_corrida:.2f} | Paradas: {len(paradas)}")
     
