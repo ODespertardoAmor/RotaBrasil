@@ -1291,7 +1291,7 @@ def admin_configuracoes():
     db.session.commit()
     return jsonify({'status': 'ok'})
 # Senha do painel admin (configure aqui)
-SENHA_PAINEL = "minha_senha_secreta_123"  # 🔥 MUDE ESTA SENHA!
+SENHA_PAINEL = "rotabrasiljesusnocontrole"  # 🔥 MUDE ESTA SENHA!
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
