@@ -759,26 +759,47 @@
         }
 
         // ========== GPS HÍBRIDO ==========
-        function abrirGPSHibrido(tipoDestino) {
-            const paradas = corrida.paradas || [];
-            const origem = `${posicaoAtual.lat},${posicaoAtual.lng}`;
-            let destinoFinal;
-            if (tipoDestino === 'origem') {
-                destinoFinal = (corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem);
-            } else {
-                destinoFinal = (corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino);
-            }
-            let waypoints = '';
-            paradas.forEach(p => {
-                const endereco = typeof p === 'string' ? p : (p.endereco || p.endereço || p.address || '');
-                if (endereco) waypoints += encodeURIComponent(endereco) + '|';
-            });
-            waypoints = waypoints.replace(/\|$/, '');
-            let googleUrl = waypoints ?
-                `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&waypoints=${waypoints}&travelmode=driving&dir_action=navigate` :
-                `https://www.google.com/maps/dir/?api=1&origin=${origem}&destination=${destinoFinal}&travelmode=driving&dir_action=navigate`;
-            window.location.href = googleUrl;
-        }
+        function abrirGPSHibrido(td) {
+    const p = corrida.paradas || [];
+    const o = `${posicaoAtual.lat},${posicaoAtual.lng}`;
+    let d = td === 'origem' ? 
+        ((corrida.lat_origem && corrida.lon_origem) ? `${corrida.lat_origem},${corrida.lon_origem}` : encodeURIComponent(corrida.origem)) : 
+        ((corrida.lat_destino && corrida.lon_destino) ? `${corrida.lat_destino},${corrida.lon_destino}` : encodeURIComponent(corrida.destino));
+    
+    let w = '';
+    p.forEach(pp => { 
+        const e = typeof pp === 'string' ? pp : (pp.endereco || pp.endereço || pp.address || ''); 
+        if (e) w += encodeURIComponent(e) + '|'; 
+    });
+    w = w.replace(/\|$/, '');
+    
+    // URL do Google Maps
+    const googleUrl = w ? 
+        `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&waypoints=${w}&travelmode=driving&dir_action=navigate` : 
+        `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving&dir_action=navigate`;
+    
+    // 🔥 SALVA O ESTADO DA CORRIDA ANTES DE SAIR
+    if (corrida) {
+        const estadoParaSalvar = {
+            corrida: corrida,
+            estado: estado,
+            posicaoAtual: posicaoAtual,
+            timerCorrida: null, // Não salva o timer
+            timestamp: Date.now()
+        };
+        localStorage.setItem('corrida_ativa_motorista', JSON.stringify(estadoParaSalvar));
+        console.log('💾 Estado salvo antes do GPS');
+    }
+    
+    // 🔥 Abre em NOVA ABA (não fecha o app)
+    const novaJanela = window.open(googleUrl, '_blank', 'noopener,noreferrer');
+    
+    // Se não conseguir abrir (bloqueado), tenta redirecionar
+    if (!novaJanela || novaJanela.closed || typeof novaJanela.closed === 'undefined') {
+        console.log('⚠️ Nova aba bloqueada, usando location.href');
+        window.location.href = googleUrl;
+    }
+}
 
         // ========== CARD DO PASSAGEIRO COM PERFIL ==========
         async function mostrarCardPassageiro() {
@@ -898,6 +919,7 @@
             document.getElementById('comentarioAvaliacao').value = '';
             document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
             pararSomAlerta();
+            limparEstadoSalvo();
             if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
             const btn = document.getElementById('btnRecusar');
             if (btn) { btn.textContent = '❌ RECUSAR (15s)'; btn.style.background = ''; btn.style.animation = ''; }
@@ -942,6 +964,90 @@
                 });
             });
         };
+        // 🔥 RECUPERA O ESTADO AO VOLTAR DO GPS
+function recuperarEstadoMotorista() {
+    const dadosSalvos = localStorage.getItem('corrida_ativa_motorista');
+    
+    if (!dadosSalvos) return;
+    
+    try {
+        const saved = JSON.parse(dadosSalvos);
+        
+        // Só recupera se foi salvo nos últimos 30 minutos
+        if (Date.now() - saved.timestamp > 30 * 60 * 1000) {
+            localStorage.removeItem('corrida_ativa_motorista');
+            console.log('🗑️ Estado expirado, removido');
+            return;
+        }
+        
+        // Restaura os dados
+        corrida = saved.corrida;
+        estado = saved.estado;
+        posicaoAtual = saved.posicaoAtual;
+        
+        console.log('🔄 Estado da corrida recuperado!');
+        console.log('📊 Estado:', estado);
+        
+        // Restaura a interface
+        document.getElementById('botoesFixos').style.display = 'none';
+        document.getElementById('areaAcoes').style.display = 'block';
+        document.getElementById('btnCancelarCorrida').style.display = 'flex';
+        
+        // Estado 1: Acabou de aceitar - mostra botão IR ATÉ PASSAGEIRO
+        if (estado.aceito && !estado.pegouPassageiro) {
+            document.getElementById('etapaTexto').className = 'etapa etapa1';
+            document.getElementById('etapaTexto').textContent = '📦 PASSO 1: Deslize para ir ao passageiro';
+            const ct = document.getElementById('containerAcoesCorrida');
+            ct.innerHTML = '';
+            ct.appendChild(criarBotaoDeslizar('IR ATÉ O PASSAGEIRO', 'fas fa-location-arrow', '#165DFF', executarIrAtePassageiro));
+        }
+        
+        // Estado 2: Já foi até o passageiro - mostra card de embarque
+        if (estado.pegouPassageiro && !estado.viagemIniciada) {
+            document.getElementById('containerAcoesCorrida').innerHTML = '';
+            mostrarCardPassageiro();
+        }
+        
+        // Estado 3: Viagem iniciada - mostra botão FINALIZAR
+        if (estado.viagemIniciada) {
+            document.getElementById('etapaTexto').className = 'etapa etapa3';
+            document.getElementById('etapaTexto').textContent = '🚗 PASSO 3: VIAGEM EM ANDAMENTO!';
+            const ct = document.getElementById('containerAcoesCorrida');
+            ct.innerHTML = '';
+            ct.appendChild(criarBotaoDeslizar('FINALIZAR CORRIDA', 'fas fa-check-double', '#00B42A', executarFinalizar));
+        }
+        
+        // Reinicia envio de localização
+        if (envioLocalizacaoInterval) clearInterval(envioLocalizacaoInterval);
+        if (estado.aceito && corrida) {
+            const cid = corrida.corrida_id || corrida.id;
+            envioLocalizacaoInterval = setInterval(() => {
+                socket.emit('localizacao_motorista', {
+                    corrida_id: cid,
+                    lat: posicaoAtual.lat,
+                    lng: posicaoAtual.lng,
+                    motorista_id: usuario.id,
+                    motorista_nome: usuario.nome,
+                    motorista_foto: usuario.foto_perfil || ''
+                });
+            }, 2000);
+        }
+        
+        // Limpa o estado salvo (já foi recuperado)
+        // Só limpa quando a corrida finalizar
+        console.log('✅ Interface restaurada com sucesso!');
+        
+    } catch(e) {
+        console.log('❌ Erro ao recuperar estado:', e);
+        localStorage.removeItem('corrida_ativa_motorista');
+    }
+}
+
+// 🔥 Limpa o estado salvo quando finalizar ou cancelar
+function limparEstadoSalvo() {
+    localStorage.removeItem('corrida_ativa_motorista');
+    console.log('🗑️ Estado salvo removido');
+}
     </script>
 </body>
 </html>
