@@ -696,19 +696,115 @@
         }
 
         async function chamarCorrida() {
-            if (!latOrigem || !latDestino || valorFinal <= 0) return alert("Calcule o valor primeiro!");
-            document.getElementById('avisoSaldo').style.display = 'none';
-            if (formaPagamento === 'pix') { await verificarSaldo(); if (saldoCarteira < valorFinal) { document.getElementById('avisoSaldo').style.display = 'block'; document.getElementById('avisoSaldo').innerHTML = '⚠️ Saldo insuficiente!<br><a href="#" onclick="selecionarPagamento(\'dinheiro\')" style="color:#EAB308;">Pagar em dinheiro</a>'; return; } }
-            const btn = document.getElementById('btnChamar'); btn.disabled = true; btn.classList.add('btn-blocked'); btn.innerHTML = '⏳ Buscando...';
-            try {
-                const res = await fetch(`${API}/nova_corrida`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify({ origem: document.getElementById('origem').value, destino: document.getElementById('destino').value, valor: valorFinal, distancia: distancia.toFixed(1) + ' km', lat_origem: latOrigem, lon_origem: lonOrigem, lat_destino: latDestino, lon_destino: lonDestino, forma_pagamento: formaPagamento, paradas: paradas }) });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.erro);
-                corridaAtual = { id: data.corrida_id }; socket.emit("entrar_na_sala", { corrida_id: data.corrida_id });
-                document.getElementById('cardValor').style.display = 'none'; document.getElementById('cardStatus').style.display = 'block';
-                document.getElementById('conteudoStatus').innerHTML = `<i class="fas fa-car-side status-icon status-buscando"></i><h3>Procurando Motoristas...</h3><p style="color:#94A3B8;">💰 ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix'}</p><br><button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>`;
-            } catch (e) { alert(e.message); btn.disabled = false; btn.classList.remove('btn-blocked'); btn.innerHTML = '🚀 CHAMAR ROTA BRASIL'; }
+    if (!latOrigem || !latDestino || valorFinal <= 0) {
+        return alert("⚠️ Calcule o valor primeiro!");
+    }
+    
+    document.getElementById('avisoSaldo').style.display = 'none';
+    document.getElementById('avisoDinheiro').style.display = 'none';
+    
+    // Verifica saldo se for Pix
+    if (formaPagamento === 'pix') {
+        await verificarSaldo();
+        if (saldoCarteira < valorFinal) {
+            document.getElementById('avisoSaldo').style.display = 'block';
+            document.getElementById('avisoSaldo').innerHTML = 
+                '⚠️ Saldo insuficiente!<br><a href="#" onclick="selecionarPagamento(\'dinheiro\')" style="color:#EAB308;">Pagar em dinheiro</a>';
+            return;
         }
+    }
+    
+    const btn = document.getElementById('btnChamar');
+    btn.disabled = true;
+    btn.classList.add('btn-blocked');
+    btn.innerHTML = '⏳ Buscando motoristas...';
+    
+    try {
+        const res = await fetch(`${API}/nova_corrida`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                origem: document.getElementById('origem').value,
+                destino: document.getElementById('destino').value,
+                valor: valorFinal,
+                distancia: distancia.toFixed(1) + ' km',
+                lat_origem: latOrigem,
+                lon_origem: lonOrigem,
+                lat_destino: latDestino,
+                lon_destino: lonDestino,
+                forma_pagamento: formaPagamento,
+                paradas: paradas,
+                foto_perfil: passageiro?.foto_perfil || ''
+            })
+        });
+        
+        const data = await res.json();
+        
+        // 🔥 Verifica se houve erro (sem motoristas próximos)
+        if (!res.ok) {
+            const erroMsg = data.erro || 'Erro ao solicitar corrida';
+            
+            if (erroMsg.includes("Nenhum motorista próximo")) {
+                // Mensagem personalizada para falta de motoristas
+                const totalOnline = data.motoristas_online || 0;
+                const distantes = data.motoristas_distantes || 0;
+                
+                alert(
+                    `🚫 ${erroMsg}\n\n` +
+                    `📊 ${totalOnline} motorista(s) online no total\n` +
+                    `📏 ${distantes} estão muito distantes\n\n` +
+                    `💡 Dica: Tente novamente em alguns instantes.`
+                );
+            } else {
+                alert("⚠️ " + erroMsg);
+            }
+            
+            // Reativa o botão
+            btn.disabled = false;
+            btn.classList.remove('btn-blocked');
+            btn.innerHTML = '🚀 CHAMAR ROTA BRASIL';
+            return;
+        }
+        
+        // ✅ Sucesso - corrida solicitada
+        corridaAtual = { id: data.corrida_id };
+        socket.emit("entrar_na_sala", { corrida_id: data.corrida_id });
+        
+        // Mostra status de busca
+        document.getElementById('cardValor').style.display = 'none';
+        document.getElementById('cardStatus').style.display = 'block';
+        document.getElementById('conteudoStatus').innerHTML = `
+            <i class="fas fa-car-side status-icon status-buscando"></i>
+            <h3>Procurando Motoristas...</h3>
+            <p style="color:#94A3B8;">
+                💰 ${formaPagamento === 'dinheiro' ? '💵 Dinheiro' : '💳 Pix'} | 
+                👥 ${data.motoristas_proximos || '...'} motoristas próximos
+            </p>
+            <br>
+            <button class="btn-danger" onclick="cancelarCorrida()">❌ Cancelar</button>
+        `;
+        
+        console.log('🚀 Corrida #' + data.corrida_id + ' solicitada com sucesso!');
+        
+    } catch (e) {
+        console.error('❌ Erro ao chamar corrida:', e);
+        
+        // Verifica se é erro de rede
+        if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+            alert('❌ Erro de conexão. Verifique sua internet e tente novamente.');
+        } else {
+            alert('❌ Erro: ' + e.message);
+        }
+        
+        // Reativa o botão
+        btn.disabled = false;
+        btn.classList.remove('btn-blocked');
+        btn.innerHTML = '🚀 CHAMAR ROTA BRASIL';
+    }
+}
 
         async function cancelarCorrida() { const cid = corridaAtual?.id; if (cid) { try { await fetch(`${API}/cancelar_corrida/${cid}`, { method: "POST", headers: { "Authorization": `Bearer ${token}` } }); } catch (e) {} } resetarInterface(); }
 
