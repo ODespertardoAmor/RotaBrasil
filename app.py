@@ -664,7 +664,7 @@ def gerar_cobranca(corrida_id):
     motorista_id = int(get_jwt_identity())
     dados = request.get_json()
     valor = float(dados.get('valor', 0))
-    metodo = dados.get('metodo', 'pix')  # pix ou cartao
+    metodo = dados.get('metodo', 'pix')
     
     corrida = Corrida.query.get(corrida_id)
     if not corrida:
@@ -687,13 +687,13 @@ def gerar_cobranca(corrida_id):
             "external_reference": f"corrida_{corrida_id}",
             "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
             "back_urls": {
-                "success": "https://rotabrasil-tobu.onrender.com/pagamento_sucesso",
-                "failure": "https://rotabrasil-tobu.onrender.com/pagamento_falha"
+                "success": "https://rotabrasil-tobu.onrender.com/sucesso",
+                "failure": "https://rotabrasil-tobu.onrender.com/falha"
             },
             "auto_return": "approved",
             "payment_methods": {
                 "excluded_payment_methods": [],
-                "installments": metodo == 'cartao' ? 12 : 1
+                "installments": 12 if metodo == 'cartao' else 1  # ✅ Python
             }
         }
         
@@ -703,12 +703,10 @@ def gerar_cobranca(corrida_id):
         link = response.get("init_point") or response.get("sandbox_init_point")
         
         if link:
-            # Salva a cobrança gerada
             corrida.link_pagamento = link
             corrida.forma_pagamento = metodo
             db.session.commit()
             
-            # Envia o link para o passageiro via socket
             socketio.emit('link_pagamento', {
                 'corrida_id': corrida_id,
                 'link': link,
