@@ -100,6 +100,7 @@ class Corrida(db.Model):
     forma_pagamento = db.Column(db.String(20), default='pix')
     status = db.Column(db.String(20), default='pendente')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    link_pagamento = db.Column(db.String(500), nullable=True)  # 🆕 Link de pagamento pós corrida
 
 class Transacao(db.Model):
     __tablename__ = 'transacoes'
@@ -655,7 +656,72 @@ def webhook():
             db.session.commit()
     
     return "OK", 200
-
+#==========Pagamento pós corrida======
+@app.route('/gerar_cobranca/<int:corrida_id>', methods=['POST'])
+@jwt_required()
+def gerar_cobranca(corrida_id):
+    """Motorista gera link de pagamento para o passageiro"""
+    motorista_id = int(get_jwt_identity())
+    dados = request.get_json()
+    valor = float(dados.get('valor', 0))
+    metodo = dados.get('metodo', 'pix')  # pix ou cartao
+    
+    corrida = Corrida.query.get(corrida_id)
+    if not corrida:
+        return jsonify({"erro": "Corrida não encontrada"}), 404
+    
+    passageiro = Usuario.query.get(corrida.passageiro_id)
+    if not passageiro:
+        return jsonify({"erro": "Passageiro não encontrado"}), 404
+    
+    if not sdk:
+        return jsonify({"erro": "Mercado Pago não configurado"}), 500
+    
+    try:
+        preference_data = {
+            "items": [{
+                "title": f"Corrida Rota Brasil #{corrida_id}",
+                "quantity": 1,
+                "unit_price": valor
+            }],
+            "external_reference": f"corrida_{corrida_id}",
+            "notification_url": "https://rotabrasil-tobu.onrender.com/webhook",
+            "back_urls": {
+                "success": "https://rotabrasil-tobu.onrender.com/pagamento_sucesso",
+                "failure": "https://rotabrasil-tobu.onrender.com/pagamento_falha"
+            },
+            "auto_return": "approved",
+            "payment_methods": {
+                "excluded_payment_methods": [],
+                "installments": metodo == 'cartao' ? 12 : 1
+            }
+        }
+        
+        preference = sdk.preference().create(preference_data)
+        response = preference.get("response", {})
+        
+        link = response.get("init_point") or response.get("sandbox_init_point")
+        
+        if link:
+            # Salva a cobrança gerada
+            corrida.link_pagamento = link
+            corrida.forma_pagamento = metodo
+            db.session.commit()
+            
+            # Envia o link para o passageiro via socket
+            socketio.emit('link_pagamento', {
+                'corrida_id': corrida_id,
+                'link': link,
+                'valor': valor,
+                'metodo': metodo
+            }, room=f"corrida_{corrida_id}")
+            
+            return jsonify({"link": link, "metodo": metodo})
+        else:
+            return jsonify({"erro": "Erro ao gerar link"}), 500
+            
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 # ==========================================
 # ADMIN
 # ==========================================
