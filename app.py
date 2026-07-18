@@ -127,6 +127,14 @@ class Configuracao(db.Model):
     chave = db.Column(db.String(50), unique=True, nullable=False)
     valor = db.Column(db.Float, nullable=False)
     descricao = db.Column(db.String(200))
+class Localizacao(db.Model):
+    __tablename__ = 'localizacoes'
+    id = db.Column(db.Integer, primary_key=True)
+    corrida_id = db.Column(db.Integer)
+    motorista_id = db.Column(db.Integer)
+    lat = db.Column(db.Float, nullable=False)
+    lng = db.Column(db.Float, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)    
 # ==========================================
 # FUNÇÕES AUXILIARES
 # ==========================================
