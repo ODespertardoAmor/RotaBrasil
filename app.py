@@ -359,98 +359,113 @@ def calcular_corrida():
 #============================================
 #============NOVA CORRIDA CAUCULO DISTANCIA
 #============================================
+#from math import radians, sin, cos, sqrt, atan2
+
 @app.route("/nova_corrida", methods=["POST"])
 @jwt_required()
 def nova_corrida():
-    passageiro_id = int(get_jwt_identity())
-    passageiro = Usuario.query.get(passageiro_id)
-    dados = request.get_json()
-    
-    valor_corrida = float(dados.get("valor", 0))
-    forma_pagamento = dados.get("forma_pagamento", "pix")
-    paradas = dados.get("paradas", [])
-    
-    lat_origem = dados.get("lat_origem")
-    lon_origem = dados.get("lon_origem")
-    lat_destino = dados.get("lat_destino")
-    lon_destino = dados.get("lon_destino")
-    
-    if forma_pagamento == "pix":
-        if not bloquear_valor_corrida(passageiro_id, valor_corrida):
-            return jsonify({"erro": "Saldo insuficiente!"}), 400
-    
-    nova = Corrida(
-        passageiro_id=passageiro_id,
-        origem=dados.get("origem"),
-        destino=dados.get("destino"),
-        lat_origem=lat_origem,
-        lon_origem=lon_origem,
-        lat_destino=lat_destino,
-        lon_destino=lon_destino,
-        valor=valor_corrida,
-        distancia=dados.get("distancia", ""),
-        forma_pagamento=forma_pagamento,
-        status="pendente"
-    )
-    db.session.add(nova)
-    db.session.commit()
-    
-    dados_chamada = {
-        "corrida_id": nova.id,
-        "passageiro_id": passageiro.id,
-        "passageiro_nome": passageiro.nome,
-        "passageiro_telefone": passageiro.telefone or "",
-        "foto_passageiro": passageiro.foto_perfil or "",
-        "origem": nova.origem,
-        "destino": nova.destino,
-        "valor": nova.valor,
-        "distancia": dados.get("distancia", "Calculando..."),
-        "forma_pagamento": forma_pagamento,
-        "lat_origem": lat_origem,
-        "lon_origem": lon_origem,
-        "lat_destino": lat_destino,
-        "lon_destino": lon_destino,
-        "paradas": paradas
-    }
-    
-    # Busca motoristas online
-    todos_motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
-    
-    RAIO_MAXIMO_KM = 50
-    motoristas_proximos = 0
-    
-    for motorista in todos_motoristas:
-        ultima_loc = db.session.execute(
-            db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
-            {'mid': motorista.id}
-        ).fetchone()
+    try:
+        passageiro_id = int(get_jwt_identity())
+        passageiro = Usuario.query.get(passageiro_id)
+        dados = request.get_json()
         
-        if ultima_loc and lat_origem and lon_origem:
-            dlat = radians(ultima_loc[0] - lat_origem)
-            dlon = radians(ultima_loc[1] - lon_origem)
-            a = sin(dlat/2)**2 + cos(radians(lat_origem)) * cos(radians(ultima_loc[0])) * sin(dlon/2)**2
-            distancia = 6371 * 2 * atan2(sqrt(a), sqrt(1-a))
-            
-            if distancia <= RAIO_MAXIMO_KM:
-                socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
-                motoristas_proximos += 1
-    
-    print(f"🆕 Corrida #{nova.id} | Motoristas proximos: {motoristas_proximos}")
-    
-    # 🔥 Retorno JSON sempre válido
-    if motoristas_proximos == 0:
+        valor_corrida = float(dados.get("valor", 0))
+        forma_pagamento = dados.get("forma_pagamento", "pix")
+        paradas = dados.get("paradas", [])
+        
+        lat_origem = dados.get("lat_origem")
+        lon_origem = dados.get("lon_origem")
+        lat_destino = dados.get("lat_destino")
+        lon_destino = dados.get("lon_destino")
+        
+        # Verifica saldo se for Pix
+        if forma_pagamento == "pix":
+            if not bloquear_valor_corrida(passageiro_id, valor_corrida):
+                return jsonify({"erro": "Saldo insuficiente!"}), 400
+        
+        # Cria a corrida
+        nova = Corrida(
+            passageiro_id=passageiro_id,
+            origem=str(dados.get("origem", "")),
+            destino=str(dados.get("destino", "")),
+            lat_origem=lat_origem,
+            lon_origem=lon_origem,
+            lat_destino=lat_destino,
+            lon_destino=lon_destino,
+            valor=valor_corrida,
+            distancia=str(dados.get("distancia", "")),
+            forma_pagamento=forma_pagamento,
+            status="pendente"
+        )
+        db.session.add(nova)
+        db.session.commit()
+        
+        # Dados para enviar aos motoristas
+        dados_chamada = {
+            "corrida_id": nova.id,
+            "passageiro_id": passageiro.id,
+            "passageiro_nome": passageiro.nome,
+            "passageiro_telefone": passageiro.telefone or "",
+            "foto_passageiro": passageiro.foto_perfil or "",
+            "origem": nova.origem,
+            "destino": nova.destino,
+            "valor": nova.valor,
+            "distancia": str(dados.get("distancia", "Calculando...")),
+            "forma_pagamento": forma_pagamento,
+            "lat_origem": lat_origem,
+            "lon_origem": lon_origem,
+            "lat_destino": lat_destino,
+            "lon_destino": lon_destino,
+            "paradas": paradas
+        }
+        
+        # Busca motoristas online
+        todos_motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
+        
+        RAIO_MAXIMO_KM = 50
+        motoristas_proximos = 0
+        
+        for motorista in todos_motoristas:
+            try:
+                ultima_loc = db.session.execute(
+                    db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
+                    {'mid': motorista.id}
+                ).fetchone()
+                
+                if ultima_loc and ultima_loc[0] and ultima_loc[1] and lat_origem and lon_origem:
+                    dlat = radians(float(ultima_loc[0]) - float(lat_origem))
+                    dlon = radians(float(ultima_loc[1]) - float(lon_origem))
+                    a = sin(dlat/2)**2 + cos(radians(float(lat_origem))) * cos(radians(float(ultima_loc[0]))) * sin(dlon/2)**2
+                    distancia = 6371 * 2 * atan2(sqrt(a), sqrt(1-a))
+                    
+                    if distancia <= RAIO_MAXIMO_KM:
+                        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
+                        motoristas_proximos += 1
+            except Exception as e:
+                print(f"Erro ao processar motorista {motorista.id}: {e}")
+                continue
+        
+        print(f"🆕 Corrida #{nova.id} | Motoristas proximos: {motoristas_proximos}")
+        
+        # Retorno JSON garantido
+        if motoristas_proximos == 0:
+            return jsonify({
+                "erro": "Nenhum motorista proximo disponivel no momento.",
+                "motoristas_online": len(todos_motoristas),
+                "motoristas_proximos": 0
+            }), 404
+        
         return jsonify({
-            "erro": "Nenhum motorista proximo disponivel no momento.",
-            "motoristas_online": len(todos_motoristas),
-            "motoristas_proximos": 0
-        }), 404
-    
-    return jsonify({
-        "status": "Procurando motoristas",
-        "corrida_id": nova.id,
-        "forma_pagamento": forma_pagamento,
-        "motoristas_proximos": motoristas_proximos
-    }), 201
+            "status": "Procurando motoristas",
+            "corrida_id": nova.id,
+            "forma_pagamento": forma_pagamento,
+            "motoristas_proximos": motoristas_proximos
+        }), 201
+        
+    except Exception as e:
+        print(f"❌ Erro na nova_corrida: {e}")
+        db.session.rollback()
+        return jsonify({"erro": "Erro interno no servidor. Tente novamente."}), 500
 
 
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
