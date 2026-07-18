@@ -401,7 +401,6 @@ def nova_corrida():
         "passageiro_nome": passageiro.nome,
         "passageiro_telefone": passageiro.telefone or "",
         "foto_passageiro": passageiro.foto_perfil or "",
-        "foto_perfil": passageiro.foto_perfil or "",
         "origem": nova.origem,
         "destino": nova.destino,
         "valor": nova.valor,
@@ -414,66 +413,46 @@ def nova_corrida():
         "paradas": paradas
     }
     
-    # 🔥 BUSCA TODOS OS MOTORISTAS ONLINE
+    # Busca motoristas online
     todos_motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
     
-    # 🔥 FILTRA POR DISTÂNCIA
-    from math import radians, sin, cos, sqrt, atan2
-    RAIO_MAXIMO_KM = 50  # Raio máximo que um motorista pode estar do passageiro
-    
-    motoristas_proximos = []
-    motoristas_distantes = []
+    RAIO_MAXIMO_KM = 50
+    motoristas_proximos = 0
     
     for motorista in todos_motoristas:
-        # Busca a última localização do motorista
         ultima_loc = db.session.execute(
             db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
             {'mid': motorista.id}
         ).fetchone()
         
         if ultima_loc and lat_origem and lon_origem:
-            # Calcula distância entre motorista e passageiro
-            R = 6371
             dlat = radians(ultima_loc[0] - lat_origem)
             dlon = radians(ultima_loc[1] - lon_origem)
             a = sin(dlat/2)**2 + cos(radians(lat_origem)) * cos(radians(ultima_loc[0])) * sin(dlon/2)**2
-            distancia = R * 2 * atan2(sqrt(a), sqrt(1-a))
+            distancia = 6371 * 2 * atan2(sqrt(a), sqrt(1-a))
             
             if distancia <= RAIO_MAXIMO_KM:
-                motoristas_proximos.append(motorista)
-                dados_chamada['distancia_motorista'] = round(distancia, 2)
-            else:
-                motoristas_distantes.append({
-                    'id': motorista.id,
-                    'nome': motorista.nome,
-                    'distancia': round(distancia, 2)
-                })
-        else:
-            # Se não tem localização, não envia (ou envia com ressalva)
-            pass
+                socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
+                motoristas_proximos += 1
     
-    # 🔥 ENVIA APENAS PARA MOTORISTAS PRÓXIMOS
-    for m in motoristas_proximos:
-        socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{m.id}")
+    print(f"🆕 Corrida #{nova.id} | Motoristas proximos: {motoristas_proximos}")
     
-    print(f"🆕 Corrida #{nova.id} | 💰 R$ {valor_corrida:.2f}")
-    print(f"📍 Motoristas próximos: {len(motoristas_proximos)}")
-    print(f"📍 Motoristas distantes: {len(motoristas_distantes)}")
-    
-    if len(motoristas_proximos) == 0:
+    # 🔥 Retorno JSON sempre válido
+    if motoristas_proximos == 0:
         return jsonify({
-            "erro": "Nenhum motorista próximo disponível no momento. Tente novamente em instantes.",
+            "erro": "Nenhum motorista proximo disponivel no momento.",
             "motoristas_online": len(todos_motoristas),
-            "motoristas_distantes": len(motoristas_distantes)
+            "motoristas_proximos": 0
         }), 404
     
     return jsonify({
         "status": "Procurando motoristas",
         "corrida_id": nova.id,
         "forma_pagamento": forma_pagamento,
-        "motoristas_proximos": len(motoristas_proximos),
-        "motoristas_total": len(todos_motoristas)
+        "motoristas_proximos": motoristas_proximos
     }), 201
+
+
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
