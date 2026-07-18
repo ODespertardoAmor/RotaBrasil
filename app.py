@@ -1,5 +1,5 @@
 import os
-import math
+from math import radians, sin, cos, sqrt, atan2
 import requests
 from datetime import datetime
 from functools import wraps
