@@ -139,11 +139,26 @@
     <!-- Barra Inferior -->
     <div class="barra-inferior" id="barra" style="display:none;">
         <div id="botoesFixos">
-            <button id="btnOnline" class="btn-success" onclick="ficarOnline()"><i class="fas fa-power-off"></i> FICAR ONLINE</button>
-            <button id="btnOffline" class="btn-danger" onclick="ficarOffline()" style="display:none;"><i class="fas fa-power-off"></i> FICAR OFFLINE</button>
-            <button class="btn-warning" onclick="abrirCarteira()" style="margin-top:8px;">💵 Carteira</button>
-            <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()"><i class="fas fa-door-open"></i> SAIR</button>
-        </div>
+    <button id="btnOnline" class="btn-success" onclick="ficarOnline()">
+        <i class="fas fa-power-off"></i> FICAR ONLINE
+    </button>
+    <button id="btnOffline" class="btn-danger" onclick="ficarOffline()" style="display:none;">
+        <i class="fas fa-power-off"></i> FICAR OFFLINE
+    </button>
+    <button class="btn-warning" onclick="abrirCarteira()" style="margin-top:8px;">
+        💵 Carteira
+    </button>
+    
+    <!-- 🆕 BOTÃO DE DOCUMENTOS -->
+    <button onclick="window.location.href='/cadastro-motorista-docs.html'" 
+            style="margin-top:8px; background:transparent; border:2px solid var(--alerta); color:var(--alerta);">
+        📋 Meus Documentos
+    </button>
+    
+    <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()">
+        <i class="fas fa-door-open"></i> SAIR
+    </button>
+</div>
         <div id="areaAcoes" style="display:none;">
             <div id="etapaTexto" class="etapa etapa1"></div>
             <div id="containerAcoesCorrida"></div>
