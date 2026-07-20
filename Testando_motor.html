@@ -190,9 +190,40 @@
         function iniciarSomAlertaRepetido(){somAlerta.loop=true;somAlerta.currentTime=0;somAlerta.play().catch(()=>setTimeout(()=>somAlerta.play(),500));}
         function pararSomAlerta(){somAlerta.pause();somAlerta.currentTime=0;somAlerta.loop=false;}
 
-        // ========== GPS ==========
-        function iniciarGPS(){if(!navigator.geolocation)return;iniciarMapa();navigator.geolocation.watchPosition((pos)=>{posicaoAtual.lat=pos.coords.latitude;posicaoAtual.lng=pos.coords.longitude;atualizarPosicaoMapa(posicaoAtual.lat,posicaoAtual.lng);if(estado.aceito&&corrida){socket.emit('localizacao_motorista',{corrida_id:corrida.corrida_id||corrida.id,lat:posicaoAtual.lat,lng:posicaoAtual.lng,motorista_id:usuario.id,motorista_nome:usuario.nome,motorista_foto:usuario.foto_perfil||''});}},()=>{},{enableHighAccuracy:true,maximumAge:3000,timeout:10000});}
-
+    
+        // ========== GPS (ENVIA SEMPRE) ==========
+function iniciarGPS(){
+    if(!navigator.geolocation)return;
+    iniciarMapa();
+    navigator.geolocation.watchPosition(
+        (pos)=>{
+            posicaoAtual.lat=pos.coords.latitude;
+            posicaoAtual.lng=pos.coords.longitude;
+            atualizarPosicaoMapa(posicaoAtual.lat,posicaoAtual.lng);
+            
+            // 🔥 ENVIA LOCALIZAÇÃO SEMPRE (mesmo sem corrida)
+            if(usuario&&usuario.id){
+                socket.emit('localizacao_motorista',{
+                    corrida_id: corrida?.corrida_id || corrida?.id || 0,
+                    lat: posicaoAtual.lat,
+                    lng: posicaoAtual.lng,
+                    motorista_id: usuario.id,
+                    motorista_nome: usuario.nome,
+                    motorista_foto: usuario.foto_perfil||''
+                });
+                console.log('📍 Localização enviada:', posicaoAtual.lat.toFixed(6), posicaoAtual.lng.toFixed(6));
+            }
+        },
+        (erro)=>{
+            console.warn('❌ Erro GPS:', erro.message);
+        },
+        { 
+            enableHighAccuracy: true, 
+            maximumAge: 5000, 
+            timeout: 15000 
+        }
+    );
+}
         // ========== LOGIN ==========
         function statusLogin(t,tp){const el=document.getElementById('statusLogin');el.textContent=t;el.className=`status-text ${tp}`;}
         async function cadastrar(){const d={nome:document.getElementById('nome').value.trim(),email:document.getElementById('email').value.trim().toLowerCase(),senha:document.getElementById('senha').value.trim(),telefone:document.getElementById('telefone').value.trim(),carro:document.getElementById('carro').value.trim(),placa:document.getElementById('placa').value.trim().toUpperCase(),tipo:"motorista"};if(Object.values(d).some(v=>!v))return statusLogin("❌ Preencha todos os campos!","erro");if(d.senha.length<6)return statusLogin("❌ Senha mínimo 6 dígitos!","erro");statusLogin("⏳ Cadastrando...","");try{const r=await fetch(`${API_URL}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const ret=await r.json();if(!r.ok)throw new Error(ret.erro||"Falha");statusLogin("✅ Criada! Entrando...","ok");setTimeout(()=>entrar(d.email,d.senha),1000);}catch(e){statusLogin(`❌ ${e.message}`,"erro");}}
