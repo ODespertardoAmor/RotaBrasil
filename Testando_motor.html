@@ -228,7 +228,7 @@ function iniciarGPS(){
         function statusLogin(t,tp){const el=document.getElementById('statusLogin');el.textContent=t;el.className=`status-text ${tp}`;}
         async function cadastrar(){const d={nome:document.getElementById('nome').value.trim(),email:document.getElementById('email').value.trim().toLowerCase(),senha:document.getElementById('senha').value.trim(),telefone:document.getElementById('telefone').value.trim(),carro:document.getElementById('carro').value.trim(),placa:document.getElementById('placa').value.trim().toUpperCase(),tipo:"motorista"};if(Object.values(d).some(v=>!v))return statusLogin("❌ Preencha todos os campos!","erro");if(d.senha.length<6)return statusLogin("❌ Senha mínimo 6 dígitos!","erro");statusLogin("⏳ Cadastrando...","");try{const r=await fetch(`${API_URL}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const ret=await r.json();if(!r.ok)throw new Error(ret.erro||"Falha");statusLogin("✅ Criada! Entrando...","ok");setTimeout(()=>entrar(d.email,d.senha),1000);}catch(e){statusLogin(`❌ ${e.message}`,"erro");}}
         async function entrar(em=null,sn=null){const email=em||document.getElementById('email').value.trim().toLowerCase(),senha=sn||document.getElementById('senha').value.trim();if(!email||!senha)return statusLogin("❌ Digite e-mail e senha!","erro");statusLogin("⏳ Entrando...","");try{const r=await fetch(`${API_URL}/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,senha})});const ret=await r.json();if(!r.ok)throw new Error(ret.erro||"Falha");if(ret.user.tipo!=="motorista")throw new Error("Conta não é de motorista");token=ret.token;usuario=ret.user;localStorage.setItem("token_motorista",token);localStorage.setItem("dados_motorista",JSON.stringify(usuario));telaPrincipal();iniciarGPS();}catch(e){statusLogin(`❌ ${e.message}`,"erro");}}
-        function telaPrincipal(){document.getElementById('loginScreen').style.display='none';document.getElementById('header').style.display='flex';document.getElementById('barra').style.display='block';document.getElementById('botoesFixos').style.display='block';document.getElementById('areaAcoes').style.display='none';iniciarVerificacaoDinamico();}
+        function telaPrincipal(){document.getElementById('loginScreen').style.display='none';document.getElementById('header').style.display='flex';document.getElementById('barra').style.display='block';document.getElementById('botoesFixos').style.display='block';document.getElementById('areaAcoes').style.display='none';iniciarVerificacaoDinamico();iniciarEnvioLocalizacaoREST();}
         function sair(){pararVerificacaoDinamico();if(estado.aceito&&!confirm('Corrida em andamento!'))return;localStorage.clear();limparTudo();window.location.reload();}
         async function ficarOnline(){if(!usuario||!token)return mostrarErro("Faça login!");try{await fetch(`${API_URL}/ficar_online/${usuario.id}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});document.getElementById('btnOnline').style.display='none';document.getElementById('btnOffline').style.display='block';const s=document.getElementById('statusMotorista');s.className='status-bolinha online';s.innerHTML='<i class="fas fa-circle"></i> <span>Online</span>';socket.emit('motorista_online',{id:usuario.id,nome:usuario.nome});}catch(e){mostrarErro("Erro de conexão");}}
         async function ficarOffline(){try{await fetch(`${API_URL}/ficar_offline/${usuario.id}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`}});document.getElementById('btnOnline').style.display='block';document.getElementById('btnOffline').style.display='none';const s=document.getElementById('statusMotorista');s.className='status-bolinha offline';s.innerHTML='<i class="fas fa-circle"></i> <span>Offline</span>';socket.emit('motorista_offline',{id:usuario.id});if(envioLocalizacaoInterval)clearInterval(envioLocalizacaoInterval);}catch(e){}}
@@ -326,32 +326,57 @@ function iniciarGPS(){
         socket.on('connect_error',()=>mostrarErro("Servidor indisponível"));
 
         window.onload=()=>{const t=localStorage.getItem("token_motorista"),d=localStorage.getItem("dados_motorista");if(t&&d){try{usuario=JSON.parse(d);token=t;telaPrincipal();iniciarGPS();iniciarVerificacaoDinamico();}catch{localStorage.clear();}}document.querySelectorAll('.estrela').forEach(e=>{e.addEventListener('click',function(){notaAvaliacao=parseInt(this.dataset.valor);document.querySelectorAll('.estrela').forEach((el,i)=>{el.classList.toggle('ativa',i<notaAvaliacao);});});});};
-        // No motorista, adicione esta função
+         // ========== ENVIO DE LOCALIZAÇÃO VIA REST (GARANTIDO) ==========
+let intervaloLocalizacaoREST = null;
+
 function iniciarEnvioLocalizacaoREST() {
-    setInterval(async () => {
-        if (!usuario || !usuario.id || !token) return;
-        
-        try {
-            await fetch(`${API_URL}/atualizar_localizacao`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    corrida_id: corrida?.corrida_id || corrida?.id || 0,
-                    lat: posicaoAtual.lat,
-                    lng: posicaoAtual.lng
-                })
-            });
-            console.log('📍 Localização enviada via REST');
-        } catch (e) {
-            console.warn('⚠️ Erro ao enviar localização REST:', e.message);
-        }
-    }, 10000); // A cada 10 segundos
+    if (intervaloLocalizacaoREST) clearInterval(intervaloLocalizacaoREST);
+    
+    console.log('🔄 Iniciando envio de localização via REST a cada 10s');
+    
+    // Primeira chamada imediata
+    enviarLocalizacaoAgora();
+    
+    // Depois a cada 10 segundos
+    intervaloLocalizacaoREST = setInterval(() => {
+        enviarLocalizacaoAgora();
+    }, 10000);
 }
 
-// Chame esta função no telaPrincipal() ou após ficar online
+async function enviarLocalizacaoAgora() {
+    if (!usuario || !usuario.id || !token) {
+        console.log('⚠️ Usuário não logado');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/atualizar_localizacao`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                corrida_id: corrida?.corrida_id || corrida?.id || 0,
+                lat: posicaoAtual.lat,
+                lng: posicaoAtual.lng
+            })
+        });
+        
+        const data = await response.json();
+        console.log('📍 Localização enviada via REST:', data);
+    } catch (e) {
+        console.warn('⚠️ Erro REST:', e.message);
+    }
+}
+
+function pararEnvioLocalizacaoREST() {
+    if (intervaloLocalizacaoREST) {
+        clearInterval(intervaloLocalizacaoREST);
+        intervaloLocalizacaoREST = null;
+        console.log('⏹️ Envio de localização REST parado');
+    }
+}
     </script>
 </body>
 </html>
