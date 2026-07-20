@@ -1565,6 +1565,31 @@ def admin_verificar():
 def config_js():
     api_url = os.environ.get('API_URL', 'https://rotabrasil-tobu.onrender.com')
     return f"var API_URL = '{api_url}';", 200, {'Content-Type': 'application/javascript'}
+@app.route('/verificar_localizacoes')
+def verificar_localizacoes():
+    """Verifica todas as localizações salvas"""
+    try:
+        resultado = db.session.execute(
+            db.text("SELECT * FROM localizacoes ORDER BY updated_at DESC LIMIT 10")
+        ).fetchall()
+        
+        lista = []
+        for r in resultado:
+            lista.append({
+                'id': r[0],
+                'corrida_id': r[1],
+                'motorista_id': r[2],
+                'lat': r[3],
+                'lng': r[4],
+                'updated_at': str(r[5])
+            })
+        
+        return jsonify({
+            'total': len(lista),
+            'localizacoes': lista
+        })
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500    
 # ==========================================
 # INICIAR
 # ==========================================
