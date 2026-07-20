@@ -211,82 +211,121 @@
 
     <script>
         const API_URL = "https://rotabrasil-tobu.onrender.com";
-        let documentosEnviados = {
-            foto: false, cnh: false, crlv: false, carro: false, antecedentes: false
+
+// Mapeamento correto dos tipos para os IDs
+let documentosEnviados = {
+    foto: false,
+    cnh: false,
+    crlv: false,
+    carro: false,
+    antecedentes: false
+};
+
+function previewFile(input, tipo) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    console.log('📎 Arquivo selecionado:', tipo, file.name);
+    
+    // Atualiza nome do arquivo
+    const nameEl = document.getElementById(`${tipo}Name`);
+    if (nameEl) {
+        nameEl.textContent = '📎 ' + file.name;
+        nameEl.style.display = 'block';
+    }
+    
+    // Atualiza visual da área de upload
+    const uploadArea = input.closest('.upload-area');
+    if (uploadArea) {
+        uploadArea.classList.add('has-file');
+    }
+    
+    // Preview da imagem
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewId = `preview${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+            const preview = document.getElementById(previewId);
+            if (preview) {
+                preview.src = e.target.result;
+                preview.classList.add('show');
+            }
         };
+        reader.readAsDataURL(file);
+    }
+    
+    // Marca como enviado
+    if (documentosEnviados.hasOwnProperty(tipo)) {
+        documentosEnviados[tipo] = true;
+        console.log('✅ Marcado como enviado:', tipo, documentosEnviados);
+    }
+    
+    // Atualiza status visual
+    atualizarStatus(tipo, true);
+    
+    // Atualiza barra de progresso
+    atualizarProgresso();
+}
 
-        function previewFile(input, tipo) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            // Atualiza nome do arquivo
-            document.getElementById(`${tipo}Name`).textContent = '📎 ' + file.name;
-            document.getElementById(`upload${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).classList.add('has-file');
-            
-            // Preview da imagem
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const preview = document.getElementById(`preview${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-                    preview.src = e.target.result;
-                    preview.classList.add('show');
-                };
-                reader.readAsDataURL(file);
-            }
-            
-            // Atualiza status
-            documentosEnviados[tipo] = true;
-            atualizarStatus(tipo, true);
-            atualizarProgresso();
+function atualizarStatus(tipo, enviado) {
+    // Procura o elemento de status dentro do card correto
+    const statusId = `status${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+    const statusEl = document.getElementById(statusId);
+    
+    if (statusEl) {
+        if (enviado) {
+            statusEl.className = 'status-doc status-enviado';
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo selecionado';
         }
+    }
+}
 
-        function atualizarStatus(tipo, enviado) {
-            const statusEl = document.getElementById(`status${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-            if (enviado) {
-                statusEl.className = 'status-doc status-enviado';
-                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo selecionado';
-            }
-        }
+function atualizarProgresso() {
+    const total = Object.keys(documentosEnviados).length;
+    const enviados = Object.values(documentosEnviados).filter(v => v).length;
+    const percentual = Math.round((enviados / total) * 100);
+    
+    console.log(`📊 Progresso: ${enviados}/${total} (${percentual}%)`);
+    console.log('Documentos:', documentosEnviados);
+    
+    document.getElementById('progressBar').style.width = percentual + '%';
+    document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
+}
 
-        function atualizarProgresso() {
-            const total = Object.keys(documentosEnviados).length;
-            const enviados = Object.values(documentosEnviados).filter(v => v).length;
-            const percentual = Math.round((enviados / total) * 100);
-            
-            document.getElementById('progressBar').style.width = percentual + '%';
-            document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
-        }
+async function enviarDocumentos() {
+    const total = Object.keys(documentosEnviados).length;
+    const enviados = Object.values(documentosEnviados).filter(v => v).length;
+    
+    console.log('📤 Enviando...', { total, enviados, documentosEnviados });
+    
+    if (enviados < total) {
+        const faltando = Object.entries(documentosEnviados)
+            .filter(([_, v]) => !v)
+            .map(([k]) => k)
+            .join(', ');
+        
+        document.getElementById('msgEnvio').style.color = 'var(--perigo)';
+        document.getElementById('msgEnvio').textContent = `❌ Faltam: ${faltando} (${enviados}/${total})`;
+        return;
+    }
+    
+    document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+    document.getElementById('msgEnvio').textContent = '✅ Todos os documentos enviados! Salvando...';
+    
+    localStorage.setItem('motorista_documentos_enviados', 'true');
+    localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+    
+    setTimeout(() => {
+        alert('✅ Documentos enviados com sucesso!\n\nSeus documentos estão em análise.');
+    }, 1000);
+}
 
-        async function enviarDocumentos() {
-            const total = Object.keys(documentosEnviados).length;
-            const enviados = Object.values(documentosEnviados).filter(v => v).length;
-            
-            if (enviados < total) {
-                document.getElementById('msgEnvio').style.color = 'var(--perigo)';
-                document.getElementById('msgEnvio').textContent = `❌ Envie todos os ${total} documentos! (${enviados}/${total})`;
-                return;
-            }
-            
-            document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
-            document.getElementById('msgEnvio').textContent = '✅ Documentos enviados com sucesso! Em análise...';
-            
-            // Aqui você pode enviar os arquivos para o backend
-            // Por enquanto, salvamos no localStorage
-            localStorage.setItem('motorista_documentos_enviados', 'true');
-            localStorage.setItem('motorista_documentos_data', new Date().toISOString());
-            
-            setTimeout(() => {
-                alert('✅ Documentos enviados com sucesso!\n\nSeus documentos estão em análise. Você será notificado quando forem aprovados.');
-                window.location.href = '/motorista.html';
-            }, 1500);
-        }
-
-        // Verifica se já enviou antes
-        if (localStorage.getItem('motorista_documentos_enviados') === 'true') {
-            const data = localStorage.getItem('motorista_documentos_data');
-            document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
-            document.getElementById('msgEnvio').textContent = `✅ Documentos enviados em ${new Date(data).toLocaleDateString()}. Aguardando análise.`;
-        }
+// Verifica se já enviou antes
+if (localStorage.getItem('motorista_documentos_enviados') === 'true') {
+    const data = localStorage.getItem('motorista_documentos_data');
+    document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+    document.getElementById('msgEnvio').textContent = `✅ Documentos enviados em ${new Date(data).toLocaleDateString()}. Aguardando análise.`;
+}
     </script>
 </body>
 </html>
