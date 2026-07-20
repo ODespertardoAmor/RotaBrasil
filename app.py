@@ -431,56 +431,64 @@ def nova_corrida():
         }
         
         # Busca TODOS motoristas online
-        todos_motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
-        print(f"🔍 Total motoristas online: {len(todos_motoristas)}")
+        # Busca TODOS motoristas online
+todos_motoristas = Usuario.query.filter_by(tipo="motorista", online=True).all()
+print(f"🔍 Total motoristas online: {len(todos_motoristas)}")
+
+RAIO_MAXIMO_KM = 50  # Ajuste este valor conforme necessário
+motoristas_proximos = 0
+motoristas_sem_localizacao = 0
+
+for motorista in todos_motoristas:
+    print(f"👤 Verificando motorista {motorista.id} - {motorista.nome}")
+    
+    # Busca última localização
+    ultima_loc = db.session.execute(
+        db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
+        {'mid': motorista.id}
+    ).fetchone()
+    
+    if ultima_loc and ultima_loc[0] is not None and ultima_loc[1] is not None:
+        mot_lat = float(ultima_loc[0])
+        mot_lng = float(ultima_loc[1])
+        print(f"  📍 Localização: {mot_lat}, {mot_lng}")
         
-        RAIO_MAXIMO_KM = 50
-        motoristas_proximos = 0
+        # Calcula distância
+        R = 6371
+        dlat = radians(mot_lat - lat_origem)
+        dlon = radians(mot_lng - lon_origem)
+        a = sin(dlat/2)**2 + cos(radians(lat_origem)) * cos(radians(mot_lat)) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+        distancia = R * c
         
-        for motorista in todos_motoristas:
-            print(f"👤 Verificando motorista {motorista.id} - {motorista.nome}")
-            
-            # Busca última localização
-            ultima_loc = db.session.execute(
-                db.text("SELECT lat, lng FROM localizacoes WHERE motorista_id = :mid ORDER BY updated_at DESC LIMIT 1"),
-                {'mid': motorista.id}
-            ).fetchone()
-            
-            if ultima_loc:
-                mot_lat = float(ultima_loc[0])
-                mot_lng = float(ultima_loc[1])
-                print(f"  📍 Localização: {mot_lat}, {mot_lng}")
-                
-                # Calcula distância
-                R = 6371
-                dlat = radians(mot_lat - lat_origem)
-                dlon = radians(mot_lng - lon_origem)
-                a = sin(dlat/2)**2 + cos(radians(lat_origem)) * cos(radians(mot_lat)) * sin(dlon/2)**2
-                c = 2 * atan2(sqrt(a), sqrt(1-a))
-                distancia = R * c
-                
-                print(f"  📏 Distância: {distancia:.2f} km")
-                
-                if distancia <= RAIO_MAXIMO_KM:
-                    print(f"  ✅ DENTRO do raio! Enviando corrida...")
-                    socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
-                    motoristas_proximos += 1
-                else:
-                    print(f"  ❌ FORA do raio ({distancia:.2f} > {RAIO_MAXIMO_KM})")
-            else:
-                print(f"  ⚠️ Sem localização registrada")
-                # 🔥 SE NÃO TEM LOCALIZAÇÃO, ENVIA MESMO ASSIM (para não perder corridas)
-                socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
-                motoristas_proximos += 1
+        print(f"  📏 Distância: {distancia:.2f} km")
         
-        print(f"📊 Motoristas próximos: {motoristas_proximos}")
-        
-        if motoristas_proximos == 0:
-            return jsonify({
-                "erro": "Nenhum motorista proximo disponivel no momento.",
-                "motoristas_online": len(todos_motoristas),
-                "motoristas_proximos": 0
-            }), 404
+        if distancia <= RAIO_MAXIMO_KM:
+            print(f"  ✅ DENTRO do raio! Enviando corrida...")
+            socketio.emit("nova_corrida", dados_chamada, room=f"motorista_{motorista.id}")
+            motoristas_proximos += 1
+        else:
+            print(f"  ❌ FORA do raio ({distancia:.2f} > {RAIO_MAXIMO_KM}) - NÃO enviado")
+    else:
+        print(f"  ⚠️ Sem localização - NÃO enviado (motorista precisa abrir o app e ficar online)")
+        motoristas_sem_localizacao += 1
+
+print(f"📊 Motoristas próximos: {motoristas_proximos}")
+print(f"📊 Motoristas sem localização: {motoristas_sem_localizacao}")
+
+if motoristas_proximos == 0:
+    # Mensagem mais detalhada
+    if motoristas_sem_localizacao > 0:
+        msg = f"Nenhum motorista próximo disponível. {motoristas_sem_localizacao} motorista(s) online mas sem localização atualizada."
+    else:
+        msg = "Nenhum motorista próximo disponível no momento."
+    
+    return jsonify({
+        "erro": msg,
+        "motoristas_online": len(todos_motoristas),
+        "motoristas_proximos": 0,
+        "motoristas_sem_localizacao": motoristas_sem_localizacao
+    }), 404
         
         return jsonify({
             "status": "Procurando motoristas",
