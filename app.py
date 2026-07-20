@@ -475,34 +475,34 @@ for motorista in todos_motoristas:
 
 print(f"📊 Motoristas próximos: {motoristas_proximos}")
 print(f"📊 Motoristas sem localização: {motoristas_sem_localizacao}")
-
-if motoristas_proximos == 0:
-    # Mensagem mais detalhada
-    if motoristas_sem_localizacao > 0:
-        msg = f"Nenhum motorista próximo disponível. {motoristas_sem_localizacao} motorista(s) online mas sem localização atualizada."
-    else:
-        msg = "Nenhum motorista próximo disponível no momento."
-    
-    return jsonify({
-        "erro": msg,
-        "motoristas_online": len(todos_motoristas),
-        "motoristas_proximos": 0,
-        "motoristas_sem_localizacao": motoristas_sem_localizacao
-    }), 404
+    if motoristas_proximos == 0:
+        # Mensagem mais detalhada
+        if motoristas_sem_localizacao > 0:
+            msg = f"Nenhum motorista proximo disponivel. {motoristas_sem_localizacao} motorista(s) online mas sem localizacao atualizada."
+        else:
+            msg = "Nenhum motorista proximo disponivel no momento."
         
         return jsonify({
-            "status": "Procurando motoristas",
-            "corrida_id": nova.id,
-            "forma_pagamento": forma_pagamento,
-            "motoristas_proximos": motoristas_proximos
-        }), 201
-        
-    except Exception as e:
-        print(f"❌ ERRO: {e}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
-        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+            "erro": msg,
+            "motoristas_online": len(todos_motoristas),
+            "motoristas_proximos": 0,
+            "motoristas_sem_localizacao": motoristas_sem_localizacao
+        }), 404
+    
+    # Só chega aqui se tiver motoristas próximos
+    return jsonify({
+        "status": "Procurando motoristas",
+        "corrida_id": nova.id,
+        "forma_pagamento": forma_pagamento,
+        "motoristas_proximos": motoristas_proximos
+    }), 201
+
+except Exception as e:
+    print(f"❌ ERRO: {e}")
+    import traceback
+    traceback.print_exc()
+    db.session.rollback()
+    return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 @app.route('/aceitar_corrida/<int:id>', methods=['POST'])
 @jwt_required()
 def aceitar_corrida(id):
