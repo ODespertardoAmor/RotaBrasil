@@ -326,6 +326,32 @@ function iniciarGPS(){
         socket.on('connect_error',()=>mostrarErro("Servidor indisponível"));
 
         window.onload=()=>{const t=localStorage.getItem("token_motorista"),d=localStorage.getItem("dados_motorista");if(t&&d){try{usuario=JSON.parse(d);token=t;telaPrincipal();iniciarGPS();iniciarVerificacaoDinamico();}catch{localStorage.clear();}}document.querySelectorAll('.estrela').forEach(e=>{e.addEventListener('click',function(){notaAvaliacao=parseInt(this.dataset.valor);document.querySelectorAll('.estrela').forEach((el,i)=>{el.classList.toggle('ativa',i<notaAvaliacao);});});});};
+        // No motorista, adicione esta função
+function iniciarEnvioLocalizacaoREST() {
+    setInterval(async () => {
+        if (!usuario || !usuario.id || !token) return;
+        
+        try {
+            await fetch(`${API_URL}/atualizar_localizacao`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    corrida_id: corrida?.corrida_id || corrida?.id || 0,
+                    lat: posicaoAtual.lat,
+                    lng: posicaoAtual.lng
+                })
+            });
+            console.log('📍 Localização enviada via REST');
+        } catch (e) {
+            console.warn('⚠️ Erro ao enviar localização REST:', e.message);
+        }
+    }, 10000); // A cada 10 segundos
+}
+
+// Chame esta função no telaPrincipal() ou após ficar online
     </script>
 </body>
 </html>
