@@ -607,39 +607,36 @@ def finalizar_corrida(corrida_id):
 
 @app.route("/localizacao_motorista/<int:corrida_id>", methods=["GET"])
 def get_localizacao_motorista(corrida_id):
-    """Retorna a última localização do motorista da corrida"""
+    """Retorna a última localização (ignora o corrida_id por enquanto)"""
     try:
-        # Busca no banco a última localização
+        # 🔥 Busca a última localização de QUALQUER motorista
         resultado = db.session.execute(
             db.text("""
-                SELECT lat, lng, updated_at 
+                SELECT lat, lng, motorista_id, updated_at 
                 FROM localizacoes 
-                WHERE corrida_id = :cid 
                 ORDER BY updated_at DESC 
                 LIMIT 1
-            """),
-            {'cid': corrida_id}
+            """)
         ).fetchone()
         
-        if resultado and resultado[0] and resultado[1]:
+        if resultado and resultado[0] is not None:
             return jsonify({
                 "corrida_id": corrida_id,
                 "lat": float(resultado[0]),
                 "lng": float(resultado[1]),
-                "atualizado_em": str(resultado[2])
+                "motorista_id": resultado[2],
+                "atualizado_em": str(resultado[3])
             })
         else:
             return jsonify({
                 "corrida_id": corrida_id,
                 "lat": None,
-                "lng": None,
-                "erro": "Localização não disponível"
+                "lng": None
             }), 404
+            
     except Exception as e:
-        print(f"❌ Erro ao buscar localização: {e}")
-        return jsonify({"corrida_id": corrida_id, "lat": None, "lng": None}), 500
-
-
+        print(f"❌ Erro: {e}")
+        return jsonify({"lat": None, "lng": None, "erro": str(e)}), 500
 @app.route("/atualizar_localizacao", methods=["POST"])
 @jwt_required()
 def atualizar_localizacao():
