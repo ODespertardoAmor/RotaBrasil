@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📋 Cadastro Motorista | Rota Brasil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --fundo: #0F1419; --card: #1D2129; --borda: #363E4D;
+            --texto: #F5F7FA; --texto2: #86909C; --primaria: #165DFF;
+            --sucesso: #00B42A; --alerta: #FF7D00; --perigo: #F53F3F;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--fundo); color: var(--texto); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 520px; }
+        
+        .header { text-align: center; margin-bottom: 25px; }
+        .header .logo { font-size: 50px; margin-bottom: 10px; }
+        .header h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #165DFF, #00B42A); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: var(--texto2); font-size: 14px; margin-top: 5px; }
+        
+        .card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid var(--borda); box-shadow: 0 10px 40px rgba(0,0,0,0.3); margin-bottom: 20px; }
+        .card h3 { font-size: 18px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
+        .card h3 i { color: var(--primaria); }
+        .card .subtitulo { color: var(--texto2); font-size: 13px; margin-bottom: 20px; }
+        
+        .upload-area {
+            border: 2px dashed var(--borda);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .upload-area:hover { border-color: var(--primaria); background: rgba(22,93,255,0.05); }
+        .upload-area.has-file { border-color: var(--sucesso); background: rgba(0,180,42,0.05); }
+        .upload-area i { font-size: 40px; color: var(--texto2); margin-bottom: 10px; }
+        .upload-area.has-file i { color: var(--sucesso); }
+        .upload-area p { font-size: 14px; color: var(--texto2); }
+        .upload-area .file-name { color: var(--sucesso); font-weight: 600; margin-top: 5px; display: none; }
+        .upload-area.has-file .file-name { display: block; }
+        .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        
+        .preview-img {
+            width: 100px; height: 100px;
+            border-radius: 12px;
+            object-fit: cover;
+            margin: 10px auto;
+            display: none;
+            border: 2px solid var(--sucesso);
+        }
+        .preview-img.show { display: block; }
+        
+        .btn {
+            width: 100%; padding: 16px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.3s; color: white;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-success { background: var(--sucesso); }
+        .btn-primary { background: var(--primaria); margin-top: 10px; }
+        .btn-outline { background: transparent; border: 2px solid var(--borda); color: var(--texto); }
+        
+        .status-doc {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; border-radius: 8px;
+            font-size: 13px; font-weight: 600; margin-top: 8px;
+        }
+        .status-pendente { background: rgba(255,125,0,0.1); color: var(--alerta); }
+        .status-enviado { background: rgba(0,180,42,0.1); color: var(--sucesso); }
+        .status-faltando { background: rgba(245,63,63,0.1); color: var(--perigo); }
+        
+        .progress-bar {
+            width: 100%; height: 8px; background: var(--borda);
+            border-radius: 4px; margin: 15px 0; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, var(--primaria), var(--sucesso));
+            border-radius: 4px; transition: width 0.5s;
+        }
+        
+        .lista-docs { margin-top: 10px; }
+        .doc-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px; background: rgba(255,255,255,0.03);
+            border-radius: 8px; margin-bottom: 8px;
+        }
+        .doc-item .doc-info { display: flex; align-items: center; gap: 10px; }
+        .doc-item i { font-size: 20px; }
+        .doc-item .doc-name { font-size: 13px; }
+        .doc-item .doc-status { font-size: 11px; font-weight: 600; }
+        
+        @media (max-width: 400px) {
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📋</div>
+            <h1>Cadastro do Motorista</h1>
+            <p>Envie seus documentos para validação</p>
+        </div>
+
+        <!-- Progresso -->
+        <div class="card">
+            <h3><i class="fas fa-tasks"></i> Progresso do Cadastro</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%;"></div>
+            </div>
+            <p style="text-align:center; font-size:12px; color:var(--texto2);" id="progressText">0 de 5 documentos enviados</p>
+        </div>
+
+        <!-- 1. Foto de Perfil -->
+        <div class="card">
+            <h3><i class="fas fa-camera"></i> 1. Foto de Perfil</h3>
+            <p class="subtitulo">Uma foto nítida do seu rosto</p>
+            <div class="upload-area" id="uploadFoto">
+                <i class="fas fa-user-circle"></i>
+                <p>Clique para fazer upload</p>
+                <p class="file-name" id="fotoName"></p>
+                <input type="file" accept="image/*" onchange="previewFile(this, 'foto')">
+            </div>
+            <img class="preview-img" id="previewFoto">
+            <div class="status-doc status-faltando" id="statusFoto">
+                <i class="fas fa-times-circle"></i> Não enviado
+            </div>
+        </div>
+
+        <!-- 2. CNH -->
+        <div class="card">
+            <h3><i class="fas fa-id-card"></i> 2. CNH (Carteira de Motorista)</h3>
+            <p class="subtitulo">Foto da sua CNH frente e verso</p>
+            <div class="upload-area" id="uploadCNH">
+                <i class="fas fa-upload"></i>
+                <p>Clique para fazer upload</p>
+                <p class="file-name" id="cnhName"></p>
+                <input type="file" accept="image/*" onchange="previewFile(this, 'cnh')">
+            </div>
+            <img class="preview-img" id="previewCNH">
+            <div class="status-doc status-faltando" id="statusCNH">
+                <i class="fas fa-times-circle"></i> Não enviado
+            </div>
+        </div>
+
+        <!-- 3. Documento do Veículo -->
+        <div class="card">
+            <h3><i class="fas fa-car"></i> 3. Documento do Veículo (CRLV)</h3>
+            <p class="subtitulo">Foto do documento do veículo</p>
+            <div class="upload-area" id="uploadCRLV">
+                <i class="fas fa-upload"></i>
+                <p>Clique para fazer upload</p>
+                <p class="file-name" id="crlvName"></p>
+                <input type="file" accept="image/*" onchange="previewFile(this, 'crlv')">
+            </div>
+            <img class="preview-img" id="previewCRLV">
+            <div class="status-doc status-faltando" id="statusCRLV">
+                <i class="fas fa-times-circle"></i> Não enviado
+            </div>
+        </div>
+
+        <!-- 4. Foto do Veículo -->
+        <div class="card">
+            <h3><i class="fas fa-images"></i> 4. Fotos do Veículo</h3>
+            <p class="subtitulo">Fotos da frente, traseira e laterais do carro</p>
+            <div class="upload-area" id="uploadCarro">
+                <i class="fas fa-upload"></i>
+                <p>Clique para fazer upload (pode selecionar várias)</p>
+                <p class="file-name" id="carroName"></p>
+                <input type="file" accept="image/*" multiple onchange="previewFile(this, 'carro')">
+            </div>
+            <img class="preview-img" id="previewCarro">
+            <div class="status-doc status-faltando" id="statusCarro">
+                <i class="fas fa-times-circle"></i> Não enviado
+            </div>
+        </div>
+
+        <!-- 5. Antecedentes Criminais -->
+        <div class="card">
+            <h3><i class="fas fa-file-alt"></i> 5. Certidão de Antecedentes</h3>
+            <p class="subtitulo">Certidão negativa de antecedentes criminais</p>
+            <div class="upload-area" id="uploadAntecedentes">
+                <i class="fas fa-upload"></i>
+                <p>Clique para fazer upload</p>
+                <p class="file-name" id="antecedentesName"></p>
+                <input type="file" accept="image/*,.pdf" onchange="previewFile(this, 'antecedentes')">
+            </div>
+            <img class="preview-img" id="previewAntecedentes">
+            <div class="status-doc status-faltando" id="statusAntecedentes">
+                <i class="fas fa-times-circle"></i> Não enviado
+            </div>
+        </div>
+
+        <!-- Botão Enviar -->
+        <button class="btn btn-success" onclick="enviarDocumentos()">
+            <i class="fas fa-paper-plane"></i> ENVIAR DOCUMENTOS
+        </button>
+        <button class="btn btn-outline" onclick="window.location.href='/motorista.html'" style="margin-top:10px;">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </button>
+
+        <!-- Mensagem -->
+        <p id="msgEnvio" style="text-align:center; margin-top:15px; font-size:14px; font-weight:600;"></p>
+    </div>
+
+    <script>
+        const API_URL = "https://rotabrasil-tobu.onrender.com";
+        let documentosEnviados = {
+            foto: false, cnh: false, crlv: false, carro: false, antecedentes: false
+        };
+
+        function previewFile(input, tipo) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // Atualiza nome do arquivo
+            document.getElementById(`${tipo}Name`).textContent = '📎 ' + file.name;
+            document.getElementById(`upload${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).classList.add('has-file');
+            
+            // Preview da imagem
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById(`preview${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+                    preview.src = e.target.result;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // Atualiza status
+            documentosEnviados[tipo] = true;
+            atualizarStatus(tipo, true);
+            atualizarProgresso();
+        }
+
+        function atualizarStatus(tipo, enviado) {
+            const statusEl = document.getElementById(`status${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+            if (enviado) {
+                statusEl.className = 'status-doc status-enviado';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo selecionado';
+            }
+        }
+
+        function atualizarProgresso() {
+            const total = Object.keys(documentosEnviados).length;
+            const enviados = Object.values(documentosEnviados).filter(v => v).length;
+            const percentual = Math.round((enviados / total) * 100);
+            
+            document.getElementById('progressBar').style.width = percentual + '%';
+            document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
+        }
+
+        async function enviarDocumentos() {
+            const total = Object.keys(documentosEnviados).length;
+            const enviados = Object.values(documentosEnviados).filter(v => v).length;
+            
+            if (enviados < total) {
+                document.getElementById('msgEnvio').style.color = 'var(--perigo)';
+                document.getElementById('msgEnvio').textContent = `❌ Envie todos os ${total} documentos! (${enviados}/${total})`;
+                return;
+            }
+            
+            document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+            document.getElementById('msgEnvio').textContent = '✅ Documentos enviados com sucesso! Em análise...';
+            
+            // Aqui você pode enviar os arquivos para o backend
+            // Por enquanto, salvamos no localStorage
+            localStorage.setItem('motorista_documentos_enviados', 'true');
+            localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+            
+            setTimeout(() => {
+                alert('✅ Documentos enviados com sucesso!\n\nSeus documentos estão em análise. Você será notificado quando forem aprovados.');
+                window.location.href = '/motorista.html';
+            }, 1500);
+        }
+
+        // Verifica se já enviou antes
+        if (localStorage.getItem('motorista_documentos_enviados') === 'true') {
+            const data = localStorage.getItem('motorista_documentos_data');
+            document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+            document.getElementById('msgEnvio').textContent = `✅ Documentos enviados em ${new Date(data).toLocaleDateString()}. Aguardando análise.`;
+        }
+    </script>
+</body>
+</html>
