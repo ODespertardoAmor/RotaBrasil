@@ -597,17 +597,80 @@ def finalizar_corrida(corrida_id):
 
 @app.route("/localizacao_motorista/<int:corrida_id>", methods=["GET"])
 def get_localizacao_motorista(corrida_id):
-    # Busca a última localização (se tiver tabela)
-    return jsonify({"corrida_id": corrida_id, "lat": None, "lng": None})
+    """Retorna a última localização do motorista da corrida"""
+    try:
+        # Busca no banco a última localização
+        resultado = db.session.execute(
+            db.text("""
+                SELECT lat, lng, updated_at 
+                FROM localizacoes 
+                WHERE corrida_id = :cid 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """),
+            {'cid': corrida_id}
+        ).fetchone()
+        
+        if resultado and resultado[0] and resultado[1]:
+            return jsonify({
+                "corrida_id": corrida_id,
+                "lat": float(resultado[0]),
+                "lng": float(resultado[1]),
+                "atualizado_em": str(resultado[2])
+            })
+        else:
+            return jsonify({
+                "corrida_id": corrida_id,
+                "lat": None,
+                "lng": None,
+                "erro": "Localização não disponível"
+            }), 404
+    except Exception as e:
+        print(f"❌ Erro ao buscar localização: {e}")
+        return jsonify({"corrida_id": corrida_id, "lat": None, "lng": None}), 500
+
 
 @app.route("/atualizar_localizacao", methods=["POST"])
 @jwt_required()
 def atualizar_localizacao():
-    motorista_id = get_jwt_identity()
-    dados = request.get_json()
-    socketio.emit("atualizacao_localizacao", dados, room=f"corrida_{dados.get('corrida_id')}")
-    return jsonify({"status": "Localização atualizada"}), 200
-
+    """Salva a localização do motorista e emite via socket"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        
+        corrida_id = dados.get('corrida_id', 0)
+        lat = dados.get('lat') or dados.get('latitude')
+        lng = dados.get('lng') or dados.get('longitude')
+        
+        if not lat or not lng:
+            return jsonify({"erro": "Coordenadas ausentes"}), 400
+        
+        # 🔥 SALVA NO BANCO DE DADOS
+        db.session.execute(
+            db.text("""
+                INSERT INTO localizacoes (corrida_id, motorista_id, lat, lng, updated_at) 
+                VALUES (:cid, :mid, :lat, :lng, NOW())
+            """),
+            {'cid': corrida_id, 'mid': motorista_id, 'lat': float(lat), 'lng': float(lng)}
+        )
+        db.session.commit()
+        
+        print(f"📍 Localização salva - Motorista {motorista_id}: {lat}, {lng}")
+        
+        # Emite via socket
+        socketio.emit("atualizacao_localizacao", {
+            "corrida_id": corrida_id,
+            "motorista_id": motorista_id,
+            "lat": float(lat),
+            "lng": float(lng)
+        }, room=f"corrida_{corrida_id}")
+        
+        return jsonify({"status": "Localização atualizada e salva!"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao salvar localização: {e}")
+        return jsonify({"erro": str(e)}), 500
 # ==========================================
 # AVALIAÇÃO
 # ==========================================
