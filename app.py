@@ -138,7 +138,17 @@ class Localizacao(db.Model):
 # ==========================================
 # FUNÇÕES AUXILIARES
 # ==========================================
-
+@app.route('/teste_localizacao')
+def teste_localizacao():
+    """Insere uma localização de teste no banco"""
+    try:
+        db.session.execute(
+            db.text("INSERT INTO localizacoes (corrida_id, motorista_id, lat, lng, updated_at) VALUES (0, 1, -16.7282, -43.8578, NOW())")
+        )
+        db.session.commit()
+        return jsonify({"status": "Localização de teste inserida!"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 def admin_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
