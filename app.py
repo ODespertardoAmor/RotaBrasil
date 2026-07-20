@@ -1095,38 +1095,48 @@ def motorista_online(dados):
         join_room(f"motorista_{motorista_id}")
         print(f"🟢 Motorista {motorista_id} online")
 
-@app.route("/localizacao_motorista/<int:corrida_id>", methods=["GET"])
-def get_localizacao_motorista(corrida_id):
-    """Busca a última localização do motorista no banco"""
-    try:
-        resultado = db.session.execute(
-            db.text("""
-                SELECT lat, lng, updated_at 
-                FROM localizacoes 
-                WHERE motorista_id IS NOT NULL
-                ORDER BY updated_at DESC 
-                LIMIT 1
-            """),
-            {'cid': corrida_id}
-        ).fetchone()
-        
-        if resultado and resultado[0] and resultado[1]:
-            return jsonify({
-                "corrida_id": corrida_id,
-                "lat": float(resultado[0]),
-                "lng": float(resultado[1]),
-                "atualizado_em": str(resultado[2])
-            })
-        else:
-            return jsonify({
-                "corrida_id": corrida_id,
-                "lat": None,
-                "lng": None
-            }), 404
+@socketio.on("localizacao_motorista")
+def receber_localizacao(dados):
+    corrida_id = dados.get('corrida_id', 0)
+    motorista_id = dados.get("motorista_id")
+    lat = dados.get("lat")
+    lng = dados.get("lng")
+    motorista_nome = dados.get("motorista_nome", "")
+    motorista_foto = dados.get("motorista_foto", "")
+    
+    if motorista_id and lat and lng:
+        try:
+            # 🔥 SALVA NO BANCO DE DADOS
+            db.session.execute(
+                db.text("""
+                    INSERT INTO localizacoes (corrida_id, motorista_id, lat, lng, updated_at) 
+                    VALUES (:cid, :mid, :lat, :lng, NOW())
+                """),
+                {
+                    'cid': int(corrida_id) if corrida_id else 0, 
+                    'mid': int(motorista_id), 
+                    'lat': float(lat), 
+                    'lng': float(lng)
+                }
+            )
+            db.session.commit()
+            print(f"💾 Localização SALVA no banco - Motorista {motorista_id}: {lat}, {lng}")
             
-    except Exception as e:
-        print(f"❌ Erro ao buscar localização: {e}")
-        return jsonify({"corrida_id": corrida_id, "lat": None, "lng": None}), 500
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Erro ao salvar localização: {e}")
+        
+        # Emite para o passageiro (se tiver corrida)
+        if corrida_id and int(corrida_id) > 0:
+            socketio.emit("localizacao_motorista", {
+                "corrida_id": int(corrida_id),
+                "motorista_id": int(motorista_id),
+                "lat": float(lat),
+                "lng": float(lng),
+                "motorista_nome": motorista_nome,
+                "motorista_foto": motorista_foto
+            }, room=f"corrida_{corrida_id}")
+            print(f"📍 Emitido para sala corrida_{corrida_id}")
 @socketio.on('corrida_aceita')
 def handle_corrida_aceita(dados):
     cid = dados.get('corrida_id')
