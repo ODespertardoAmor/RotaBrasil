@@ -392,6 +392,20 @@ function pararEnvioLocalizacaoREST() {
         console.log('⏹️ Envio de localização REST parado');
     }
 }
+        async function verificarDocumentos() {
+    try {
+        const res = await fetch(`${API_URL}/motorista/documentos/${usuario.id}`);
+        const data = await res.json();
+        
+        if (!data.documentos_aprovados) {
+            // Mostra aviso
+            document.getElementById('avisoDocs').style.display = 'block';
+            document.getElementById('avisoDocs').innerHTML = 
+                '⚠️ Seus documentos ainda não foram aprovados. ' +
+                '<a href="/cadastro-motorista-docs.html" style="color:#FF7D00;">Enviar documentos</a>';
+        }
+    } catch(e) {}
+}
     </script>
 </body>
 </html>
