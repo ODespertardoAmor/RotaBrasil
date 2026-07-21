@@ -291,12 +291,9 @@ function atualizarProgresso() {
     document.getElementById('progressBar').style.width = percentual + '%';
     document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
 }
-
 async function enviarDocumentos() {
     const total = Object.keys(documentosEnviados).length;
     const enviados = Object.values(documentosEnviados).filter(v => v).length;
-    
-    console.log('📤 Enviando...', { total, enviados, documentosEnviados });
     
     if (enviados < total) {
         const faltando = Object.entries(documentosEnviados)
@@ -310,15 +307,58 @@ async function enviarDocumentos() {
     }
     
     document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
-    document.getElementById('msgEnvio').textContent = '✅ Todos os documentos enviados! Salvando...';
+    document.getElementById('msgEnvio').textContent = '⏳ Enviando documentos...';
     
-    localStorage.setItem('motorista_documentos_enviados', 'true');
-    localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+    // 🔥 SALVA NO LOCALSTORAGE
+    const dadosEnvio = {
+        enviado: true,
+        data: new Date().toISOString(),
+        status: 'pendente',
+        documentos: ['foto', 'cnh', 'crlv', 'carro', 'antecedentes']
+    };
+    localStorage.setItem('motorista_documentos', JSON.stringify(dadosEnvio));
     
-    setTimeout(() => {
-        alert('✅ Documentos enviados com sucesso!\n\nSeus documentos estão em análise.');
-    }, 1000);
+    // 🔥 ATUALIZA NO BANCO DE DADOS
+    const token = localStorage.getItem('token_motorista');
+    
+    if (token) {
+        try {
+            const res = await fetch(`${API_URL}/motorista/enviar_documentos`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    documentos_enviados: true,
+                    data_envio: new Date().toISOString()
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+                document.getElementById('msgEnvio').textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
+                
+                setTimeout(() => {
+                    window.location.href = '/motorista.html';
+                }, 2000);
+            } else {
+                throw new Error(data.erro || 'Erro ao salvar');
+            }
+        } catch (e) {
+            // Mesmo com erro, salva localmente
+            document.getElementById('msgEnvio').style.color = 'var(--alerta)';
+            document.getElementById('msgEnvio').textContent = '⚠️ Documentos salvos localmente. Serão enviados quando houver conexão.';
+        }
+    } else {
+        // Sem token, salva só localmente
+        document.getElementById('msgEnvio').style.color = 'var(--sucesso)';
+        document.getElementById('msgEnvio').textContent = '✅ Documentos salvos! Faça login para enviar.';
+    }
 }
+
 
 // Verifica se já enviou antes
 if (localStorage.getItem('motorista_documentos_enviados') === 'true') {
