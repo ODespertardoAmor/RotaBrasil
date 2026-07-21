@@ -67,7 +67,9 @@ class Usuario(db.Model):
     online = db.Column(db.Boolean, default=False)
     admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    documentos_enviados = db.Column(db.Boolean, default=False)
+    documentos_aprovados = db.Column(db.Boolean, default=False)
+    data_envio_docs = db.Column(db.DateTime, nullable=True)
     def to_dict(self):
         return {
             'id': self.id, 'nome': self.nome, 'email': self.email,
@@ -1587,6 +1589,18 @@ def verificar_localizacoes():
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500    
+@app.route('/motorista/documentos/<int:mot_id>', methods=['GET'])
+def verificar_documentos(mot_id):
+    """Verifica se o motorista enviou os documentos"""
+    motorista = Usuario.query.get(mot_id)
+    if not motorista:
+        return jsonify({'erro': 'Motorista não encontrado'}), 404
+    
+    return jsonify({
+        'documentos_enviados': motorista.documentos_enviados or False,
+        'documentos_aprovados': motorista.documentos_aprovados or False,
+        'data_envio': str(motorista.data_envio_docs) if motorista.data_envio_docs else None
+    })        
 # ==========================================
 # INICIAR
 # ==========================================
