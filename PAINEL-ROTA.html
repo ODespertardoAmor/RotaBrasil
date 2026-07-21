@@ -223,7 +223,22 @@
         </div>
     </div>
     <div class="toast-container" id="toastContainer"></div>
-
+    //===≠==modal documentos visualizar 
+    <!-- Modal para ver documentos -->
+<div class="modal-overlay" id="modalDocumentos">
+    <div class="modal-box" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+        <h3 id="modalTituloDocs">📋 Documentos do Motorista</h3>
+        <div id="conteudoDocumentos" style="text-align: left;">
+            <p id="infoMotoristaDocs" style="color:#94A3B8; margin-bottom: 15px;"></p>
+            <div id="imagensDocumentos"></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="btn btn-success" onclick="aprovarDocumentosModal(true)" style="flex:1;">✅ Aprovar</button>
+            <button class="btn btn-danger" onclick="aprovarDocumentosModal(false)" style="flex:1;">❌ Reprovar</button>
+            <button class="btn" onclick="fecharModalDocumentos()" style="flex:1; background:#334155;">Fechar</button>
+        </div>
+    </div>
+</div>
     <script>
         // ========== CONFIG (UMA ÚNICA DECLARAÇÃO) ==========
         const API = 'https://rotabrasil-tobu.onrender.com';
@@ -500,7 +515,71 @@
     } catch (e) {
         toast('❌ Erro de conexão', 'error');
     }
+}.      let motoristaDocumentosId = null;
+
+async function verDocumentos(motId) {
+    motoristaDocumentosId = motId;
+    
+    try {
+        const res = await fetch(`${API}/admin/ver_documentos/${motId}`);
+        const data = await res.json();
+        
+        const mot = data.motorista;
+        document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${mot.nome}`;
+        document.getElementById('infoMotoristaDocs').innerHTML = `
+            <strong>Email:</strong> ${mot.email}<br>
+            <strong>Telefone:</strong> ${mot.telefone || 'N/A'}<br>
+            <strong>Veículo:</strong> ${mot.carro || 'N/A'} - ${mot.placa || 'N/A'}
+        `;
+        
+        const docs = data.documentos;
+        let html = '';
+        
+        if (docs.length === 0) {
+            html = '<p style="color:#EF4444;">Nenhum documento enviado.</p>';
+        } else {
+            const nomes = {
+                'foto': '📸 Foto de Perfil',
+                'cnh': '🪪 CNH',
+                'crlv': '📄 CRLV',
+                'carro': '🚗 Fotos do Carro',
+                'antecedentes': '📋 Antecedentes'
+            };
+            
+            docs.forEach(doc => {
+                html += `
+                    <div style="margin-bottom: 20px; border: 1px solid #334155; border-radius: 8px; padding: 10px;">
+                        <h4 style="margin-bottom: 10px;">${nomes[doc.tipo] || doc.tipo}</h4>
+                        <img src="${doc.imagem}" style="width: 100%; border-radius: 8px; max-height: 300px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/300x200?text=Imagem+não+disponível'">
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('imagensDocumentos').innerHTML = html;
+        document.getElementById('modalDocumentos').classList.add('show');
+        
+    } catch (e) {
+        toast('❌ Erro ao carregar documentos', 'error');
+    }
 }
+
+function fecharModalDocumentos() {
+    document.getElementById('modalDocumentos').classList.remove('show');
+    motoristaDocumentosId = null;
+}
+
+async function aprovarDocumentosModal(aprovado) {
+    if (!motoristaDocumentosId) return;
+    await aprovarDocumentos(motoristaDocumentosId, aprovado);
+    fecharModalDocumentos();
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modalDocumentos').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalDocumentos();
+});
+        
         // ========== INIT ==========
         verificarLogin();
     </script>
