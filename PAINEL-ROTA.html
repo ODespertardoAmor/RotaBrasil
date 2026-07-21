@@ -84,7 +84,7 @@
         .btn:hover { opacity: 0.85; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 650px; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 700px; text-align: center; max-height: 90vh; overflow-y: auto; }
         .modal-box input { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 18px; text-align: center; margin: 15px 0; }
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
         .toast { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; max-width: 350px; }
@@ -99,23 +99,24 @@
         @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tarifas-form { grid-template-columns: 1fr; } }
         .acao-botoes { display: flex; gap: 5px; flex-wrap: wrap; }
         .acao-botoes .btn { margin: 2px; }
-        .documento-imagem { 
-            width: 100%; 
-            border-radius: 8px; 
-            max-height: 300px; 
-            object-fit: contain; 
+        
+        .documento-imagem {
+            width: 100%;
+            border-radius: 8px;
+            max-height: 400px;
+            object-fit: contain;
             background: #0F172A;
             border: 1px solid #334155;
         }
         .documento-card {
-            margin-bottom: 20px; 
-            border: 1px solid #334155; 
-            border-radius: 8px; 
-            padding: 15px; 
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
             background: #0F172A;
         }
         .documento-card h4 {
-            margin-bottom: 10px; 
+            margin-bottom: 10px;
             color: #F1F5F9;
             font-size: 16px;
         }
@@ -146,18 +147,35 @@
             font-size: 48px;
             margin-bottom: 10px;
         }
-        .debug-info {
-            background: #0F172A;
+        .debug-box {
+            background: #0A0E14;
             border: 1px solid #334155;
             border-radius: 8px;
             padding: 10px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #94A3B8;
-            text-align: left;
-            max-height: 150px;
-            overflow-y: auto;
+            margin-top: 15px;
+            font-size: 11px;
             font-family: monospace;
+            color: #94A3B8;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .debug-box.show { display: block; }
+        .debug-box .log-error { color: #F53F3F; }
+        .debug-box .log-success { color: #00B42A; }
+        .debug-box .log-warning { color: #FF7D00; }
+        .debug-box .log-info { color: #165DFF; }
+        
+        .doc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media (max-width: 600px) {
+            .doc-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -204,7 +222,6 @@
         </div>
 
         <div class="content">
-            <!-- TAB MOTORISTAS -->
             <div class="tab-content active" id="tab-motoristas">
                 <div class="table-container">
                     <div class="table-header">
@@ -233,52 +250,30 @@
                     </div>
                 </div>
             </div>
-
-            <!-- TAB PASSAGEIROS -->
             <div class="tab-content" id="tab-passageiros">
-                <div class="table-container">
-                    <div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
-                        <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
+                    <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB CORRIDAS -->
             <div class="tab-content" id="tab-corridas">
-                <div class="table-container">
-                    <div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
-                        <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
+                    <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB AVALIAÇÕES -->
             <div class="tab-content" id="tab-avaliacoes">
-                <div class="table-container">
-                    <div class="table-header"><h3>Avaliações</h3></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
-                        <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Avaliações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
+                    <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB TRANSAÇÕES -->
             <div class="tab-content" id="tab-transacoes">
-                <div class="table-container">
-                    <div class="table-header"><h3>Transações</h3></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
-                        <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Transações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
+                    <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB TARIFAS -->
             <div class="tab-content" id="tab-tarifas">
                 <div class="table-container">
                     <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
@@ -309,9 +304,9 @@
         </div>
     </div>
 
-    <!-- MODAL DOCUMENTOS - VERSÃO CORRIGIDA -->
+    <!-- MODAL DOCUMENTOS -->
     <div class="modal-overlay" id="modalDocumentos">
-        <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-box" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
             <h3 id="modalTituloDocs">📋 Documentos do Motorista</h3>
             <div id="conteudoDocumentos" style="text-align: left; margin-top: 15px;">
                 <div id="loadingDocs" class="loading-docs">
@@ -319,7 +314,7 @@
                     <p style="margin-top: 10px;">Carregando documentos...</p>
                 </div>
                 <div id="infoMotoristaDocs" style="color:#94A3B8; margin-bottom: 15px; display: none;"></div>
-                <div id="debugInfo" class="debug-info" style="display: none;"></div>
+                <div id="debugBox" class="debug-box"></div>
                 <div id="imagensDocumentos" style="display: none;"></div>
                 <div id="erroDocumentos" style="color:#EF4444; display: none; text-align: center; padding: 20px;"></div>
                 <div id="semDocumentos" class="sem-documentos" style="display: none;">
@@ -339,13 +334,11 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        // ========== CONFIGURAÇÕES ==========
-        const API = 'https://rotabrasil-tobu.onrender.com';
+        const API_URL = "https://rotabrasil-tobu.onrender.com";
         let usuarioSaldoId = null;
         let motoristaDocumentosId = null;
         let motoristasCache = [];
 
-        // ========== TOAST ==========
         function toast(msg, tipo = 'success') {
             const el = document.getElementById('toastContainer');
             const t = document.createElement('div');
@@ -353,6 +346,25 @@
             t.textContent = msg;
             el.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+        }
+
+        function log(msg, tipo = 'info') {
+            const box = document.getElementById('debugBox');
+            if (!box) return;
+            box.classList.add('show');
+            const timestamp = new Date().toLocaleTimeString();
+            const classes = { 'error': 'log-error', 'success': 'log-success', 'warning': 'log-warning', 'info': 'log-info' };
+            const linha = document.createElement('div');
+            linha.className = classes[tipo] || 'log-info';
+            linha.textContent = `[${timestamp}] ${msg}`;
+            box.appendChild(linha);
+            console.log(`[${tipo.toUpperCase()}]`, msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function clearLogs() {
+            const box = document.getElementById('debugBox');
+            if (box) { box.innerHTML = ''; box.classList.remove('show'); }
         }
 
         // ========== LOGIN ==========
@@ -364,7 +376,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${API}/admin/login`, {
+                const res = await fetch(`${API_URL}/admin/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ senha })
@@ -390,7 +402,7 @@
         function verificarLogin() {
             const token = localStorage.getItem('admin_token');
             if (token) {
-                fetch(`${API}/admin/verificar`, {
+                fetch(`${API_URL}/admin/verificar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token })
@@ -419,7 +431,6 @@
             if (e.key === 'Enter') entrarPainel();
         });
 
-        // ========== TABS ==========
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -439,57 +450,35 @@
         // ========== DASHBOARD ==========
         async function carregarDashboard() {
             try {
-                const res = await fetch(`${API}/admin/dashboard`);
+                const res = await fetch(`${API_URL}/admin/dashboard`);
                 const data = await res.json();
                 document.getElementById('totalUsuarios').textContent = data.estatisticas?.total_usuarios || data.usuarios || 0;
                 document.getElementById('motoristasOnline').textContent = data.estatisticas?.motoristas_online || data.motoristas_online || 0;
                 document.getElementById('corridasAtivas').textContent = data.estatisticas?.corridas_ativas || data.corridas_ativas?.length || 0;
                 document.getElementById('corridasFinalizadas').textContent = data.estatisticas?.corridas_finalizadas_hoje || data.corridas_finalizadas?.length || 0;
                 document.getElementById('faturamento').textContent = data.totalFaturamento || `R$ ${(data.estatisticas?.faturamento_hoje || 0).toFixed(2)}`;
-            } catch (e) {
-                console.error('Erro ao carregar dashboard:', e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         // ========== MOTORISTAS ==========
         async function carregarMotoristas() {
             try {
-                console.log('🔄 Carregando motoristas...');
-                const res = await fetch(`${API}/admin/motoristas`);
+                const res = await fetch(`${API_URL}/admin/motoristas`);
                 const data = await res.json();
-                console.log('📊 Motoristas recebidos:', data);
-                
-                // Guarda no cache
                 motoristasCache = data;
-                
                 const tbody = document.getElementById('listaMotoristas');
-                
                 if (!data || !data.length) {
                     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>';
                     return;
                 }
-                
                 tbody.innerHTML = data.map(m => {
-                    let docStatus = '';
-                    let docBadge = '';
-                    if (m.documentos_aprovados) {
-                        docStatus = '✅ Aprovado';
-                        docBadge = 'badge-online';
-                    } else if (m.documentos_enviados) {
-                        docStatus = '⏳ Pendente';
-                        docBadge = 'badge-pendente';
-                    } else {
-                        docStatus = '❌ Não enviado';
-                        docBadge = 'badge-offline';
-                    }
-
-                    return `
-                    <tr>
+                    let docStatus = '', docBadge = '';
+                    if (m.documentos_aprovados) { docStatus = '✅ Aprovado'; docBadge = 'badge-online'; }
+                    else if (m.documentos_enviados) { docStatus = '⏳ Pendente'; docBadge = 'badge-pendente'; }
+                    else { docStatus = '❌ Não enviado'; docBadge = 'badge-offline'; }
+                    return `<tr>
                         <td>#${m.id}</td>
-                        <td>
-                            <img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=35&background=334155&color=fff'}" 
-                                 class="avatar" onerror="this.style.display='none'">
-                        </td>
+                        <td><img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=35&background=334155&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
                         <td><strong>${m.nome}</strong></td>
                         <td style="color:#94A3B8;">${m.email}</td>
                         <td>${m.carro || '-'}</td>
@@ -499,53 +488,37 @@
                         <td>
                             <div class="acao-botoes">
                                 <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')" title="Adicionar Saldo">💵</button>
-                                
-                                ${m.documentos_enviados ? 
-                                    `<button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>` : 
-                                    `<button class="btn btn-secondary btn-sm" disabled title="Sem documentos">📄</button>`
-                                }
-                                
-                                ${m.documentos_enviados && !m.documentos_aprovados ? 
-                                    `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button>
-                                     <button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` : 
-                                    ''
-                                }
-                                
+                                ${m.documentos_enviados ? `<button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>` : `<button class="btn btn-secondary btn-sm" disabled title="Sem documentos">📄</button>`}
+                                ${m.documentos_enviados && !m.documentos_aprovados ? `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button><button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` : ''}
                                 <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})" title="Excluir">🗑</button>
                             </div>
                         </td>
-                    </tr>
-                `}).join('');
-                
+                    </tr>`;
+                }).join('');
             } catch (e) {
-                console.error('❌ Erro ao carregar motoristas:', e);
                 document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>';
             }
         }
 
-        // ========== VER DOCUMENTOS - VERSÃO CORRIGIDA ==========
+        // ========== VER DOCUMENTOS - CORRIGIDO ==========
         async function verDocumentos(motId) {
             console.log('📄 verDocumentos chamado para motorista ID:', motId);
             
-            // Mostra loading
             document.getElementById('modalDocumentos').classList.add('show');
             document.getElementById('loadingDocs').style.display = 'block';
             document.getElementById('infoMotoristaDocs').style.display = 'none';
             document.getElementById('imagensDocumentos').style.display = 'none';
             document.getElementById('erroDocumentos').style.display = 'none';
             document.getElementById('semDocumentos').style.display = 'none';
-            document.getElementById('debugInfo').style.display = 'none';
+            clearLogs();
             
             motoristaDocumentosId = motId;
             
             try {
-                // BUSCA O MOTORISTA DO CACHE OU DA API
+                // Busca o motorista
                 let motorista = motoristasCache.find(m => m.id === motId);
-                
                 if (!motorista) {
-                    // Se não tiver no cache, busca da API
-                    console.log('🔍 Motorista não encontrado no cache, buscando da API...');
-                    const res = await fetch(`${API}/admin/motoristas`);
+                    const res = await fetch(`${API_URL}/admin/motoristas`);
                     const data = await res.json();
                     motorista = data.find(m => m.id === motId);
                     motoristasCache = data;
@@ -555,106 +528,69 @@
                     throw new Error('Motorista não encontrado');
                 }
                 
-                console.log('👤 Motorista encontrado:', motorista);
+                log(`👤 Motorista: ${motorista.nome} (ID: ${motId})`, 'info');
+                log(`📋 Status documentos: ${motorista.documentos_enviados ? 'Enviados' : 'Não enviados'}`, 'info');
                 
-                // Busca os documentos do motorista
+                // ===== BUSCA DOCUMENTOS DO BANCO =====
+                log('🔍 Buscando documentos do banco...', 'info');
+                
                 let docs = [];
-                let debugMsg = `🔍 Buscando documentos do motorista #${motId}\n`;
                 
-                // Tenta várias fontes
-                // 1. Verifica se tem documentos no objeto do motorista
-                if (motorista.documentos && Array.isArray(motorista.documentos) && motorista.documentos.length > 0) {
-                    docs = motorista.documentos;
-                    debugMsg += `✅ Encontrado ${docs.length} documentos no objeto do motorista\n`;
-                    console.log('📎 Documentos do motorista:', docs);
+                // Tenta a rota /admin/ver_documentos
+                try {
+                    log(`🌐 GET /admin/ver_documentos/${motId}`, 'info');
+                    const res = await fetch(`${API_URL}/admin/ver_documentos/${motId}`);
+                    log(`📡 Status: ${res.status}`, 'info');
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        log(`📦 Dados recebidos: ${JSON.stringify(data).substring(0, 300)}`, 'info');
+                        
+                        // Verifica diferentes estruturas de resposta
+                        if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
+                            docs = data.documentos;
+                            log(`✅ Encontrado ${docs.length} documentos na chave 'documentos'`, 'success');
+                        } else if (data.imagem_base64) {
+                            docs = [{ tipo: 'documento', imagem_base64: data.imagem_base64 }];
+                            log(`✅ Encontrado 1 documento (imagem única)`, 'success');
+                        } else if (data.foto || data.cnh || data.crlv || data.carro || data.antecedentes) {
+                            // Tenta pegar campos individuais
+                            const campos = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
+                            campos.forEach(campo => {
+                                if (data[campo]) {
+                                    docs.push({ tipo: campo, imagem_base64: data[campo] });
+                                }
+                            });
+                            log(`✅ Encontrado ${docs.length} documentos em campos individuais`, 'success');
+                        } else {
+                            log(`⚠️ Nenhum documento encontrado na resposta`, 'warning');
+                        }
+                    } else {
+                        log(`❌ Erro na requisição: ${res.status}`, 'error');
+                    }
+                } catch (e) {
+                    log(`❌ Erro ao buscar documentos: ${e.message}`, 'error');
                 }
                 
-                // 2. Tenta a rota /admin/ver_documentos
+                // Se não encontrou, tenta do localStorage do motorista
                 if (docs.length === 0) {
-                    try {
-                        debugMsg += `🔄 Tentando rota: /admin/ver_documentos/${motId}\n`;
-                        const res = await fetch(`${API}/admin/ver_documentos/${motId}`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            console.log('📡 Resposta rota 1:', data);
-                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
-                                docs = data.documentos;
-                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 1\n`;
-                            } else {
-                                debugMsg += `❌ Rota 1 retornou: ${JSON.stringify(data)}\n`;
+                    log('🔍 Tentando buscar do localStorage...', 'info');
+                    const localDocs = localStorage.getItem(`motorista_documentos_${motId}`);
+                    if (localDocs) {
+                        try {
+                            const parsed = JSON.parse(localDocs);
+                            if (parsed.documentos) {
+                                docs = Object.entries(parsed.documentos).map(([tipo, imagem]) => ({
+                                    tipo: tipo,
+                                    imagem_base64: imagem
+                                }));
+                                log(`✅ Encontrado ${docs.length} documentos no localStorage`, 'success');
                             }
-                        } else {
-                            debugMsg += `❌ Rota 1 falhou: ${res.status}\n`;
-                        }
-                    } catch (e) {
-                        debugMsg += `❌ Rota 1 erro: ${e.message}\n`;
+                        } catch (e) {}
                     }
                 }
                 
-                // 3. Tenta a rota /admin/documentos
-                if (docs.length === 0) {
-                    try {
-                        debugMsg += `🔄 Tentando rota: /admin/documentos/${motId}\n`;
-                        const res = await fetch(`${API}/admin/documentos/${motId}`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            console.log('📡 Resposta rota 2:', data);
-                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
-                                docs = data.documentos;
-                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 2\n`;
-                            } else {
-                                debugMsg += `❌ Rota 2 retornou: ${JSON.stringify(data)}\n`;
-                            }
-                        } else {
-                            debugMsg += `❌ Rota 2 falhou: ${res.status}\n`;
-                        }
-                    } catch (e) {
-                        debugMsg += `❌ Rota 2 erro: ${e.message}\n`;
-                    }
-                }
-                
-                // 4. Tenta a rota /motoristas
-                if (docs.length === 0) {
-                    try {
-                        debugMsg += `🔄 Tentando rota: /motoristas/${motId}/documentos\n`;
-                        const res = await fetch(`${API}/motoristas/${motId}/documentos`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            console.log('📡 Resposta rota 3:', data);
-                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
-                                docs = data.documentos;
-                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 3\n`;
-                            } else {
-                                debugMsg += `❌ Rota 3 retornou: ${JSON.stringify(data)}\n`;
-                            }
-                        } else {
-                            debugMsg += `❌ Rota 3 falhou: ${res.status}\n`;
-                        }
-                    } catch (e) {
-                        debugMsg += `❌ Rota 3 erro: ${e.message}\n`;
-                    }
-                }
-                
-                // 5. Verifica campos específicos no motorista
-                if (docs.length === 0) {
-                    const camposDoc = ['foto_documento', 'foto_cnh', 'foto_crlv', 'foto_carro', 'documento_foto', 'cnh_foto', 'crlv_foto'];
-                    camposDoc.forEach(campo => {
-                        if (motorista[campo]) {
-                            docs.push({ tipo: campo, imagem: motorista[campo] });
-                            debugMsg += `✅ Encontrado campo: ${campo}\n`;
-                        }
-                    });
-                }
-                
-                console.log(`📎 Total de documentos encontrados: ${docs.length}`);
-                debugMsg += `\n📊 Total: ${docs.length} documento(s) encontrado(s)`;
-                
-                // Esconde loading
                 document.getElementById('loadingDocs').style.display = 'none';
-                
-                // Exibe debug
-                document.getElementById('debugInfo').textContent = debugMsg;
-                document.getElementById('debugInfo').style.display = 'block';
                 
                 // Exibe informações do motorista
                 document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${motorista.nome}`;
@@ -662,8 +598,7 @@
                     <strong>Email:</strong> ${motorista.email}<br>
                     <strong>Telefone:</strong> ${motorista.telefone || 'N/A'}<br>
                     <strong>Veículo:</strong> ${motorista.carro || 'N/A'} - ${motorista.placa || 'N/A'}<br>
-                    <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}
-                    <hr style="border-color:#334155; margin: 10px 0;">
+                    <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}<br>
                     <strong>Total de documentos:</strong> ${docs.length}
                 `;
                 document.getElementById('infoMotoristaDocs').style.display = 'block';
@@ -672,52 +607,66 @@
                 if (!docs || docs.length === 0) {
                     document.getElementById('semDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').style.display = 'none';
+                    log('📭 Nenhum documento encontrado', 'warning');
                     toast('📭 Nenhum documento encontrado', 'warning');
                 } else {
                     const nomes = {
                         'foto': '📸 Foto de Perfil',
-                        'foto_documento': '📸 Foto de Perfil',
                         'cnh': '🪪 CNH',
-                        'foto_cnh': '🪪 CNH',
                         'crlv': '📄 CRLV',
-                        'foto_crlv': '📄 CRLV',
                         'carro': '🚗 Fotos do Carro',
-                        'foto_carro': '🚗 Fotos do Carro',
                         'antecedentes': '📋 Antecedentes',
-                        'perfil': '📸 Foto de Perfil',
-                        'documento_foto': '📸 Foto'
+                        'documento': '📄 Documento'
                     };
                     
-                    let html = '';
+                    let html = '<div class="doc-grid">';
                     docs.forEach((doc, index) => {
-                        console.log(`📎 Documento ${index+1}:`, doc);
-                        const imagem = doc.imagem || doc.url || doc.foto || doc.path || doc.caminho || doc.link || '';
-                        const tipo = doc.tipo || doc.nome || 'documento';
+                        // Pega a imagem base64
+                        let imagem = doc.imagem_base64 || doc.imagem || doc.url || '';
+                        
+                        // Se a imagem não começa com data:image, adiciona o prefixo
+                        if (imagem && !imagem.startsWith('data:image')) {
+                            // Verifica se é um base64 puro
+                            if (imagem.match(/^[A-Za-z0-9+/=]+$/)) {
+                                imagem = `data:image/jpeg;base64,${imagem}`;
+                            } else if (imagem.startsWith('iVBORw0KGgo')) {
+                                imagem = `data:image/png;base64,${imagem}`;
+                            } else {
+                                imagem = `data:image/jpeg;base64,${imagem}`;
+                            }
+                        }
+                        
+                        const tipo = doc.tipo || 'documento';
                         const nomeExibicao = nomes[tipo] || tipo;
+                        
+                        log(`📎 Doc ${index+1}: ${nomeExibicao} - ${imagem ? '✅ com imagem' : '❌ sem imagem'}`, imagem ? 'success' : 'warning');
                         
                         html += `
                             <div class="documento-card">
                                 <h4>${nomeExibicao}</h4>
                                 ${imagem ? 
                                     `<img src="${imagem}" class="documento-imagem" 
-                                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;"` :
-                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>
-                                     <p style="color:#94A3B8; font-size:12px;">Tipo: ${tipo}</p>`
+                                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;" 
+                                          alt="${nomeExibicao}">` :
+                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>`
                                 }
                             </div>
                         `;
                     });
+                    html += '</div>';
                     
                     document.getElementById('imagensDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').innerHTML = html;
-                    toast(`✅ ${docs.length} documento(s) encontrado(s)!`, 'success');
+                    log(`✅ ${docs.length} documento(s) exibido(s)`, 'success');
+                    toast(`✅ ${docs.length} documento(s) carregado(s)!`, 'success');
                 }
                 
-            } catch (e) {
-                console.error('❌ Erro ao ver documentos:', e);
+            } catch (error) {
+                console.error('❌ Erro ao ver documentos:', error);
                 document.getElementById('loadingDocs').style.display = 'none';
-                document.getElementById('erroDocumentos').textContent = '❌ ' + (e.message || 'Erro ao carregar documentos');
+                document.getElementById('erroDocumentos').textContent = `❌ ${error.message}`;
                 document.getElementById('erroDocumentos').style.display = 'block';
+                log(`❌ Erro: ${error.message}`, 'error');
                 toast('❌ Erro ao carregar documentos', 'error');
             }
         }
@@ -725,20 +674,14 @@
         // ========== APROVAR DOCUMENTOS ==========
         async function aprovarDocumentos(motId, aprovado) {
             const acao = aprovado ? 'APROVAR' : 'REPROVAR';
-            
-            if (!confirm(`Tem certeza que deseja ${acao} os documentos do motorista #${motId}?`)) {
-                return;
-            }
-            
+            if (!confirm(`Tem certeza que deseja ${acao} os documentos do motorista #${motId}?`)) return;
             try {
-                const res = await fetch(`${API}/admin/aprovar_documentos/${motId}`, {
+                const res = await fetch(`${API_URL}/admin/aprovar_documentos/${motId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ aprovado })
                 });
-                
                 const data = await res.json();
-                
                 if (res.ok) {
                     toast(`✅ Documentos ${data.status || 'atualizados'}!`);
                     carregarMotoristas();
@@ -747,7 +690,6 @@
                     toast('❌ ' + (data.erro || 'Erro'), 'error');
                 }
             } catch (e) {
-                console.error('Erro ao aprovar documentos:', e);
                 toast('❌ Erro de conexão', 'error');
             }
         }
@@ -772,101 +714,67 @@
         // ========== PASSAGEIROS ==========
         async function carregarPassageiros() {
             try {
-                const res = await fetch(`${API}/admin/passageiros`);
+                const res = await fetch(`${API_URL}/admin/passageiros`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaPassageiros');
-                if (!data.length) { 
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>'; 
-                    return; 
-                }
-                tbody.innerHTML = data.map(p => `
-                    <tr>
-                        <td>#${p.id}</td>
-                        <td><img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=35&background=3B82F6&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
-                        <td><strong>${p.nome}</strong></td>
-                        <td style="color:#94A3B8;">${p.email}</td>
-                        <td>${p.telefone || '-'}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id}, '${p.nome}', 'passageiro')">💵</button>
-                            <button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})">🗑</button>
-                        </td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>'; return; }
+                tbody.innerHTML = data.map(p => `<tr>
+                    <td>#${p.id}</td>
+                    <td><img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=35&background=3B82F6&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
+                    <td><strong>${p.nome}</strong></td>
+                    <td style="color:#94A3B8;">${p.email}</td>
+                    <td>${p.telefone || '-'}</td>
+                    <td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id}, '${p.nome}', 'passageiro')">💵</button><button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})">🗑</button></td>
+                </tr>`).join('');
             } catch (e) {}
         }
 
         // ========== CORRIDAS ==========
         async function carregarCorridas() {
             try {
-                const res = await fetch(`${API}/admin/corridas`);
+                const res = await fetch(`${API_URL}/admin/corridas`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaCorridas');
-                if (!data.length) { 
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhuma corrida</td></tr>'; 
-                    return; 
-                }
-                tbody.innerHTML = data.map(c => `
-                    <tr>
-                        <td>#${c.id}</td>
-                        <td>${c.passageiro_nome || '-'}</td>
-                        <td>${c.motorista_nome || 'Aguardando'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem || '-'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino || '-'}</td>
-                        <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                        <td><span class="badge ${c.forma_pagamento === 'dinheiro' ? 'badge-dinheiro' : 'badge-pix'}">${c.forma_pagamento === 'dinheiro' ? '💵' : '💳'} ${c.forma_pagamento || 'pix'}</span></td>
-                        <td><span class="badge badge-${c.status || 'pendente'}">${c.status || 'pendente'}</span></td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhuma corrida</td></tr>'; return; }
+                tbody.innerHTML = data.map(c => `<tr>
+                    <td>#${c.id}</td>
+                    <td>${c.passageiro_nome || '-'}</td>
+                    <td>${c.motorista_nome || 'Aguardando'}</td>
+                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem || '-'}</td>
+                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino || '-'}</td>
+                    <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
+                    <td><span class="badge ${c.forma_pagamento === 'dinheiro' ? 'badge-dinheiro' : 'badge-pix'}">${c.forma_pagamento === 'dinheiro' ? '💵' : '💳'} ${c.forma_pagamento || 'pix'}</span></td>
+                    <td><span class="badge badge-${c.status || 'pendente'}">${c.status || 'pendente'}</span></td>
+                </tr>`).join('');
             } catch (e) {}
         }
 
         // ========== AVALIAÇÕES ==========
         async function carregarAvaliacoes() {
             try {
-                const res = await fetch(`${API}/admin/avaliacoes`);
+                const res = await fetch(`${API_URL}/admin/avaliacoes`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaAvaliacoes');
-                if (!data.length) { 
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748B;">Nenhuma avaliação</td></tr>'; 
-                    return; 
-                }
-                tbody.innerHTML = data.map(a => `
-                    <tr>
-                        <td>#${a.id}</td>
-                        <td>Corrida #${a.corrida_id || '-'}</td>
-                        <td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td>
-                        <td style="color:#94A3B8;">${a.comentario || 'Sem comentário'}</td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748B;">Nenhuma avaliação</td></tr>'; return; }
+                tbody.innerHTML = data.map(a => `<tr><td>#${a.id}</td><td>Corrida #${a.corrida_id || '-'}</td><td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td><td style="color:#94A3B8;">${a.comentario || 'Sem comentário'}</td></tr>`).join('');
             } catch (e) {}
         }
 
         // ========== TRANSAÇÕES ==========
         async function carregarTransacoes() {
             try {
-                const res = await fetch(`${API}/transacoes`);
+                const res = await fetch(`${API_URL}/transacoes`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaTransacoes');
-                if (!data.length) { 
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Nenhuma transação</td></tr>'; 
-                    return; 
-                }
-                tbody.innerHTML = data.map(t => `
-                    <tr>
-                        <td>#${t.id}</td>
-                        <td>Usuário #${t.usuario_id}</td>
-                        <td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo}</td>
-                        <td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo === 'credito' || t.tipo === 'recarga' ? '+' : '-'} R$ ${(t.valor || 0).toFixed(2)}</td>
-                        <td style="color:#94A3B8;">${t.descricao || '-'}</td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Nenhuma transação</td></tr>'; return; }
+                tbody.innerHTML = data.map(t => `<tr><td>#${t.id}</td><td>Usuário #${t.usuario_id}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo === 'credito' || t.tipo === 'recarga' ? '+' : '-'} R$ ${(t.valor || 0).toFixed(2)}</td><td style="color:#94A3B8;">${t.descricao || '-'}</td></tr>`).join('');
             } catch (e) {}
         }
 
         // ========== TARIFAS ==========
         async function carregarTarifas() {
             try {
-                const res = await fetch(`${API}/configuracoes`);
+                const res = await fetch(`${API_URL}/configuracoes`);
                 const data = await res.json();
                 document.getElementById('bandeirada').value = data.bandeirada || 5.0;
                 document.getElementById('preco_km').value = data.preco_km || 2.5;
@@ -883,36 +791,15 @@
                 dinamico_ativo: parseInt(document.getElementById('dinamico_ativo').value)
             };
             try {
-                const res = await fetch(`${API}/admin/configuracoes`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(dados) 
-                });
+                const res = await fetch(`${API_URL}/admin/configuracoes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 if (res.ok) toast('✅ Tarifas salvas!');
                 else toast('❌ Erro ao salvar', 'error');
             } catch (e) { toast('❌ Erro de conexão', 'error'); }
         }
 
         // ========== EXCLUIR ==========
-        async function excluirMotorista(id) { 
-            if (!confirm(`Excluir motorista #${id}?`)) return; 
-            try { 
-                await fetch(`${API}/admin/excluir_motorista/${id}`, { method: 'DELETE' }); 
-                toast('Motorista excluído!'); 
-                carregarMotoristas(); 
-                carregarDashboard(); 
-            } catch (e) { toast('Erro', 'error'); } 
-        }
-
-        async function excluirPassageiro(id) { 
-            if (!confirm(`Excluir passageiro #${id}?`)) return; 
-            try { 
-                await fetch(`${API}/admin/excluir_passageiro/${id}`, { method: 'DELETE' }); 
-                toast('Passageiro excluído!'); 
-                carregarPassageiros(); 
-                carregarDashboard(); 
-            } catch (e) { toast('Erro', 'error'); } 
-        }
+        async function excluirMotorista(id) { if (!confirm(`Excluir motorista #${id}?`)) return; try { await fetch(`${API_URL}/admin/excluir_motorista/${id}`, { method: 'DELETE' }); toast('Motorista excluído!'); carregarMotoristas(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
+        async function excluirPassageiro(id) { if (!confirm(`Excluir passageiro #${id}?`)) return; try { await fetch(`${API_URL}/admin/excluir_passageiro/${id}`, { method: 'DELETE' }); toast('Passageiro excluído!'); carregarPassageiros(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
 
         // ========== MODAL SALDO ==========
         function abrirModalSaldo(id, nome, tipo) {
@@ -922,41 +809,19 @@
             document.getElementById('modalSaldo').classList.add('show');
             setTimeout(() => document.getElementById('modalValor').focus(), 100);
         }
-
-        function fecharModal() { 
-            document.getElementById('modalSaldo').classList.remove('show'); 
-            usuarioSaldoId = null; 
-        }
-
+        function fecharModal() { document.getElementById('modalSaldo').classList.remove('show'); usuarioSaldoId = null; }
         async function confirmarSaldo() {
             const valor = parseFloat(document.getElementById('modalValor').value);
             if (!valor || valor <= 0) return toast('Valor inválido!', 'error');
             try {
-                const res = await fetch(`${API}/admin/adicionar_saldo/${usuarioSaldoId}`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ valor }) 
-                });
+                const res = await fetch(`${API_URL}/admin/adicionar_saldo/${usuarioSaldoId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor }) });
                 const data = await res.json();
-                if (res.ok) { 
-                    toast(`✅ R$ ${valor.toFixed(2)} adicionado!`); 
-                    fecharModal(); 
-                    carregarMotoristas(); 
-                    carregarPassageiros(); 
-                    carregarDashboard(); 
-                } else {
-                    toast('❌ ' + (data.erro || 'Erro'), 'error');
-                }
+                if (res.ok) { toast(`✅ R$ ${valor.toFixed(2)} adicionado!`); fecharModal(); carregarMotoristas(); carregarPassageiros(); carregarDashboard(); }
+                else toast('❌ ' + (data.erro || 'Erro'), 'error');
             } catch (e) { toast('Erro de conexão', 'error'); }
         }
-
-        document.getElementById('modalSaldo').addEventListener('click', function(e) { 
-            if (e.target === this) fecharModal(); 
-        });
-
-        document.getElementById('modalValor').addEventListener('keypress', function(e) { 
-            if (e.key === 'Enter') confirmarSaldo(); 
-        });
+        document.getElementById('modalSaldo').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
+        document.getElementById('modalValor').addEventListener('keypress', function(e) { if (e.key === 'Enter') confirmarSaldo(); });
 
         // ========== INICIALIZAÇÃO ==========
         verificarLogin();
