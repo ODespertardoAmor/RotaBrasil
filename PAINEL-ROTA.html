@@ -383,15 +383,18 @@
                 <td><span class="badge ${m.online ? 'badge-online' : 'badge-offline'}">${m.online ? '🟢 Online' : '🔴 Offline'}</span></td>
                 
                 <td>
-                    <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')">💵</button>
+                    <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')" title="Adicionar Saldo">💵</button>
                     
-                    <!-- 🔥 Botões de Aprovar/Reprovar Documentos -->
+                    <!-- 🔥 BOTÃO PARA VER DOCUMENTOS -->
+                    <button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>
+                    
+                    <!-- Botões de Aprovar/Reprovar Documentos -->
                     ${m.documentos_enviados && !m.documentos_aprovados ? 
                         `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button>
                          <button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` 
                         : ''}
                     
-                    <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})" title="Excluir">🗑</button>
                 </td>
             </tr>
         `).join('');
