@@ -339,7 +339,7 @@
         const tbody = document.getElementById('listaMotoristas');
         
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>';
             return;
         }
         
@@ -355,7 +355,7 @@
                 <td>${m.carro || '-'}</td>
                 <td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa || '-'}</span></td>
                 
-                <!-- 🆕 COLUNA DE DOCUMENTOS -->
+                <!-- Coluna de Documentos -->
                 <td>
                     ${m.documentos_aprovados ? 
                         '<span class="badge badge-online">✅ Aprovado</span>' : 
@@ -369,13 +369,20 @@
                 
                 <td>
                     <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')">💵</button>
+                    
+                    <!-- 🔥 Botões de Aprovar/Reprovar Documentos -->
+                    ${m.documentos_enviados && !m.documentos_aprovados ? 
+                        `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button>
+                         <button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` 
+                        : ''}
+                    
                     <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button>
                 </td>
             </tr>
         `).join('');
         
     } catch (e) {
-        document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>';
+        document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>';
     }
 }
 
@@ -468,7 +475,32 @@
 
         document.getElementById('modalSaldo').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
         document.getElementById('modalValor').addEventListener('keypress', function(e) { if (e.key === 'Enter') confirmarSaldo(); });
-
+    async function aprovarDocumentos(motId, aprovado) {
+    const acao = aprovado ? 'APROVAR' : 'REPROVAR';
+    
+    if (!confirm(`Tem certeza que deseja ${acao} os documentos do motorista #${motId}?`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API}/admin/aprovar_documentos/${motId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ aprovado })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            toast(`✅ Documentos ${data.status}!`);
+            carregarMotoristas(); // Atualiza a tabela
+        } else {
+            toast('❌ ' + (data.erro || 'Erro'), 'error');
+        }
+    } catch (e) {
+        toast('❌ Erro de conexão', 'error');
+    }
+}
         // ========== INIT ==========
         verificarLogin();
     </script>
