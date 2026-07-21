@@ -73,28 +73,7 @@
         .badge-cancelada { background: rgba(239,68,68,0.2); color: #EF4444; }
         .badge-pix { background: rgba(59,130,246,0.2); color: #3B82F6; }
         .badge-dinheiro { background: rgba(245,158,11,0.2); color: #F59E0B; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #334155; cursor: pointer; transition: all 0.3s; }
-        .avatar:hover { border-color: #3B82F6; transform: scale(1.05); }
-        .avatar-wrapper { position: relative; display: inline-block; }
-        .avatar-wrapper .avatar-overlay {
-            position: absolute;
-            bottom: -5px;
-            right: -5px;
-            background: #3B82F6;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: white;
-            cursor: pointer;
-            border: 2px solid #0F172A;
-            transition: all 0.3s;
-        }
-        .avatar-wrapper .avatar-overlay:hover { background: #10B981; transform: scale(1.1); }
-        
+        .avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid #334155; }
         .btn { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
         .btn-sm { padding: 5px 10px; font-size: 11px; }
         .btn-success { background: #10B981; color: white; }
@@ -103,13 +82,10 @@
         .btn-secondary { background: #475569; color: white; }
         .btn-warning { background: #F59E0B; color: #0F172A; }
         .btn:hover { opacity: 0.85; }
-        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; text-align: center; max-height: 90vh; overflow-y: auto; }
-        .modal-box input[type="file"] { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; margin: 15px 0; }
-        .modal-box .preview-foto { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #334155; margin: 10px auto; display: none; }
-        .modal-box .preview-foto.show { display: block; }
+        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 700px; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal-box input { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 18px; text-align: center; margin: 15px 0; }
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
         .toast { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; max-width: 350px; }
         .toast-success { background: #10B981; color: white; }
@@ -123,6 +99,84 @@
         @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tarifas-form { grid-template-columns: 1fr; } }
         .acao-botoes { display: flex; gap: 5px; flex-wrap: wrap; }
         .acao-botoes .btn { margin: 2px; }
+        
+        .documento-imagem {
+            width: 100%;
+            border-radius: 8px;
+            max-height: 400px;
+            object-fit: contain;
+            background: #0F172A;
+            border: 1px solid #334155;
+        }
+        .documento-card {
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
+            background: #0F172A;
+        }
+        .documento-card h4 {
+            margin-bottom: 10px;
+            color: #F1F5F9;
+            font-size: 16px;
+        }
+        .loading-docs {
+            text-align: center;
+            padding: 30px;
+            color: #94A3B8;
+        }
+        .loading-docs .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #334155;
+            border-top: 4px solid #3B82F6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sem-documentos {
+            text-align: center;
+            padding: 30px;
+            color: #94A3B8;
+        }
+        .sem-documentos .icone {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .debug-box {
+            background: #0A0E14;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #94A3B8;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .debug-box.show { display: block; }
+        .debug-box .log-error { color: #F53F3F; }
+        .debug-box .log-success { color: #00B42A; }
+        .debug-box .log-warning { color: #FF7D00; }
+        .debug-box .log-info { color: #165DFF; }
+        
+        .doc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media (max-width: 600px) {
+            .doc-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -168,7 +222,6 @@
         </div>
 
         <div class="content">
-            <!-- TAB MOTORISTAS -->
             <div class="tab-content active" id="tab-motoristas">
                 <div class="table-container">
                     <div class="table-header">
@@ -197,52 +250,30 @@
                     </div>
                 </div>
             </div>
-
-            <!-- TAB PASSAGEIROS -->
             <div class="tab-content" id="tab-passageiros">
-                <div class="table-container">
-                    <div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
-                        <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Ações</th></tr></thead>
+                    <tbody id="listaPassageiros"><tr><td colspan="6" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB CORRIDAS -->
             <div class="tab-content" id="tab-corridas">
-                <div class="table-container">
-                    <div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
-                        <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Passageiro</th><th>Motorista</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Pagamento</th><th>Status</th></tr></thead>
+                    <tbody id="listaCorridas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB AVALIAÇÕES -->
             <div class="tab-content" id="tab-avaliacoes">
-                <div class="table-container">
-                    <div class="table-header"><h3>Avaliações</h3></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
-                        <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Avaliações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Corrida</th><th>Nota</th><th>Comentário</th></tr></thead>
+                    <tbody id="listaAvaliacoes"><tr><td colspan="4" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB TRANSAÇÕES -->
             <div class="tab-content" id="tab-transacoes">
-                <div class="table-container">
-                    <div class="table-header"><h3>Transações</h3></div>
-                    <div style="overflow-x:auto;">
-                        <table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
-                        <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody>
-                    </table></div>
+                <div class="table-container"><div class="table-header"><h3>Transações</h3></div>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Usuário</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
+                    <tbody id="listaTransacoes"><tr><td colspan="5" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
                 </div>
             </div>
-
-            <!-- TAB TARIFAS -->
             <div class="tab-content" id="tab-tarifas">
                 <div class="table-container">
                     <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
@@ -273,22 +304,28 @@
         </div>
     </div>
 
-    <!-- MODAL ATUALIZAR FOTO -->
-    <div class="modal-overlay" id="modalFoto">
-        <div class="modal-box">
-            <h3 id="modalFotoTitulo">📸 Atualizar Foto</h3>
-            <p id="modalFotoInfo" style="color:#94A3B8; font-size:14px;"></p>
-            
-            <img class="preview-foto" id="previewFotoModal" src="" alt="Preview">
-            
-            <input type="file" id="inputFotoModal" accept="image/*" onchange="previewFotoModal(this)">
-            
-            <div style="display:flex;gap:10px;margin-top:15px;">
-                <button class="btn btn-success" onclick="confirmarFoto()" style="flex:1;" id="btnConfirmarFoto">✅ Atualizar</button>
-                <button class="btn btn-danger" onclick="fecharModalFoto()" style="flex:1;">❌ Cancelar</button>
+    <!-- MODAL DOCUMENTOS -->
+    <div class="modal-overlay" id="modalDocumentos">
+        <div class="modal-box" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <h3 id="modalTituloDocs">📋 Documentos do Motorista</h3>
+            <div id="conteudoDocumentos" style="text-align: left; margin-top: 15px;">
+                <div id="loadingDocs" class="loading-docs">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">Carregando documentos...</p>
+                </div>
+                <div id="infoMotoristaDocs" style="color:#94A3B8; margin-bottom: 15px; display: none;"></div>
+                <div id="debugBox" class="debug-box"></div>
+                <div id="imagensDocumentos" style="display: none;"></div>
+                <div id="erroDocumentos" style="color:#EF4444; display: none; text-align: center; padding: 20px;"></div>
+                <div id="semDocumentos" class="sem-documentos" style="display: none;">
+                    <div class="icone">📭</div>
+                    <p>Este motorista ainda não enviou documentos.</p>
+                </div>
             </div>
-            <div id="fotoProgresso" style="display:none; margin-top:10px; color:#94A3B8;">
-                <i class="fas fa-spinner fa-spin"></i> Enviando...
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn btn-success" onclick="aprovarDocumentosModal(true)" style="flex:1; min-width:100px;" id="btnAprovarDocs">✅ Aprovar</button>
+                <button class="btn btn-danger" onclick="aprovarDocumentosModal(false)" style="flex:1; min-width:100px;" id="btnReprovarDocs">❌ Reprovar</button>
+                <button class="btn btn-secondary" onclick="fecharModalDocumentos()" style="flex:1; min-width:100px;">🔒 Fechar</button>
             </div>
         </div>
     </div>
@@ -297,12 +334,10 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        // ========== CONFIG ==========
         const API_URL = "https://rotabrasil-tobu.onrender.com";
         let usuarioSaldoId = null;
-        let fotoUsuarioId = null;
-        let fotoUsuarioTipo = null;
-        let fotoArquivo = null;
+        let motoristaDocumentosId = null;
+        let motoristasCache = [];
 
         function toast(msg, tipo = 'success') {
             const el = document.getElementById('toastContainer');
@@ -311,6 +346,25 @@
             t.textContent = msg;
             el.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+        }
+
+        function log(msg, tipo = 'info') {
+            const box = document.getElementById('debugBox');
+            if (!box) return;
+            box.classList.add('show');
+            const timestamp = new Date().toLocaleTimeString();
+            const classes = { 'error': 'log-error', 'success': 'log-success', 'warning': 'log-warning', 'info': 'log-info' };
+            const linha = document.createElement('div');
+            linha.className = classes[tipo] || 'log-info';
+            linha.textContent = `[${timestamp}] ${msg}`;
+            box.appendChild(linha);
+            console.log(`[${tipo.toUpperCase()}]`, msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function clearLogs() {
+            const box = document.getElementById('debugBox');
+            if (box) { box.innerHTML = ''; box.classList.remove('show'); }
         }
 
         // ========== LOGIN ==========
@@ -377,7 +431,6 @@
             if (e.key === 'Enter') entrarPainel();
         });
 
-        // ========== TABS ==========
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -404,7 +457,7 @@
                 document.getElementById('corridasAtivas').textContent = data.estatisticas?.corridas_ativas || data.corridas_ativas?.length || 0;
                 document.getElementById('corridasFinalizadas').textContent = data.estatisticas?.corridas_finalizadas_hoje || data.corridas_finalizadas?.length || 0;
                 document.getElementById('faturamento').textContent = data.totalFaturamento || `R$ ${(data.estatisticas?.faturamento_hoje || 0).toFixed(2)}`;
-            } catch (e) {}
+            } catch (e) { console.error(e); }
         }
 
         // ========== MOTORISTAS ==========
@@ -412,42 +465,251 @@
             try {
                 const res = await fetch(`${API_URL}/admin/motoristas`);
                 const data = await res.json();
+                motoristasCache = data;
                 const tbody = document.getElementById('listaMotoristas');
-                if (!data.length) {
+                if (!data || !data.length) {
                     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>';
                     return;
                 }
-                tbody.innerHTML = data.map(m => `
-                    <tr>
+                tbody.innerHTML = data.map(m => {
+                    let docStatus = '', docBadge = '';
+                    if (m.documentos_aprovados) { docStatus = '✅ Aprovado'; docBadge = 'badge-online'; }
+                    else if (m.documentos_enviados) { docStatus = '⏳ Pendente'; docBadge = 'badge-pendente'; }
+                    else { docStatus = '❌ Não enviado'; docBadge = 'badge-offline'; }
+                    return `<tr>
                         <td>#${m.id}</td>
-                        <td>
-                            <div class="avatar-wrapper">
-                                <img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=40&background=334155&color=fff'}" 
-                                     class="avatar" onerror="this.style.display='none'">
-                                <div class="avatar-overlay" onclick="abrirModalFoto(${m.id}, '${m.nome}', 'motorista')" title="Atualizar foto">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-                            </div>
-                        </td>
+                        <td><img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=35&background=334155&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
                         <td><strong>${m.nome}</strong></td>
                         <td style="color:#94A3B8;">${m.email}</td>
                         <td>${m.carro || '-'}</td>
                         <td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa || '-'}</span></td>
-                        <td><span class="badge ${m.documentos_aprovados ? 'badge-online' : m.documentos_enviados ? 'badge-pendente' : 'badge-offline'}">${m.documentos_aprovados ? '✅ Aprovado' : m.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}</span></td>
+                        <td><span class="badge ${docBadge}">${docStatus}</span></td>
                         <td><span class="badge ${m.online ? 'badge-online' : 'badge-offline'}">${m.online ? '🟢 Online' : '🔴 Offline'}</span></td>
                         <td>
                             <div class="acao-botoes">
                                 <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')" title="Adicionar Saldo">💵</button>
-                                <button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>
+                                ${m.documentos_enviados ? `<button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>` : `<button class="btn btn-secondary btn-sm" disabled title="Sem documentos">📄</button>`}
+                                ${m.documentos_enviados && !m.documentos_aprovados ? `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button><button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` : ''}
                                 <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})" title="Excluir">🗑</button>
                             </div>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
             } catch (e) {
                 document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>';
             }
         }
+
+        // ========== VER DOCUMENTOS - CORRIGIDO ==========
+        async function verDocumentos(motId) {
+            console.log('📄 verDocumentos chamado para motorista ID:', motId);
+            
+            document.getElementById('modalDocumentos').classList.add('show');
+            document.getElementById('loadingDocs').style.display = 'block';
+            document.getElementById('infoMotoristaDocs').style.display = 'none';
+            document.getElementById('imagensDocumentos').style.display = 'none';
+            document.getElementById('erroDocumentos').style.display = 'none';
+            document.getElementById('semDocumentos').style.display = 'none';
+            clearLogs();
+            
+            motoristaDocumentosId = motId;
+            
+            try {
+                // Busca o motorista
+                let motorista = motoristasCache.find(m => m.id === motId);
+                if (!motorista) {
+                    const res = await fetch(`${API_URL}/admin/motoristas`);
+                    const data = await res.json();
+                    motorista = data.find(m => m.id === motId);
+                    motoristasCache = data;
+                }
+                
+                if (!motorista) {
+                    throw new Error('Motorista não encontrado');
+                }
+                
+                log(`👤 Motorista: ${motorista.nome} (ID: ${motId})`, 'info');
+                log(`📋 Status documentos: ${motorista.documentos_enviados ? 'Enviados' : 'Não enviados'}`, 'info');
+                
+                // ===== BUSCA DOCUMENTOS DO BANCO =====
+                log('🔍 Buscando documentos do banco...', 'info');
+                
+                let docs = [];
+                
+                // Tenta a rota /admin/ver_documentos
+                try {
+                    log(`🌐 GET /admin/ver_documentos/${motId}`, 'info');
+                    const res = await fetch(`${API_URL}/admin/ver_documentos/${motId}`);
+                    log(`📡 Status: ${res.status}`, 'info');
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        log(`📦 Dados recebidos: ${JSON.stringify(data).substring(0, 300)}`, 'info');
+                        
+                        // Verifica diferentes estruturas de resposta
+                        if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
+                            docs = data.documentos;
+                            log(`✅ Encontrado ${docs.length} documentos na chave 'documentos'`, 'success');
+                        } else if (data.imagem_base64) {
+                            docs = [{ tipo: 'documento', imagem_base64: data.imagem_base64 }];
+                            log(`✅ Encontrado 1 documento (imagem única)`, 'success');
+                        } else if (data.foto || data.cnh || data.crlv || data.carro || data.antecedentes) {
+                            // Tenta pegar campos individuais
+                            const campos = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
+                            campos.forEach(campo => {
+                                if (data[campo]) {
+                                    docs.push({ tipo: campo, imagem_base64: data[campo] });
+                                }
+                            });
+                            log(`✅ Encontrado ${docs.length} documentos em campos individuais`, 'success');
+                        } else {
+                            log(`⚠️ Nenhum documento encontrado na resposta`, 'warning');
+                        }
+                    } else {
+                        log(`❌ Erro na requisição: ${res.status}`, 'error');
+                    }
+                } catch (e) {
+                    log(`❌ Erro ao buscar documentos: ${e.message}`, 'error');
+                }
+                
+                // Se não encontrou, tenta do localStorage do motorista
+                if (docs.length === 0) {
+                    log('🔍 Tentando buscar do localStorage...', 'info');
+                    const localDocs = localStorage.getItem(`motorista_documentos_${motId}`);
+                    if (localDocs) {
+                        try {
+                            const parsed = JSON.parse(localDocs);
+                            if (parsed.documentos) {
+                                docs = Object.entries(parsed.documentos).map(([tipo, imagem]) => ({
+                                    tipo: tipo,
+                                    imagem_base64: imagem
+                                }));
+                                log(`✅ Encontrado ${docs.length} documentos no localStorage`, 'success');
+                            }
+                        } catch (e) {}
+                    }
+                }
+                
+                document.getElementById('loadingDocs').style.display = 'none';
+                
+                // Exibe informações do motorista
+                document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${motorista.nome}`;
+                document.getElementById('infoMotoristaDocs').innerHTML = `
+                    <strong>Email:</strong> ${motorista.email}<br>
+                    <strong>Telefone:</strong> ${motorista.telefone || 'N/A'}<br>
+                    <strong>Veículo:</strong> ${motorista.carro || 'N/A'} - ${motorista.placa || 'N/A'}<br>
+                    <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}<br>
+                    <strong>Total de documentos:</strong> ${docs.length}
+                `;
+                document.getElementById('infoMotoristaDocs').style.display = 'block';
+                
+                // Exibe os documentos
+                if (!docs || docs.length === 0) {
+                    document.getElementById('semDocumentos').style.display = 'block';
+                    document.getElementById('imagensDocumentos').style.display = 'none';
+                    log('📭 Nenhum documento encontrado', 'warning');
+                    toast('📭 Nenhum documento encontrado', 'warning');
+                } else {
+                    const nomes = {
+                        'foto': '📸 Foto de Perfil',
+                        'cnh': '🪪 CNH',
+                        'crlv': '📄 CRLV',
+                        'carro': '🚗 Fotos do Carro',
+                        'antecedentes': '📋 Antecedentes',
+                        'documento': '📄 Documento'
+                    };
+                    
+                    let html = '<div class="doc-grid">';
+                    docs.forEach((doc, index) => {
+                        // Pega a imagem base64
+                        let imagem = doc.imagem_base64 || doc.imagem || doc.url || '';
+                        
+                        // Se a imagem não começa com data:image, adiciona o prefixo
+                        if (imagem && !imagem.startsWith('data:image')) {
+                            // Verifica se é um base64 puro
+                            if (imagem.match(/^[A-Za-z0-9+/=]+$/)) {
+                                imagem = `data:image/jpeg;base64,${imagem}`;
+                            } else if (imagem.startsWith('iVBORw0KGgo')) {
+                                imagem = `data:image/png;base64,${imagem}`;
+                            } else {
+                                imagem = `data:image/jpeg;base64,${imagem}`;
+                            }
+                        }
+                        
+                        const tipo = doc.tipo || 'documento';
+                        const nomeExibicao = nomes[tipo] || tipo;
+                        
+                        log(`📎 Doc ${index+1}: ${nomeExibicao} - ${imagem ? '✅ com imagem' : '❌ sem imagem'}`, imagem ? 'success' : 'warning');
+                        
+                        html += `
+                            <div class="documento-card">
+                                <h4>${nomeExibicao}</h4>
+                                ${imagem ? 
+                                    `<img src="${imagem}" class="documento-imagem" 
+                                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;" 
+                                          alt="${nomeExibicao}">` :
+                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>`
+                                }
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    
+                    document.getElementById('imagensDocumentos').style.display = 'block';
+                    document.getElementById('imagensDocumentos').innerHTML = html;
+                    log(`✅ ${docs.length} documento(s) exibido(s)`, 'success');
+                    toast(`✅ ${docs.length} documento(s) carregado(s)!`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao ver documentos:', error);
+                document.getElementById('loadingDocs').style.display = 'none';
+                document.getElementById('erroDocumentos').textContent = `❌ ${error.message}`;
+                document.getElementById('erroDocumentos').style.display = 'block';
+                log(`❌ Erro: ${error.message}`, 'error');
+                toast('❌ Erro ao carregar documentos', 'error');
+            }
+        }
+
+        // ========== APROVAR DOCUMENTOS ==========
+        async function aprovarDocumentos(motId, aprovado) {
+            const acao = aprovado ? 'APROVAR' : 'REPROVAR';
+            if (!confirm(`Tem certeza que deseja ${acao} os documentos do motorista #${motId}?`)) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/aprovar_documentos/${motId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aprovado })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    toast(`✅ Documentos ${data.status || 'atualizados'}!`);
+                    carregarMotoristas();
+                    fecharModalDocumentos();
+                } else {
+                    toast('❌ ' + (data.erro || 'Erro'), 'error');
+                }
+            } catch (e) {
+                toast('❌ Erro de conexão', 'error');
+            }
+        }
+
+        async function aprovarDocumentosModal(aprovado) {
+            if (!motoristaDocumentosId) {
+                toast('❌ Nenhum motorista selecionado', 'error');
+                return;
+            }
+            await aprovarDocumentos(motoristaDocumentosId, aprovado);
+        }
+
+        function fecharModalDocumentos() {
+            document.getElementById('modalDocumentos').classList.remove('show');
+            motoristaDocumentosId = null;
+        }
+
+        document.getElementById('modalDocumentos').addEventListener('click', function(e) {
+            if (e.target === this) fecharModalDocumentos();
+        });
 
         // ========== PASSAGEIROS ==========
         async function carregarPassageiros() {
@@ -455,146 +717,16 @@
                 const res = await fetch(`${API_URL}/admin/passageiros`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaPassageiros');
-                if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = data.map(p => `
-                    <tr>
-                        <td>#${p.id}</td>
-                        <td>
-                            <div class="avatar-wrapper">
-                                <img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=40&background=3B82F6&color=fff'}" 
-                                     class="avatar" onerror="this.style.display='none'">
-                                <div class="avatar-overlay" onclick="abrirModalFoto(${p.id}, '${p.nome}', 'passageiro')" title="Atualizar foto">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-                            </div>
-                        </td>
-                        <td><strong>${p.nome}</strong></td>
-                        <td style="color:#94A3B8;">${p.email}</td>
-                        <td>${p.telefone || '-'}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id}, '${p.nome}', 'passageiro')" title="Adicionar Saldo">💵</button>
-                            <button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})" title="Excluir">🗑</button>
-                        </td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>'; return; }
+                tbody.innerHTML = data.map(p => `<tr>
+                    <td>#${p.id}</td>
+                    <td><img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=35&background=3B82F6&color=fff'}" class="avatar" onerror="this.style.display='none'"></td>
+                    <td><strong>${p.nome}</strong></td>
+                    <td style="color:#94A3B8;">${p.email}</td>
+                    <td>${p.telefone || '-'}</td>
+                    <td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${p.id}, '${p.nome}', 'passageiro')">💵</button><button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})">🗑</button></td>
+                </tr>`).join('');
             } catch (e) {}
-        }
-
-        // ========== MODAL FOTO ==========
-        function abrirModalFoto(id, nome, tipo) {
-            fotoUsuarioId = id;
-            fotoUsuarioTipo = tipo;
-            fotoArquivo = null;
-            
-            document.getElementById('modalFotoTitulo').textContent = `📸 Atualizar Foto - ${nome}`;
-            document.getElementById('modalFotoInfo').textContent = `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} #${id}`;
-            document.getElementById('previewFotoModal').classList.remove('show');
-            document.getElementById('previewFotoModal').src = '';
-            document.getElementById('inputFotoModal').value = '';
-            document.getElementById('fotoProgresso').style.display = 'none';
-            document.getElementById('btnConfirmarFoto').disabled = false;
-            document.getElementById('btnConfirmarFoto').innerHTML = '✅ Atualizar';
-            
-            document.getElementById('modalFoto').classList.add('show');
-        }
-
-        function fecharModalFoto() {
-            document.getElementById('modalFoto').classList.remove('show');
-            fotoUsuarioId = null;
-            fotoUsuarioTipo = null;
-            fotoArquivo = null;
-        }
-
-        function previewFotoModal(input) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            if (file.size > 5 * 1024 * 1024) {
-                toast('❌ Imagem muito grande! Máximo 5MB.', 'error');
-                input.value = '';
-                return;
-            }
-            
-            fotoArquivo = file;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const preview = document.getElementById('previewFotoModal');
-                preview.src = e.target.result;
-                preview.classList.add('show');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function confirmarFoto() {
-            if (!fotoArquivo) {
-                toast('❌ Selecione uma imagem primeiro!', 'error');
-                return;
-            }
-            
-            const btn = document.getElementById('btnConfirmarFoto');
-            const progresso = document.getElementById('fotoProgresso');
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-            progresso.style.display = 'block';
-            
-            try {
-                // Converte para base64
-                const base64 = await fileToBase64(fotoArquivo);
-                
-                // Envia para o servidor
-                const token = localStorage.getItem('admin_token');
-                const resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        usuario_id: fotoUsuarioId,
-                        tipo: fotoUsuarioTipo,
-                        foto_base64: base64
-                    })
-                });
-                
-                const data = await resposta.json();
-                
-                if (resposta.ok) {
-                    toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
-                    fecharModalFoto();
-                    if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
-                    else carregarPassageiros();
-                } else {
-                    toast(`❌ ${data.erro || 'Erro ao atualizar foto'}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '✅ Atualizar';
-                    progresso.style.display = 'none';
-                }
-            } catch (e) {
-                toast('❌ Erro de conexão', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '✅ Atualizar';
-                progresso.style.display = 'none';
-            }
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // ========== VER DOCUMENTOS ==========
-        async function verDocumentos(motId) {
-            // ... (mantenha a função existente)
-            toast(`📄 Ver documentos do motorista #${motId}`, 'info');
         }
 
         // ========== CORRIDAS ==========
@@ -603,22 +735,17 @@
                 const res = await fetch(`${API_URL}/admin/corridas`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaCorridas');
-                if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhuma corrida</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = data.map(c => `
-                    <tr>
-                        <td>#${c.id}</td>
-                        <td>${c.passageiro_nome || '-'}</td>
-                        <td>${c.motorista_nome || 'Aguardando'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem || '-'}</td>
-                        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino || '-'}</td>
-                        <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                        <td><span class="badge ${c.forma_pagamento === 'dinheiro' ? 'badge-dinheiro' : 'badge-pix'}">${c.forma_pagamento === 'dinheiro' ? '💵' : '💳'} ${c.forma_pagamento || 'pix'}</span></td>
-                        <td><span class="badge badge-${c.status || 'pendente'}">${c.status || 'pendente'}</span></td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhuma corrida</td></tr>'; return; }
+                tbody.innerHTML = data.map(c => `<tr>
+                    <td>#${c.id}</td>
+                    <td>${c.passageiro_nome || '-'}</td>
+                    <td>${c.motorista_nome || 'Aguardando'}</td>
+                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.origem || '-'}</td>
+                    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.destino || '-'}</td>
+                    <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
+                    <td><span class="badge ${c.forma_pagamento === 'dinheiro' ? 'badge-dinheiro' : 'badge-pix'}">${c.forma_pagamento === 'dinheiro' ? '💵' : '💳'} ${c.forma_pagamento || 'pix'}</span></td>
+                    <td><span class="badge badge-${c.status || 'pendente'}">${c.status || 'pendente'}</span></td>
+                </tr>`).join('');
             } catch (e) {}
         }
 
@@ -628,18 +755,8 @@
                 const res = await fetch(`${API_URL}/admin/avaliacoes`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaAvaliacoes');
-                if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748B;">Nenhuma avaliação</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = data.map(a => `
-                    <tr>
-                        <td>#${a.id}</td>
-                        <td>Corrida #${a.corrida_id || '-'}</td>
-                        <td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td>
-                        <td style="color:#94A3B8;">${a.comentario || 'Sem comentário'}</td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748B;">Nenhuma avaliação</td></tr>'; return; }
+                tbody.innerHTML = data.map(a => `<tr><td>#${a.id}</td><td>Corrida #${a.corrida_id || '-'}</td><td>${'⭐'.repeat(a.nota)} ${a.nota}/5</td><td style="color:#94A3B8;">${a.comentario || 'Sem comentário'}</td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -649,19 +766,8 @@
                 const res = await fetch(`${API_URL}/transacoes`);
                 const data = await res.json();
                 const tbody = document.getElementById('listaTransacoes');
-                if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Nenhuma transação</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = data.map(t => `
-                    <tr>
-                        <td>#${t.id}</td>
-                        <td>Usuário #${t.usuario_id}</td>
-                        <td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo}</td>
-                        <td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo === 'credito' || t.tipo === 'recarga' ? '+' : '-'} R$ ${(t.valor || 0).toFixed(2)}</td>
-                        <td style="color:#94A3B8;">${t.descricao || '-'}</td>
-                    </tr>
-                `).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Nenhuma transação</td></tr>'; return; }
+                tbody.innerHTML = data.map(t => `<tr><td>#${t.id}</td><td>Usuário #${t.usuario_id}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo}</td><td style="color:${t.tipo === 'credito' || t.tipo === 'recarga' ? '#10B981' : '#EF4444'};">${t.tipo === 'credito' || t.tipo === 'recarga' ? '+' : '-'} R$ ${(t.valor || 0).toFixed(2)}</td><td style="color:#94A3B8;">${t.descricao || '-'}</td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -685,36 +791,15 @@
                 dinamico_ativo: parseInt(document.getElementById('dinamico_ativo').value)
             };
             try {
-                const res = await fetch(`${API_URL}/admin/configuracoes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
+                const res = await fetch(`${API_URL}/admin/configuracoes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 if (res.ok) toast('✅ Tarifas salvas!');
                 else toast('❌ Erro ao salvar', 'error');
             } catch (e) { toast('❌ Erro de conexão', 'error'); }
         }
 
         // ========== EXCLUIR ==========
-        async function excluirMotorista(id) {
-            if (!confirm(`Excluir motorista #${id}?`)) return;
-            try {
-                await fetch(`${API_URL}/admin/excluir_motorista/${id}`, { method: 'DELETE' });
-                toast('Motorista excluído!');
-                carregarMotoristas();
-                carregarDashboard();
-            } catch (e) { toast('Erro', 'error'); }
-        }
-
-        async function excluirPassageiro(id) {
-            if (!confirm(`Excluir passageiro #${id}?`)) return;
-            try {
-                await fetch(`${API_URL}/admin/excluir_passageiro/${id}`, { method: 'DELETE' });
-                toast('Passageiro excluído!');
-                carregarPassageiros();
-                carregarDashboard();
-            } catch (e) { toast('Erro', 'error'); }
-        }
+        async function excluirMotorista(id) { if (!confirm(`Excluir motorista #${id}?`)) return; try { await fetch(`${API_URL}/admin/excluir_motorista/${id}`, { method: 'DELETE' }); toast('Motorista excluído!'); carregarMotoristas(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
+        async function excluirPassageiro(id) { if (!confirm(`Excluir passageiro #${id}?`)) return; try { await fetch(`${API_URL}/admin/excluir_passageiro/${id}`, { method: 'DELETE' }); toast('Passageiro excluído!'); carregarPassageiros(); carregarDashboard(); } catch (e) { toast('Erro', 'error'); } }
 
         // ========== MODAL SALDO ==========
         function abrirModalSaldo(id, nome, tipo) {
@@ -724,43 +809,19 @@
             document.getElementById('modalSaldo').classList.add('show');
             setTimeout(() => document.getElementById('modalValor').focus(), 100);
         }
-
-        function fecharModal() {
-            document.getElementById('modalSaldo').classList.remove('show');
-            usuarioSaldoId = null;
-        }
-
+        function fecharModal() { document.getElementById('modalSaldo').classList.remove('show'); usuarioSaldoId = null; }
         async function confirmarSaldo() {
             const valor = parseFloat(document.getElementById('modalValor').value);
             if (!valor || valor <= 0) return toast('Valor inválido!', 'error');
             try {
-                const res = await fetch(`${API_URL}/admin/adicionar_saldo/${usuarioSaldoId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ valor })
-                });
+                const res = await fetch(`${API_URL}/admin/adicionar_saldo/${usuarioSaldoId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor }) });
                 const data = await res.json();
-                if (res.ok) {
-                    toast(`✅ R$ ${valor.toFixed(2)} adicionado!`);
-                    fecharModal();
-                    carregarMotoristas();
-                    carregarPassageiros();
-                    carregarDashboard();
-                } else {
-                    toast('❌ ' + (data.erro || 'Erro'), 'error');
-                }
+                if (res.ok) { toast(`✅ R$ ${valor.toFixed(2)} adicionado!`); fecharModal(); carregarMotoristas(); carregarPassageiros(); carregarDashboard(); }
+                else toast('❌ ' + (data.erro || 'Erro'), 'error');
             } catch (e) { toast('Erro de conexão', 'error'); }
         }
-
-        document.getElementById('modalSaldo').addEventListener('click', function(e) {
-            if (e.target === this) fecharModal();
-        });
-        document.getElementById('modalFoto').addEventListener('click', function(e) {
-            if (e.target === this) fecharModalFoto();
-        });
-        document.getElementById('modalValor').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') confirmarSaldo();
-        });
+        document.getElementById('modalSaldo').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
+        document.getElementById('modalValor').addEventListener('keypress', function(e) { if (e.key === 'Enter') confirmarSaldo(); });
 
         // ========== INICIALIZAÇÃO ==========
         verificarLogin();
