@@ -1600,7 +1600,37 @@ def verificar_documentos(mot_id):
         'documentos_enviados': motorista.documentos_enviados or False,
         'documentos_aprovados': motorista.documentos_aprovados or False,
         'data_envio': str(motorista.data_envio_docs) if motorista.data_envio_docs else None
-    })        
+    })  
+    
+@app.route('/motorista/enviar_documentos', methods=['POST'])
+@jwt_required()
+def motorista_enviar_documentos():
+    """Marca que o motorista enviou os documentos"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        
+        motorista = Usuario.query.get(motorista_id)
+        if not motorista:
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        motorista.documentos_enviados = True
+        motorista.data_envio_docs = datetime.utcnow()
+        motorista.documentos_aprovados = False  # Reseta aprovação
+        
+        db.session.commit()
+        
+        print(f"📋 Documentos enviados - Motorista {motorista_id}")
+        
+        return jsonify({
+            'status': 'Documentos enviados com sucesso!',
+            'documentos_enviados': True,
+            'data_envio': str(motorista.data_envio_docs)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500    
 # ==========================================
 # INICIAR
 # ==========================================
