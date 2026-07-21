@@ -103,13 +103,18 @@
             font-size: 11px;
             font-family: monospace;
             color: #94A3B8;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             display: none;
             text-align: left;
             white-space: pre-wrap;
+            word-break: break-all;
         }
         .debug-box.show { display: block; }
+        .debug-box .log-error { color: #F53F3F; }
+        .debug-box .log-success { color: #00B42A; }
+        .debug-box .log-warning { color: #FF7D00; }
+        .debug-box .log-info { color: #165DFF; }
         
         @media (max-width: 400px) {
             .card { padding: 20px; }
@@ -124,7 +129,6 @@
             <p>Envie seus documentos para validação</p>
         </div>
 
-        <!-- Progresso -->
         <div class="card">
             <h3><i class="fas fa-tasks"></i> Progresso do Cadastro</h3>
             <div class="progress-bar">
@@ -133,7 +137,7 @@
             <p style="text-align:center; font-size:12px; color:var(--texto2);" id="progressText">0 de 5 documentos enviados</p>
         </div>
 
-        <!-- 1. Foto de Perfil -->
+        <!-- 1. Foto -->
         <div class="card">
             <h3><i class="fas fa-camera"></i> 1. Foto de Perfil</h3>
             <p class="subtitulo">Uma foto nítida do seu rosto</p>
@@ -151,7 +155,7 @@
 
         <!-- 2. CNH -->
         <div class="card">
-            <h3><i class="fas fa-id-card"></i> 2. CNH (Carteira de Motorista)</h3>
+            <h3><i class="fas fa-id-card"></i> 2. CNH</h3>
             <p class="subtitulo">Foto da sua CNH frente e verso</p>
             <div class="upload-area" id="uploadCNH">
                 <i class="fas fa-upload"></i>
@@ -165,7 +169,7 @@
             </div>
         </div>
 
-        <!-- 3. Documento do Veículo -->
+        <!-- 3. CRLV -->
         <div class="card">
             <h3><i class="fas fa-car"></i> 3. Documento do Veículo (CRLV)</h3>
             <p class="subtitulo">Foto do documento do veículo</p>
@@ -181,13 +185,13 @@
             </div>
         </div>
 
-        <!-- 4. Foto do Veículo -->
+        <!-- 4. Fotos Carro -->
         <div class="card">
             <h3><i class="fas fa-images"></i> 4. Fotos do Veículo</h3>
-            <p class="subtitulo">Fotos da frente, traseira e laterais do carro</p>
+            <p class="subtitulo">Fotos da frente, traseira e laterais</p>
             <div class="upload-area" id="uploadCarro">
                 <i class="fas fa-upload"></i>
-                <p>Clique para fazer upload (pode selecionar várias)</p>
+                <p>Clique para fazer upload (várias)</p>
                 <p class="file-name" id="carroName"></p>
                 <input type="file" accept="image/*" multiple onchange="previewFile(this, 'carro')">
             </div>
@@ -197,10 +201,10 @@
             </div>
         </div>
 
-        <!-- 5. Antecedentes Criminais -->
+        <!-- 5. Antecedentes -->
         <div class="card">
             <h3><i class="fas fa-file-alt"></i> 5. Certidão de Antecedentes</h3>
-            <p class="subtitulo">Certidão negativa de antecedentes criminais</p>
+            <p class="subtitulo">Certidão negativa de antecedentes</p>
             <div class="upload-area" id="uploadAntecedentes">
                 <i class="fas fa-upload"></i>
                 <p>Clique para fazer upload</p>
@@ -213,7 +217,6 @@
             </div>
         </div>
 
-        <!-- Botão Enviar -->
         <button class="btn btn-success" id="btnEnviar" onclick="enviarDocumentos()">
             <i class="fas fa-paper-plane"></i> ENVIAR DOCUMENTOS
         </button>
@@ -221,17 +224,13 @@
             <i class="fas fa-arrow-left"></i> Voltar
         </button>
 
-        <!-- Mensagem -->
         <div id="msgEnvio"></div>
-        
-        <!-- Debug Box -->
         <div id="debugBox" class="debug-box"></div>
     </div>
 
     <script>
         const API_URL = "https://rotabrasil-tobu.onrender.com";
 
-        // ========== ARMAZENAMENTO ==========
         let arquivos = {
             foto: null,
             cnh: null,
@@ -248,18 +247,32 @@
             antecedentes: false
         };
 
-        // ========== DEBUG ==========
-        function addDebug(msg) {
+        // ========== LOGS COLORIDOS ==========
+        function log(msg, tipo = 'info') {
             const box = document.getElementById('debugBox');
             box.classList.add('show');
-            box.textContent += msg + '\n';
-            console.log(msg);
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const classes = {
+                'error': 'log-error',
+                'success': 'log-success', 
+                'warning': 'log-warning',
+                'info': 'log-info'
+            };
+            
+            const linha = document.createElement('div');
+            linha.className = classes[tipo] || 'log-info';
+            linha.textContent = `[${timestamp}] ${msg}`;
+            box.appendChild(linha);
+            
+            console.log(`[${tipo.toUpperCase()}]`, msg);
             box.scrollTop = box.scrollHeight;
         }
 
-        function clearDebug() {
-            document.getElementById('debugBox').textContent = '';
-            document.getElementById('debugBox').classList.remove('show');
+        function clearLogs() {
+            const box = document.getElementById('debugBox');
+            box.innerHTML = '';
+            box.classList.remove('show');
         }
 
         // ========== PREVIEW ==========
@@ -268,7 +281,7 @@
             if (!files || files.length === 0) return;
             
             const file = files[0];
-            addDebug(`📎 Arquivo selecionado: ${tipo} - ${file.name} (${Math.round(file.size/1024)}KB)`);
+            log(`📎 Arquivo: ${tipo} - ${file.name} (${Math.round(file.size/1024)}KB)`, 'info');
             
             arquivos[tipo] = file;
             
@@ -303,11 +316,9 @@
         function atualizarStatus(tipo, enviado) {
             const statusId = `status${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
             const statusEl = document.getElementById(statusId);
-            if (statusEl) {
-                if (enviado) {
-                    statusEl.className = 'status-doc status-enviado';
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo selecionado';
-                }
+            if (statusEl && enviado) {
+                statusEl.className = 'status-doc status-enviado';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Arquivo selecionado';
             }
         }
 
@@ -320,63 +331,67 @@
             document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
         }
 
-        // ========== ENVIAR DOCUMENTOS ==========
+        // ========== ENVIAR COM LOGS DETALHADOS ==========
         async function enviarDocumentos() {
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('msgEnvio');
             
-            clearDebug();
-            addDebug('🚀 Iniciando envio de documentos...');
+            clearLogs();
+            log('🚀 INICIANDO ENVIO DE DOCUMENTOS', 'info');
+            log(`🌐 API: ${API_URL}`, 'info');
             
-            // Verifica se todos foram selecionados
+            // Verifica token
+            const token = localStorage.getItem('token_motorista');
+            log(`🔑 Token motorista: ${token ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO'}`, token ? 'success' : 'error');
+            
+            if (token) {
+                log(`📝 Token: ${token.substring(0, 30)}...`, 'info');
+            }
+            
+            // Verifica documentos
             const total = Object.keys(arquivos).length;
             const selecionados = Object.values(arquivos).filter(a => a !== null).length;
-            
-            addDebug(`📊 Documentos selecionados: ${selecionados}/${total}`);
+            log(`📊 Documentos: ${selecionados}/${total} selecionados`, 'info');
             
             if (selecionados < total) {
                 const faltando = Object.entries(arquivos)
                     .filter(([_, v]) => v === null)
-                    .map(([k]) => {
-                        const nomes = {
-                            foto: 'Foto de Perfil',
-                            cnh: 'CNH',
-                            crlv: 'CRLV',
-                            carro: 'Fotos do Carro',
-                            antecedentes: 'Antecedentes'
-                        };
-                        return nomes[k] || k;
-                    })
+                    .map(([k]) => k)
                     .join(', ');
-                
+                log(`❌ Faltando: ${faltando}`, 'error');
                 msg.className = 'erro';
-                msg.textContent = `❌ Faltam: ${faltando}`;
-                addDebug(`❌ Documentos faltando: ${faltando}`);
+                msg.textContent = `❌ Faltam documentos: ${faltando}`;
                 return;
             }
+            
+            log('✅ Todos os documentos selecionados!', 'success');
             
             // Desabilita botão
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
-            
             msg.className = 'carregando';
-            msg.textContent = '⏳ Processando documentos...';
+            msg.textContent = '⏳ Processando...';
             
             try {
-                // ===== SALVA LOCALMENTE PRIMEIRO (sempre) =====
-                addDebug('💾 Salvando documentos localmente...');
-                
-                // Converte imagens para base64
+                // ===== CONVERTE PARA BASE64 =====
+                log('🔄 Convertendo arquivos para base64...', 'info');
                 const docsBase64 = {};
+                
                 for (const [tipo, arquivo] of Object.entries(arquivos)) {
                     if (arquivo) {
-                        const base64 = await fileToBase64(arquivo);
-                        docsBase64[tipo] = base64;
-                        addDebug(`✅ ${tipo} convertido para base64 (${Math.round(base64.length/1024)}KB)`);
+                        try {
+                            const base64 = await fileToBase64(arquivo);
+                            docsBase64[tipo] = base64;
+                            log(`✅ ${tipo} convertido (${Math.round(base64.length/1024)}KB)`, 'success');
+                        } catch (e) {
+                            log(`❌ Erro ao converter ${tipo}: ${e.message}`, 'error');
+                            throw new Error(`Erro ao converter ${tipo}`);
+                        }
                     }
                 }
                 
-                // Salva no localStorage
+                // ===== SALVA LOCALMENTE =====
+                log('💾 Salvando localmente...', 'info');
                 const dadosLocal = {
                     enviado: true,
                     data: new Date().toISOString(),
@@ -386,30 +401,26 @@
                 localStorage.setItem('motorista_documentos', JSON.stringify(dadosLocal));
                 localStorage.setItem('motorista_documentos_enviados', 'true');
                 localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+                log('✅ Salvo no localStorage!', 'success');
                 
-                addDebug('✅ Documentos salvos localmente!');
-                
-                // ===== TENTA ENVIAR PARA O SERVIDOR =====
-                const token = localStorage.getItem('token_motorista');
-                addDebug(`🔑 Token encontrado: ${token ? 'SIM' : 'NÃO'}`);
-                
+                // ===== TENTA ENVIAR AO SERVIDOR =====
                 if (token) {
-                    addDebug('📤 Enviando para o servidor...');
+                    log('📤 Enviando para o servidor...', 'info');
                     
-                    // Cria FormData
-                    const formData = new FormData();
-                    for (const [tipo, arquivo] of Object.entries(arquivos)) {
-                        if (arquivo) {
-                            formData.append(tipo, arquivo);
-                            addDebug(`📎 Adicionado ${tipo} ao FormData`);
-                        }
-                    }
-                    
-                    // Tenta enviar
                     try {
-                        addDebug(`🌐 URL: ${API_URL}/motorista/documentos`);
+                        const formData = new FormData();
+                        for (const [tipo, arquivo] of Object.entries(arquivos)) {
+                            if (arquivo) {
+                                formData.append(tipo, arquivo);
+                                log(`📎 Anexado: ${tipo} (${arquivo.name})`, 'info');
+                            }
+                        }
                         
-                        const response = await fetch(`${API_URL}/motorista/documentos`, {
+                        const url = `${API_URL}/motorista/documentos`;
+                        log(`🌐 POST ${url}`, 'info');
+                        
+                        log('⏳ Aguardando resposta...', 'info');
+                        const response = await fetch(url, {
                             method: 'POST',
                             headers: {
                                 'Authorization': `Bearer ${token}`
@@ -417,24 +428,25 @@
                             body: formData
                         });
                         
-                        addDebug(`📡 Status da resposta: ${response.status}`);
+                        log(`📡 Status: ${response.status} ${response.statusText}`, 'info');
                         
-                        const responseText = await response.text();
-                        addDebug(`📦 Resposta: ${responseText}`);
-                        
+                        // Tenta ler a resposta
                         let data;
                         try {
-                            data = JSON.parse(responseText);
+                            const text = await response.text();
+                            log(`📦 Resposta bruta: ${text.substring(0, 200)}...`, 'info');
+                            data = JSON.parse(text);
                         } catch (e) {
-                            data = { erro: 'Resposta não é JSON', texto: responseText };
+                            log(`⚠️ Resposta não é JSON: ${e.message}`, 'warning');
+                            data = { erro: 'Resposta inválida' };
                         }
                         
+                        log(`📋 Dados: ${JSON.stringify(data)}`, 'info');
+                        
                         if (response.ok) {
+                            log('✅ ENVIO CONCLUÍDO COM SUCESSO!', 'success');
                             msg.className = 'sucesso';
-                            msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
-                            addDebug('✅ Envio para o servidor concluído com sucesso!');
-                            
-                            // Atualiza status
+                            msg.textContent = '✅ Documentos enviados! Aguardando aprovação.';
                             localStorage.setItem('motorista_documentos_status', 'aprovacao');
                             
                             setTimeout(() => {
@@ -442,22 +454,23 @@
                             }, 2000);
                             return;
                         } else {
-                            addDebug(`⚠️ Erro do servidor: ${data.erro || 'Erro desconhecido'}`);
-                            // Continua mesmo com erro, pois salvamos localmente
+                            log(`❌ Erro do servidor: ${data.erro || 'Desconhecido'}`, 'error');
+                            // Continua mesmo com erro
                         }
                     } catch (fetchError) {
-                        addDebug(`❌ Erro na requisição: ${fetchError.message}`);
+                        log(`❌ ERRO NA REQUISIÇÃO: ${fetchError.message}`, 'error');
+                        log(`📋 Stack: ${fetchError.stack}`, 'error');
                         // Continua mesmo com erro
                     }
                 }
                 
-                // ===== SE CHEGOU AQUI, SALVOU LOCALMENTE MAS NÃO ENVIOU =====
+                // ===== FALLOFF: SALVO LOCALMENTE =====
+                log('⚠️ Documentos salvos localmente (modo offline)', 'warning');
                 msg.className = 'alerta';
-                msg.textContent = '⚠️ Documentos salvos localmente. A conexão com o servidor falhou, mas seus documentos estão seguros.';
-                addDebug('⚠️ Documentos salvos apenas localmente (offline)');
+                msg.textContent = '⚠️ Documentos salvos localmente. O servidor não respondeu.';
                 
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> REENVIAR';
+                btn.innerHTML = '<i class="fas fa-redo"></i> REENVIAR';
                 btn.style.background = '#F59E0B';
                 
                 setTimeout(() => {
@@ -465,69 +478,59 @@
                 }, 3000);
                 
             } catch (error) {
-                console.error('❌ Erro ao enviar:', error);
-                addDebug(`❌ Erro geral: ${error.message}`);
+                log(`❌ ERRO GERAL: ${error.message}`, 'error');
+                log(`📋 Stack: ${error.stack}`, 'error');
                 
                 msg.className = 'erro';
-                msg.textContent = '❌ Erro ao processar documentos. Tente novamente.';
+                msg.textContent = `❌ Erro: ${error.message}`;
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> TENTAR NOVAMENTE';
             }
         }
 
-        // ========== CONVERTER FILE PARA BASE64 ==========
+        // ========== FILE TO BASE64 ==========
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = (e) => reject(e);
+                reader.onerror = (e) => reject(new Error(`Falha ao ler ${file.name}: ${e.message}`));
                 reader.readAsDataURL(file);
             });
         }
 
-        // ========== VERIFICAR ENVIO ANTERIOR ==========
+        // ========== VERIFICAR ENVIO ==========
         function verificarEnvioAnterior() {
             const enviado = localStorage.getItem('motorista_documentos_enviados');
-            const data = localStorage.getItem('motorista_documentos_data');
-            
             if (enviado === 'true') {
                 const msg = document.getElementById('msgEnvio');
                 msg.className = 'sucesso';
-                msg.textContent = `✅ Documentos já enviados em ${data ? new Date(data).toLocaleDateString() : 'data desconhecida'}. Aguardando análise.`;
-                
-                document.querySelectorAll('input[type="file"]').forEach(input => {
-                    input.disabled = true;
-                });
+                msg.textContent = '✅ Documentos já enviados! Aguardando análise.';
+                document.querySelectorAll('input[type="file"]').forEach(i => i.disabled = true);
                 document.querySelectorAll('.upload-area').forEach(el => {
                     el.style.opacity = '0.5';
                     el.style.cursor = 'default';
                 });
-                
                 const btn = document.getElementById('btnEnviar');
                 btn.disabled = true;
                 btn.innerHTML = '✅ JÁ ENVIADO';
                 btn.style.background = '#475569';
-                
-                addDebug('📋 Documentos já enviados anteriormente');
-            }
-        }
-
-        // ========== VERIFICAR TOKEN ==========
-        function verificarToken() {
-            const token = localStorage.getItem('token_motorista');
-            if (token) {
-                addDebug(`✅ Token encontrado: ${token.substring(0, 20)}...`);
-            } else {
-                addDebug('⚠️ Nenhum token encontrado. Os documentos serão salvos localmente.');
+                log('📋 Documentos já enviados anteriormente', 'warning');
             }
         }
 
         // ========== INICIALIZAÇÃO ==========
-        addDebug('🚀 Página de cadastro carregada');
-        addDebug(`🌐 API: ${API_URL}`);
-        verificarToken();
+        log('🚀 Página carregada', 'info');
+        log(`🌐 API: ${API_URL}`, 'info');
         verificarEnvioAnterior();
         atualizarProgresso();
+        
+        // Mostra token no log
+        const token = localStorage.getItem('token_motorista');
+        if (token) {
+            log(`🔑 Token: ${token.substring(0, 20)}...`, 'success');
+        } else {
+            log('⚠️ Sem token - modo offline', 'warning');
+        }
     </script>
 </body>
 </html>
