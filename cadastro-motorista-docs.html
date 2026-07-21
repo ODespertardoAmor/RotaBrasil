@@ -75,6 +75,7 @@
         .status-pendente { background: rgba(255,125,0,0.1); color: var(--alerta); }
         .status-enviado { background: rgba(0,180,42,0.1); color: var(--sucesso); }
         .status-faltando { background: rgba(245,63,63,0.1); color: var(--perigo); }
+        .status-erro { background: rgba(245,63,63,0.2); color: var(--perigo); }
         
         .progress-bar {
             width: 100%; height: 8px; background: var(--borda);
@@ -127,8 +128,27 @@
         .status-online.offline { background: rgba(245,63,63,0.2); color: var(--perigo); }
         .status-online.online { background: rgba(0,180,42,0.2); color: var(--sucesso); }
         
+        .resumo-envio {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .resumo-item {
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid var(--borda);
+        }
+        .resumo-item.ok { background: rgba(0,180,42,0.15); border-color: var(--sucesso); color: var(--sucesso); }
+        .resumo-item.erro { background: rgba(245,63,63,0.15); border-color: var(--perigo); color: var(--perigo); }
+        .resumo-item.pendente { background: rgba(255,125,0,0.15); border-color: var(--alerta); color: var(--alerta); }
+        
         @media (max-width: 400px) {
             .card { padding: 20px; }
+            .resumo-envio { grid-template-columns: 1fr 1fr 1fr; }
         }
     </style>
 </head>
@@ -147,6 +167,15 @@
                 <div class="progress-fill" id="progressBar" style="width: 0%;"></div>
             </div>
             <p style="text-align:center; font-size:12px; color:var(--texto2);" id="progressText">0 de 5 documentos enviados</p>
+            
+            <!-- Resumo do Envio -->
+            <div class="resumo-envio" id="resumoEnvio">
+                <div class="resumo-item pendente" id="resumoFoto">📸<br>Foto</div>
+                <div class="resumo-item pendente" id="resumoCNH">🪪<br>CNH</div>
+                <div class="resumo-item pendente" id="resumoCRLV">📄<br>CRLV</div>
+                <div class="resumo-item pendente" id="resumoCarro">🚗<br>Carro</div>
+                <div class="resumo-item pendente" id="resumoAntecedentes">📋<br>Anteced.</div>
+            </div>
         </div>
 
         <!-- 1. Foto -->
@@ -243,6 +272,7 @@
     <script>
         const API_URL = "https://rotabrasil-tobu.onrender.com";
 
+        // ========== ARMAZENAMENTO ==========
         let arquivos = {
             foto: null,
             cnh: null,
@@ -257,6 +287,14 @@
             crlv: false,
             carro: false,
             antecedentes: false
+        };
+
+        let statusEnvio = {
+            foto: 'pendente',
+            cnh: 'pendente',
+            crlv: 'pendente',
+            carro: 'pendente',
+            antecedentes: 'pendente'
         };
 
         // ========== LOGS ==========
@@ -300,6 +338,13 @@
                 return;
             }
             
+            // Verifica tamanho máximo (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                log(`❌ ${tipo}: arquivo muito grande (${Math.round(file.size/1024/1024)}MB) - Máximo 10MB`, 'error');
+                toast(`❌ ${tipo}: arquivo muito grande`, 'error');
+                return;
+            }
+            
             arquivos[tipo] = file;
             
             const nameEl = document.getElementById(`${tipo}Name`);
@@ -322,12 +367,16 @@
                         preview.classList.add('show');
                     }
                 };
+                reader.onerror = (e) => {
+                    log(`❌ Erro ao gerar preview ${tipo}: ${e.message}`, 'error');
+                };
                 reader.readAsDataURL(file);
             }
             
             documentosEnviados[tipo] = true;
             atualizarStatus(tipo, true);
             atualizarProgresso();
+            atualizarResumo(tipo, 'ok');
         }
 
         function atualizarStatus(tipo, enviado) {
@@ -346,6 +395,28 @@
             
             document.getElementById('progressBar').style.width = percentual + '%';
             document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
+        }
+
+        function atualizarResumo(tipo, status) {
+            const nomes = {
+                'foto': 'resumoFoto',
+                'cnh': 'resumoCNH',
+                'crlv': 'resumoCRLV',
+                'carro': 'resumoCarro',
+                'antecedentes': 'resumoAntecedentes'
+            };
+            
+            const el = document.getElementById(nomes[tipo]);
+            if (el) {
+                el.className = `resumo-item ${status}`;
+                if (status === 'ok') {
+                    el.textContent = '✅';
+                } else if (status === 'erro') {
+                    el.textContent = '❌';
+                } else {
+                    el.textContent = '⏳';
+                }
+            }
         }
 
         // ========== FILE TO BASE64 ==========
@@ -386,7 +457,7 @@
             });
         }
 
-        // ========== ENVIAR DOCUMENTOS (ROTA CORRETA) ==========
+        // ========== ENVIAR DOCUMENTOS - CORRIGIDO ==========
         async function enviarDocumentos() {
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('msgEnvio');
@@ -432,36 +503,42 @@
             }
             
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONVERTENDO...';
             msg.className = 'carregando';
             msg.textContent = '⏳ Convertendo documentos...';
             
             try {
-                // ===== CONVERTE TODOS PARA BASE64 =====
+                // ===== CONVERTE TODOS PARA BASE64 INDIVIDUALMENTE =====
                 log('🔄 Convertendo documentos para base64...', 'info');
                 const docsBase64 = {};
-                let falhas = [];
+                const erros = [];
                 
                 for (const [tipo, arquivo] of Object.entries(arquivos)) {
                     if (arquivo) {
                         try {
-                            docsBase64[tipo] = await fileToBase64(arquivo);
-                            log(`✅ ${tipo} convertido (${Math.round(docsBase64[tipo].length/1024)}KB)`, 'success');
+                            log(`⏳ Convertendo ${tipo}... (${Math.round(arquivo.size/1024)}KB)`, 'info');
+                            const base64 = await fileToBase64(arquivo);
+                            docsBase64[tipo] = base64;
+                            log(`✅ ${tipo} convertido (${Math.round(base64.length/1024)}KB)`, 'success');
+                            atualizarResumo(tipo, 'ok');
                         } catch (e) {
                             log(`❌ ${tipo} falhou: ${e.message}`, 'error');
-                            falhas.push(tipo);
+                            erros.push(`${tipo}: ${e.message}`);
                             docsBase64[tipo] = null;
+                            atualizarResumo(tipo, 'erro');
                         }
                     }
                 }
                 
-                if (falhas.length > 0) {
-                    log(`⚠️ Documentos com falha: ${falhas.join(', ')}`, 'warning');
+                // Verifica se algum documento falhou
+                if (erros.length > 0) {
+                    log(`⚠️ Documentos com erro: ${erros.join(', ')}`, 'warning');
                 }
                 
-                // ===== SALVA NO BANCO VIA ROTA CORRETA =====
-                log('📤 Enviando para o servidor (rota: /motorista/salvar_documentos)...', 'info');
+                // ===== ENVIA PARA O SERVIDOR =====
+                log('📤 Enviando para o servidor...', 'info');
                 
+                // Envia todos os documentos de uma vez
                 const resposta = await fetch(`${API_URL}/motorista/salvar_documentos`, {
                     method: 'POST',
                     headers: {
@@ -485,9 +562,14 @@
                 }
                 
                 if (resposta.ok) {
-                    log('✅ DOCUMENTOS SALVOS COM SUCESSO!', 'success');
-                    document.getElementById('statusServidor').className = 'status-online online';
-                    document.getElementById('statusServidor').textContent = '📡 Online';
+                    log('✅ DOCUMENTOS ENVIADOS COM SUCESSO!', 'success');
+                    
+                    // Atualiza status de todos como ok
+                    Object.keys(docsBase64).forEach(tipo => {
+                        if (docsBase64[tipo]) {
+                            atualizarResumo(tipo, 'ok');
+                        }
+                    });
                     
                     // Salva no localStorage
                     localStorage.setItem('motorista_documentos', JSON.stringify(docsBase64));
@@ -496,7 +578,7 @@
                     localStorage.setItem('motorista_documentos_status', 'aprovacao');
                     
                     msg.className = 'sucesso';
-                    msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
+                    msg.textContent = `✅ ${data.salvos || 'Documentos'} enviados com sucesso! Aguardando aprovação.`;
                     
                     btn.disabled = false;
                     btn.innerHTML = '✅ ENVIADO';
@@ -510,12 +592,25 @@
                     log(`❌ Erro do servidor: ${data.erro || 'Desconhecido'}`, 'error');
                     msg.className = 'erro';
                     msg.textContent = `❌ Erro: ${data.erro || 'Falha ao salvar documentos'}`;
+                    
+                    // Marca como erro os que falharam
+                    if (data.erros) {
+                        data.erros.forEach(err => {
+                            const tipo = err.split(':')[0];
+                            atualizarResumo(tipo, 'erro');
+                        });
+                    }
+                    
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-redo"></i> TENTAR NOVAMENTE';
                 }
                 
             } catch (error) {
-                log(`❌ ERRO: ${error.message}`, 'error');
+                log(`❌ ERRO GERAL: ${error.message}`, 'error');
+                if (error.stack) {
+                    log(`📋 Stack: ${error.stack.substring(0, 300)}`, 'error');
+                }
+                
                 msg.className = 'erro';
                 msg.textContent = `❌ Erro: ${error.message}`;
                 btn.disabled = false;
@@ -550,6 +645,11 @@
                 btn.innerHTML = status === 'aprovacao' ? '✅ ENVIADO' : '📁 SALVO';
                 btn.style.background = status === 'aprovacao' ? '#00B42A' : '#F59E0B';
                 
+                // Marca todos como ok no resumo
+                Object.keys(statusEnvio).forEach(tipo => {
+                    atualizarResumo(tipo, 'ok');
+                });
+                
                 log(`📋 Documentos já enviados (status: ${status || 'pendente'})`, 'warning');
             }
         }
@@ -576,6 +676,19 @@
                 document.getElementById('statusServidor').textContent = '📡 Offline';
                 log('⚠️ Servidor offline', 'warning');
             }
+        }
+
+        // ========== TOAST ==========
+        function toast(msg, tipo = 'success') {
+            // Cria um toast simples
+            const msgEl = document.getElementById('msgEnvio');
+            msgEl.className = tipo === 'success' ? 'sucesso' : 'erro';
+            msgEl.textContent = msg;
+            msgEl.style.display = 'block';
+            
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 5000);
         }
 
         // ========== INICIALIZAÇÃO ==========
