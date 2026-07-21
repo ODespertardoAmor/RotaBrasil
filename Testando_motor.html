@@ -149,11 +149,12 @@
         💵 Carteira
     </button>
     
-    <!-- 🆕 BOTÃO DE DOCUMENTOS -->
-    <button onclick="window.location.href='EnvioDocMotor.html'" 
-            style="margin-top:8px; background:transparent; border:2px solid var(--alerta); color:var(--alerta);">
-        📋 Meus Documentos
-    </button>
+    <!-- 🆕 BOTÃO DE DOCUMENTOS (só aparece se bloqueado) -->
+<button id="btnDocumentos" 
+        onclick="window.location.href='/cadastro-motorista-docs.html'" 
+        style="margin-top:8px; background:rgba(245,63,63,0.1); border:2px solid var(--perigo); color:var(--perigo); display:none;">
+    🔒 Documentos Pendentes - Clique para enviar
+</button>
     
     <button style="margin-top:8px; background:transparent; border:1px solid var(--perigo); color:var(--perigo);" onclick="sair()">
         <i class="fas fa-door-open"></i> SAIR
@@ -243,7 +244,7 @@ function iniciarGPS(){
         function statusLogin(t,tp){const el=document.getElementById('statusLogin');el.textContent=t;el.className=`status-text ${tp}`;}
         async function cadastrar(){const d={nome:document.getElementById('nome').value.trim(),email:document.getElementById('email').value.trim().toLowerCase(),senha:document.getElementById('senha').value.trim(),telefone:document.getElementById('telefone').value.trim(),carro:document.getElementById('carro').value.trim(),placa:document.getElementById('placa').value.trim().toUpperCase(),tipo:"motorista"};if(Object.values(d).some(v=>!v))return statusLogin("❌ Preencha todos os campos!","erro");if(d.senha.length<6)return statusLogin("❌ Senha mínimo 6 dígitos!","erro");statusLogin("⏳ Cadastrando...","");try{const r=await fetch(`${API_URL}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const ret=await r.json();if(!r.ok)throw new Error(ret.erro||"Falha");statusLogin("✅ Criada! Entrando...","ok");setTimeout(()=>entrar(d.email,d.senha),1000);}catch(e){statusLogin(`❌ ${e.message}`,"erro");}}
         async function entrar(em=null,sn=null){const email=em||document.getElementById('email').value.trim().toLowerCase(),senha=sn||document.getElementById('senha').value.trim();if(!email||!senha)return statusLogin("❌ Digite e-mail e senha!","erro");statusLogin("⏳ Entrando...","");try{const r=await fetch(`${API_URL}/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,senha})});const ret=await r.json();if(!r.ok)throw new Error(ret.erro||"Falha");if(ret.user.tipo!=="motorista")throw new Error("Conta não é de motorista");token=ret.token;usuario=ret.user;localStorage.setItem("token_motorista",token);localStorage.setItem("dados_motorista",JSON.stringify(usuario));telaPrincipal();iniciarGPS();}catch(e){statusLogin(`❌ ${e.message}`,"erro");}}
-        function telaPrincipal(){document.getElementById('loginScreen').style.display='none';document.getElementById('header').style.display='flex';document.getElementById('barra').style.display='block';document.getElementById('botoesFixos').style.display='block';document.getElementById('areaAcoes').style.display='none';iniciarVerificacaoDinamico();iniciarEnvioLocalizacaoREST();}
+        function telaPrincipal(){document.getElementById('loginScreen').style.display='none';document.getElementById('header').style.display='flex';document.getElementById('barra').style.display='block';document.getElementById('botoesFixos').style.display='block';document.getElementById('areaAcoes').style.display='none';iniciarVerificacaoDinamico();iniciarEnvioLocalizacaoREST();verificarStatusDocumentos();}
         function sair(){pararVerificacaoDinamico();if(estado.aceito&&!confirm('Corrida em andamento!'))return;localStorage.clear();limparTudo();window.location.reload();}
         async function ficarOnline(){if(!usuario||!token)return mostrarErro("Faça login!");try{await fetch(`${API_URL}/ficar_online/${usuario.id}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});document.getElementById('btnOnline').style.display='none';document.getElementById('btnOffline').style.display='block';const s=document.getElementById('statusMotorista');s.className='status-bolinha online';s.innerHTML='<i class="fas fa-circle"></i> <span>Online</span>';socket.emit('motorista_online',{id:usuario.id,nome:usuario.nome});}catch(e){mostrarErro("Erro de conexão");}}
         async function ficarOffline(){try{await fetch(`${API_URL}/ficar_offline/${usuario.id}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`}});document.getElementById('btnOnline').style.display='block';document.getElementById('btnOffline').style.display='none';const s=document.getElementById('statusMotorista');s.className='status-bolinha offline';s.innerHTML='<i class="fas fa-circle"></i> <span>Offline</span>';socket.emit('motorista_offline',{id:usuario.id});if(envioLocalizacaoInterval)clearInterval(envioLocalizacaoInterval);}catch(e){}}
@@ -392,20 +393,43 @@ function pararEnvioLocalizacaoREST() {
         console.log('⏹️ Envio de localização REST parado');
     }
 }
-        async function verificarDocumentos() {
+      // ========== VERIFICA STATUS DOS DOCUMENTOS ==========
+async function verificarStatusDocumentos() {
+    if (!usuario || !usuario.id) return;
+    
     try {
         const res = await fetch(`${API_URL}/motorista/documentos/${usuario.id}`);
         const data = await res.json();
         
+        const btnDocs = document.getElementById('btnDocumentos');
+        
         if (!data.documentos_aprovados) {
-            // Mostra aviso
-            document.getElementById('avisoDocs').style.display = 'block';
-            document.getElementById('avisoDocs').innerHTML = 
-                '⚠️ Seus documentos ainda não foram aprovados. ' +
-                '<a href="/cadastro-motorista-docs.html" style="color:#FF7D00;">Enviar documentos</a>';
+            // Documentos não aprovados - mostra botão de alerta
+            btnDocs.style.display = 'block';
+            
+            if (!data.documentos_enviados) {
+                btnDocs.innerHTML = '🔴 Documentos Não Enviados - Clique Aqui';
+                btnDocs.style.background = 'rgba(245,63,63,0.2)';
+            } else {
+                btnDocs.innerHTML = '🟡 Documentos em Análise - Aguardando Aprovação';
+                btnDocs.style.background = 'rgba(255,125,0,0.2)';
+                btnDocs.style.borderColor = 'var(--alerta)';
+                btnDocs.style.color = 'var(--alerta)';
+            }
+        } else {
+            // Documentos aprovados - esconde ou mostra como OK
+            btnDocs.style.display = 'block';
+            btnDocs.innerHTML = '✅ Documentos Aprovados';
+            btnDocs.style.background = 'rgba(0,180,42,0.1)';
+            btnDocs.style.borderColor = 'var(--sucesso)';
+            btnDocs.style.color = 'var(--sucesso)';
+            btnDocs.onclick = null; // Remove o clique
+            btnDocs.style.cursor = 'default';
         }
-    } catch(e) {}
-}
+    } catch (e) {
+        console.log('⚠️ Erro ao verificar documentos:', e);
+    }
+}  
     </script>
 </body>
 </html>
