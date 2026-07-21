@@ -104,7 +104,7 @@
             font-size: 11px;
             font-family: monospace;
             color: #94A3B8;
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
             display: none;
             text-align: left;
@@ -145,6 +145,7 @@
         .resumo-item.ok { background: rgba(0,180,42,0.15); border-color: var(--sucesso); color: var(--sucesso); }
         .resumo-item.erro { background: rgba(245,63,63,0.15); border-color: var(--perigo); color: var(--perigo); }
         .resumo-item.pendente { background: rgba(255,125,0,0.15); border-color: var(--alerta); color: var(--alerta); }
+        .resumo-item.convertendo { background: rgba(22,93,255,0.15); border-color: var(--primaria); color: var(--primaria); }
         
         @media (max-width: 400px) {
             .card { padding: 20px; }
@@ -289,14 +290,6 @@
             antecedentes: false
         };
 
-        let statusEnvio = {
-            foto: 'pendente',
-            cnh: 'pendente',
-            crlv: 'pendente',
-            carro: 'pendente',
-            antecedentes: 'pendente'
-        };
-
         // ========== LOGS ==========
         function log(msg, tipo = 'info') {
             const box = document.getElementById('debugBox');
@@ -341,7 +334,7 @@
             // Verifica tamanho máximo (10MB)
             if (file.size > 10 * 1024 * 1024) {
                 log(`❌ ${tipo}: arquivo muito grande (${Math.round(file.size/1024/1024)}MB) - Máximo 10MB`, 'error');
-                toast(`❌ ${tipo}: arquivo muito grande`, 'error');
+                alert(`❌ ${tipo}: arquivo muito grande (${Math.round(file.size/1024/1024)}MB). Máximo 10MB.`);
                 return;
             }
             
@@ -413,15 +406,19 @@
                     el.textContent = '✅';
                 } else if (status === 'erro') {
                     el.textContent = '❌';
+                } else if (status === 'convertendo') {
+                    el.textContent = '⏳';
                 } else {
                     el.textContent = '⏳';
                 }
             }
         }
 
-        // ========== FILE TO BASE64 ==========
-        function fileToBase64(file) {
+        // ========== FILE TO BASE64 - COM LOG DETALHADO ==========
+        function fileToBase64(file, tipo) {
             return new Promise((resolve, reject) => {
+                log(`📖 Lendo arquivo ${tipo}: ${file.name} (${Math.round(file.size/1024)}KB)`, 'info');
+                
                 if (!file) {
                     reject(new Error('Arquivo não fornecido'));
                     return;
@@ -438,6 +435,7 @@
                 }
                 
                 const reader = new FileReader();
+                
                 reader.onload = (event) => {
                     try {
                         const result = event.target.result;
@@ -445,15 +443,29 @@
                             reject(new Error(`Falha ao ler "${file.name}"`));
                             return;
                         }
+                        log(`✅ ${tipo} convertido com sucesso! (${Math.round(result.length/1024)}KB)`, 'success');
                         resolve(result);
                     } catch (e) {
                         reject(new Error(`Erro ao processar "${file.name}": ${e.message}`));
                     }
                 };
+                
                 reader.onerror = (event) => {
-                    reject(new Error(`Erro ao ler "${file.name}": ${event.target.error?.message || 'Erro desconhecido'}`));
+                    const erroMsg = event.target.error?.message || 'Erro desconhecido';
+                    log(`❌ Erro ao ler ${tipo}: ${erroMsg}`, 'error');
+                    reject(new Error(`Erro ao ler "${file.name}": ${erroMsg}`));
                 };
-                reader.readAsDataURL(file);
+                
+                reader.onabort = () => {
+                    reject(new Error(`Leitura de "${file.name}" foi abortada`));
+                };
+                
+                // INICIA A LEITURA
+                try {
+                    reader.readAsDataURL(file);
+                } catch (e) {
+                    reject(new Error(`Falha ao iniciar leitura de "${file.name}": ${e.message}`));
+                }
             });
         }
 
@@ -508,19 +520,33 @@
             msg.textContent = '⏳ Convertendo documentos...';
             
             try {
-                // ===== CONVERTE TODOS PARA BASE64 INDIVIDUALMENTE =====
+                // ===== CONVERTE CADA DOCUMENTO INDIVIDUALMENTE =====
                 log('🔄 Convertendo documentos para base64...', 'info');
                 const docsBase64 = {};
                 const erros = [];
+                let sucessos = 0;
                 
-                for (const [tipo, arquivo] of Object.entries(arquivos)) {
+                // Lista de tipos para converter
+                const tipos = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
+                
+                for (const tipo of tipos) {
+                    const arquivo = arquivos[tipo];
                     if (arquivo) {
                         try {
+                            // Marca como convertendo
+                            atualizarResumo(tipo, 'convertendo');
+                            
                             log(`⏳ Convertendo ${tipo}... (${Math.round(arquivo.size/1024)}KB)`, 'info');
-                            const base64 = await fileToBase64(arquivo);
-                            docsBase64[tipo] = base64;
-                            log(`✅ ${tipo} convertido (${Math.round(base64.length/1024)}KB)`, 'success');
-                            atualizarResumo(tipo, 'ok');
+                            const base64 = await fileToBase64(arquivo, tipo);
+                            
+                            if (base64) {
+                                docsBase64[tipo] = base64;
+                                sucessos++;
+                                log(`✅ ${tipo} convertido (${Math.round(base64.length/1024)}KB)`, 'success');
+                                atualizarResumo(tipo, 'ok');
+                            } else {
+                                throw new Error('Resultado vazio');
+                            }
                         } catch (e) {
                             log(`❌ ${tipo} falhou: ${e.message}`, 'error');
                             erros.push(`${tipo}: ${e.message}`);
@@ -530,15 +556,22 @@
                     }
                 }
                 
-                // Verifica se algum documento falhou
-                if (erros.length > 0) {
-                    log(`⚠️ Documentos com erro: ${erros.join(', ')}`, 'warning');
+                log(`📊 Resumo: ${sucessos}/${tipos.length} documentos convertidos`, 'info');
+                
+                if (sucessos === 0) {
+                    throw new Error('Nenhum documento foi convertido com sucesso');
                 }
+                
+                // ===== SALVA LOCALMENTE =====
+                log('💾 Salvando localmente...', 'info');
+                localStorage.setItem('motorista_documentos', JSON.stringify(docsBase64));
+                localStorage.setItem('motorista_documentos_enviados', 'true');
+                localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+                log('✅ Salvo localmente', 'success');
                 
                 // ===== ENVIA PARA O SERVIDOR =====
                 log('📤 Enviando para o servidor...', 'info');
                 
-                // Envia todos os documentos de uma vez
                 const resposta = await fetch(`${API_URL}/motorista/salvar_documentos`, {
                     method: 'POST',
                     headers: {
@@ -564,21 +597,17 @@
                 if (resposta.ok) {
                     log('✅ DOCUMENTOS ENVIADOS COM SUCESSO!', 'success');
                     
-                    // Atualiza status de todos como ok
+                    // Marca todos como ok
                     Object.keys(docsBase64).forEach(tipo => {
                         if (docsBase64[tipo]) {
                             atualizarResumo(tipo, 'ok');
                         }
                     });
                     
-                    // Salva no localStorage
-                    localStorage.setItem('motorista_documentos', JSON.stringify(docsBase64));
-                    localStorage.setItem('motorista_documentos_enviados', 'true');
-                    localStorage.setItem('motorista_documentos_data', new Date().toISOString());
                     localStorage.setItem('motorista_documentos_status', 'aprovacao');
                     
                     msg.className = 'sucesso';
-                    msg.textContent = `✅ ${data.salvos || 'Documentos'} enviados com sucesso! Aguardando aprovação.`;
+                    msg.textContent = `✅ ${data.salvos || sucessos} documentos enviados! Aguardando aprovação.`;
                     
                     btn.disabled = false;
                     btn.innerHTML = '✅ ENVIADO';
@@ -592,14 +621,6 @@
                     log(`❌ Erro do servidor: ${data.erro || 'Desconhecido'}`, 'error');
                     msg.className = 'erro';
                     msg.textContent = `❌ Erro: ${data.erro || 'Falha ao salvar documentos'}`;
-                    
-                    // Marca como erro os que falharam
-                    if (data.erros) {
-                        data.erros.forEach(err => {
-                            const tipo = err.split(':')[0];
-                            atualizarResumo(tipo, 'erro');
-                        });
-                    }
                     
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-redo"></i> TENTAR NOVAMENTE';
@@ -646,12 +667,24 @@
                 btn.style.background = status === 'aprovacao' ? '#00B42A' : '#F59E0B';
                 
                 // Marca todos como ok no resumo
-                Object.keys(statusEnvio).forEach(tipo => {
+                Object.keys(arquivos).forEach(tipo => {
                     atualizarResumo(tipo, 'ok');
                 });
                 
                 log(`📋 Documentos já enviados (status: ${status || 'pendente'})`, 'warning');
             }
+        }
+
+        // ========== TOAST ==========
+        function toast(msg, tipo = 'success') {
+            const msgEl = document.getElementById('msgEnvio');
+            msgEl.className = tipo === 'success' ? 'sucesso' : 'erro';
+            msgEl.textContent = msg;
+            msgEl.style.display = 'block';
+            
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 5000);
         }
 
         // ========== VERIFICAR STATUS DO SERVIDOR ==========
@@ -665,30 +698,14 @@
                 if (response.ok) {
                     document.getElementById('statusServidor').className = 'status-online online';
                     document.getElementById('statusServidor').textContent = '📡 Online';
-                    log('✅ Servidor online!', 'success');
                 } else {
                     document.getElementById('statusServidor').className = 'status-online offline';
                     document.getElementById('statusServidor').textContent = '📡 Offline';
-                    log('⚠️ Servidor offline', 'warning');
                 }
             } catch (e) {
                 document.getElementById('statusServidor').className = 'status-online offline';
                 document.getElementById('statusServidor').textContent = '📡 Offline';
-                log('⚠️ Servidor offline', 'warning');
             }
-        }
-
-        // ========== TOAST ==========
-        function toast(msg, tipo = 'success') {
-            // Cria um toast simples
-            const msgEl = document.getElementById('msgEnvio');
-            msgEl.className = tipo === 'success' ? 'sucesso' : 'erro';
-            msgEl.textContent = msg;
-            msgEl.style.display = 'block';
-            
-            setTimeout(() => {
-                msgEl.style.display = 'none';
-            }, 5000);
         }
 
         // ========== INICIALIZAÇÃO ==========
