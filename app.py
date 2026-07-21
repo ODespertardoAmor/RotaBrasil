@@ -52,7 +52,13 @@ VALOR_KM = 2.5
 # ==========================================
 # MODELOS (ORDEM CORRETA)
 # ==========================================
-
+class DocumentoMotorista(db.Model):
+    __tablename__ = 'documentos_motorista'
+    id = db.Column(db.Integer, primary_key=True)
+    motorista_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    tipo = db.Column(db.String(50))  # foto, cnh, crlv, carro, antecedentes
+    imagem_base64 = db.Column(db.Text)  # Imagem em base64
+    data_envio = db.Column(db.DateTime, default=datetime.utcnow)
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
     id = db.Column(db.Integer, primary_key=True)
@@ -1667,7 +1673,69 @@ def motorista_enviar_documentos():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'erro': str(e)}), 500    
+        return jsonify({'erro': str(e)}), 500 
+@app.route('/motorista/salvar_documentos', methods=['POST'])
+@jwt_required()
+def salvar_documentos():
+    """Salva os documentos do motorista no banco"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        documentos = dados.get('documentos', {})
+        
+        # Remove documentos antigos
+        DocumentoMotorista.query.filter_by(motorista_id=motorista_id).delete()
+        
+        # Salva cada documento
+        for tipo, imagem_base64 in documentos.items():
+            if imagem_base64:
+                doc = DocumentoMotorista(
+                    motorista_id=motorista_id,
+                    tipo=tipo,
+                    imagem_base64=imagem_base64
+                )
+                db.session.add(doc)
+        
+        # Marca como enviado
+        motorista = db.session.get(Usuario, motorista_id)
+        if motorista:
+            motorista.documentos_enviados = True
+            motorista.data_envio_docs = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({'status': 'Documentos salvos!', 'total': len(documentos)}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500 
+@app.route('/admin/ver_documentos/<int:mot_id>', methods=['GET'])
+def admin_ver_documentos(mot_id):
+    """Retorna os documentos do motorista para visualização"""
+    try:
+        docs = DocumentoMotorista.query.filter_by(motorista_id=mot_id).all()
+        
+        motorista = db.session.get(Usuario, mot_id)
+        
+        return jsonify({
+            'motorista': {
+                'id': motorista.id,
+                'nome': motorista.nome,
+                'email': motorista.email,
+                'telefone': motorista.telefone or '',
+                'carro': motorista.carro or '',
+                'placa': motorista.placa or ''
+            },
+            'documentos': [{
+                'id': d.id,
+                'tipo': d.tipo,
+                'imagem': d.imagem_base64,
+                'data': str(d.data_envio)
+            } for d in docs]
+        })
+        
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
 # ==========================================
