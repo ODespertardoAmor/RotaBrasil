@@ -85,7 +85,7 @@
         .btn:hover { opacity: 0.85; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 500px; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 600px; text-align: center; max-height: 90vh; overflow-y: auto; }
         .modal-box input { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 18px; text-align: center; margin: 15px 0; }
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
         .toast { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; max-width: 350px; }
@@ -137,6 +137,15 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        .sem-documentos {
+            text-align: center;
+            padding: 30px;
+            color: #94A3B8;
+        }
+        .sem-documentos .icone {
+            font-size: 48px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -290,7 +299,7 @@
 
     <!-- MODAL DOCUMENTOS (CORRIGIDO) -->
     <div class="modal-overlay" id="modalDocumentos">
-        <div class="modal-box" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
             <h3 id="modalTituloDocs">📋 Documentos do Motorista</h3>
             <div id="conteudoDocumentos" style="text-align: left; margin-top: 15px;">
                 <div id="loadingDocs" class="loading-docs">
@@ -300,11 +309,15 @@
                 <div id="infoMotoristaDocs" style="color:#94A3B8; margin-bottom: 15px; display: none;"></div>
                 <div id="imagensDocumentos" style="display: none;"></div>
                 <div id="erroDocumentos" style="color:#EF4444; display: none; text-align: center; padding: 20px;"></div>
+                <div id="semDocumentos" class="sem-documentos" style="display: none;">
+                    <div class="icone">📭</div>
+                    <p>Este motorista ainda não enviou documentos.</p>
+                </div>
             </div>
-            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
-                <button class="btn btn-success" onclick="aprovarDocumentosModal(true)" style="flex:1;" id="btnAprovarDocs">✅ Aprovar</button>
-                <button class="btn btn-danger" onclick="aprovarDocumentosModal(false)" style="flex:1;" id="btnReprovarDocs">❌ Reprovar</button>
-                <button class="btn btn-secondary" onclick="fecharModalDocumentos()" style="flex:1;">🔒 Fechar</button>
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn btn-success" onclick="aprovarDocumentosModal(true)" style="flex:1; min-width:100px;" id="btnAprovarDocs">✅ Aprovar</button>
+                <button class="btn btn-danger" onclick="aprovarDocumentosModal(false)" style="flex:1; min-width:100px;" id="btnReprovarDocs">❌ Reprovar</button>
+                <button class="btn btn-secondary" onclick="fecharModalDocumentos()" style="flex:1; min-width:100px;">🔒 Fechar</button>
             </div>
         </div>
     </div>
@@ -424,7 +437,7 @@
             }
         }
 
-        // ========== MOTORISTAS (CORRIGIDO) ==========
+        // ========== MOTORISTAS ==========
         async function carregarMotoristas() {
             try {
                 console.log('🔄 Carregando motoristas...');
@@ -440,7 +453,6 @@
                 }
                 
                 tbody.innerHTML = data.map(m => {
-                    // Determina o status dos documentos
                     let docStatus = '';
                     let docBadge = '';
                     if (m.documentos_aprovados) {
@@ -453,9 +465,6 @@
                         docStatus = '❌ Não enviado';
                         docBadge = 'badge-offline';
                     }
-
-                    // DEBUG: Mostra o status no console
-                    console.log(`Motorista #${m.id}: docs_enviados=${m.documentos_enviados}, docs_aprovados=${m.documentos_aprovados}`);
 
                     return `
                     <tr>
@@ -474,13 +483,11 @@
                             <div class="acao-botoes">
                                 <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')" title="Adicionar Saldo">💵</button>
                                 
-                                <!-- BOTÃO VER DOCUMENTOS - AGORA COM onclick DIRETO E LOG -->
                                 ${m.documentos_enviados ? 
-                                    `<button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos" style="background:#3B82F6;">📄</button>` : 
+                                    `<button class="btn btn-primary btn-sm" onclick="verDocumentos(${m.id})" title="Ver Documentos">📄</button>` : 
                                     `<button class="btn btn-secondary btn-sm" disabled title="Sem documentos">📄</button>`
                                 }
                                 
-                                <!-- BOTÕES APROVAR/REPROVAR -->
                                 ${m.documentos_enviados && !m.documentos_aprovados ? 
                                     `<button class="btn btn-sm" style="background:#10B981;color:white;" onclick="aprovarDocumentos(${m.id}, true)" title="Aprovar">✅</button>
                                      <button class="btn btn-sm" style="background:#EF4444;color:white;" onclick="aprovarDocumentos(${m.id}, false)" title="Reprovar">❌</button>` : 
@@ -499,72 +506,132 @@
             }
         }
 
-        // ========== VER DOCUMENTOS (CORRIGIDO COM DEBUG) ==========
+        // ========== VER DOCUMENTOS - VERSÃO CORRIGIDA ==========
         async function verDocumentos(motId) {
             console.log('📄 verDocumentos chamado para motorista ID:', motId);
             
-            // Mostra loading
+            // Mostra loading e esconde tudo
             document.getElementById('modalDocumentos').classList.add('show');
             document.getElementById('loadingDocs').style.display = 'block';
             document.getElementById('infoMotoristaDocs').style.display = 'none';
             document.getElementById('imagensDocumentos').style.display = 'none';
             document.getElementById('erroDocumentos').style.display = 'none';
+            document.getElementById('semDocumentos').style.display = 'none';
             
             motoristaDocumentosId = motId;
             
             try {
-                console.log(`🔍 Buscando documentos do motorista ${motId}...`);
-                const res = await fetch(`${API}/admin/ver_documentos/${motId}`);
-                console.log('📡 Resposta da API:', res.status);
+                // PRIMEIRO: Busca os dados do motorista
+                console.log(`🔍 Buscando motorista ${motId}...`);
+                const resMotorista = await fetch(`${API}/admin/motoristas`);
+                const motoristas = await resMotorista.json();
+                const motorista = motoristas.find(m => m.id === motId);
                 
-                const data = await res.json();
-                console.log('📦 Dados recebidos:', data);
+                if (!motorista) {
+                    throw new Error('Motorista não encontrado');
+                }
+                
+                console.log('👤 Motorista encontrado:', motorista);
+                
+                // SEGUNDO: Busca os documentos do motorista
+                console.log(`📎 Buscando documentos do motorista ${motId}...`);
+                
+                // Tenta várias rotas possíveis
+                let docs = [];
+                let rotaUsada = '';
+                
+                // Rota 1: /admin/ver_documentos/:id
+                try {
+                    const res1 = await fetch(`${API}/admin/ver_documentos/${motId}`);
+                    if (res1.ok) {
+                        const data1 = await res1.json();
+                        console.log('📡 Resposta rota 1:', data1);
+                        if (data1.sucesso && data1.documentos) {
+                            docs = data1.documentos;
+                            rotaUsada = 'rota 1 (/admin/ver_documentos)';
+                        }
+                    }
+                } catch (e) { console.log('Rota 1 falhou:', e); }
+                
+                // Rota 2: /admin/documentos/:id
+                if (docs.length === 0) {
+                    try {
+                        const res2 = await fetch(`${API}/admin/documentos/${motId}`);
+                        if (res2.ok) {
+                            const data2 = await res2.json();
+                            console.log('📡 Resposta rota 2:', data2);
+                            if (data2.sucesso && data2.documentos) {
+                                docs = data2.documentos;
+                                rotaUsada = 'rota 2 (/admin/documentos)';
+                            }
+                        }
+                    } catch (e) { console.log('Rota 2 falhou:', e); }
+                }
+                
+                // Rota 3: /motoristas/:id/documentos
+                if (docs.length === 0) {
+                    try {
+                        const res3 = await fetch(`${API}/motoristas/${motId}/documentos`);
+                        if (res3.ok) {
+                            const data3 = await res3.json();
+                            console.log('📡 Resposta rota 3:', data3);
+                            if (data3.sucesso && data3.documentos) {
+                                docs = data3.documentos;
+                                rotaUsada = 'rota 3 (/motoristas/:id/documentos)';
+                            }
+                        }
+                    } catch (e) { console.log('Rota 3 falhou:', e); }
+                }
+                
+                // Se ainda não encontrou, tenta buscar da lista de motoristas
+                if (docs.length === 0 && motorista.documentos) {
+                    docs = motorista.documentos;
+                    rotaUsada = 'dados do motorista';
+                    console.log('📎 Usando documentos do objeto motorista:', docs);
+                }
+                
+                console.log(`📎 Total de documentos encontrados: ${docs.length} (${rotaUsada})`);
                 
                 // Esconde loading
                 document.getElementById('loadingDocs').style.display = 'none';
                 
-                if (!data.sucesso) {
-                    console.error('❌ Erro da API:', data.erro);
-                    document.getElementById('erroDocumentos').textContent = '❌ ' + (data.erro || 'Erro ao carregar documentos');
-                    document.getElementById('erroDocumentos').style.display = 'block';
-                    toast('❌ ' + (data.erro || 'Erro ao carregar documentos'), 'error');
-                    return;
-                }
-                
-                const mot = data.motorista;
-                document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${mot.nome}`;
+                // Exibe informações do motorista
+                document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${motorista.nome}`;
                 document.getElementById('infoMotoristaDocs').innerHTML = `
-                    <strong>Email:</strong> ${mot.email}<br>
-                    <strong>Telefone:</strong> ${mot.telefone || 'N/A'}<br>
-                    <strong>Veículo:</strong> ${mot.carro || 'N/A'} - ${mot.placa || 'N/A'}<br>
-                    <strong>Status:</strong> ${mot.documentos_aprovados ? '✅ Aprovado' : mot.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}
+                    <strong>Email:</strong> ${motorista.email}<br>
+                    <strong>Telefone:</strong> ${motorista.telefone || 'N/A'}<br>
+                    <strong>Veículo:</strong> ${motorista.carro || 'N/A'} - ${motorista.placa || 'N/A'}<br>
+                    <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}
                 `;
                 document.getElementById('infoMotoristaDocs').style.display = 'block';
                 
-                const docs = data.documentos;
-                let html = '';
-                
+                // Exibe os documentos
                 if (!docs || docs.length === 0) {
-                    html = '<p style="color:#EF4444; text-align:center; padding:20px;">Nenhum documento enviado.</p>';
-                    document.getElementById('imagensDocumentos').style.display = 'block';
-                    document.getElementById('imagensDocumentos').innerHTML = html;
+                    document.getElementById('semDocumentos').style.display = 'block';
+                    document.getElementById('imagensDocumentos').style.display = 'none';
+                    toast('📭 Nenhum documento encontrado', 'warning');
                 } else {
                     const nomes = {
                         'foto': '📸 Foto de Perfil',
                         'cnh': '🪪 CNH',
                         'crlv': '📄 CRLV',
                         'carro': '🚗 Fotos do Carro',
-                        'antecedentes': '📋 Antecedentes'
+                        'antecedentes': '📋 Antecedentes',
+                        'perfil': '📸 Foto de Perfil'
                     };
                     
+                    let html = '';
                     docs.forEach((doc, index) => {
-                        console.log(`📎 Documento ${index+1}:`, doc.tipo, doc.imagem ? 'com imagem' : 'sem imagem');
+                        console.log(`📎 Documento ${index+1}:`, doc);
+                        const imagem = doc.imagem || doc.url || doc.foto || doc.path || doc.caminho || '';
+                        const tipo = doc.tipo || doc.nome || 'documento';
                         html += `
                             <div class="documento-card">
-                                <h4>${nomes[doc.tipo] || doc.tipo}</h4>
-                                ${doc.imagem ? 
-                                    `<img src="${doc.imagem}" class="documento-imagem" onerror="this.src='https://via.placeholder.com/400x300?text=Erro+ao+carregar+imagem'">` : 
-                                    '<p style="color:#94A3B8;">Imagem não disponível</p>'
+                                <h4>${nomes[tipo] || tipo}</h4>
+                                ${imagem ? 
+                                    `<img src="${imagem}" class="documento-imagem" 
+                                          onerror="this.src='https://via.placeholder.com/400x300?text=Imagem+indispon%C3%ADvel'; this.onerror=null;">` : 
+                                    `<p style="color:#94A3B8;">📎 ${tipo} (sem imagem)</p>`
                                 }
                             </div>
                         `;
@@ -572,14 +639,13 @@
                     
                     document.getElementById('imagensDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').innerHTML = html;
+                    toast(`✅ ${docs.length} documento(s) carregado(s)!`, 'success');
                 }
-                
-                toast('✅ Documentos carregados com sucesso!', 'success');
                 
             } catch (e) {
                 console.error('❌ Erro ao ver documentos:', e);
                 document.getElementById('loadingDocs').style.display = 'none';
-                document.getElementById('erroDocumentos').textContent = '❌ Erro ao conectar com o servidor: ' + e.message;
+                document.getElementById('erroDocumentos').textContent = '❌ ' + (e.message || 'Erro ao carregar documentos');
                 document.getElementById('erroDocumentos').style.display = 'block';
                 toast('❌ Erro ao carregar documentos', 'error');
             }
@@ -603,8 +669,9 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    toast(`✅ Documentos ${data.status}!`);
+                    toast(`✅ Documentos ${data.status || 'atualizados'}!`);
                     carregarMotoristas();
+                    fecharModalDocumentos();
                 } else {
                     toast('❌ ' + (data.erro || 'Erro'), 'error');
                 }
@@ -620,7 +687,6 @@
                 return;
             }
             await aprovarDocumentos(motoristaDocumentosId, aprovado);
-            fecharModalDocumentos();
         }
 
         function fecharModalDocumentos() {
@@ -628,7 +694,6 @@
             motoristaDocumentosId = null;
         }
 
-        // Fechar modal ao clicar fora
         document.getElementById('modalDocumentos').addEventListener('click', function(e) {
             if (e.target === this) fecharModalDocumentos();
         });
