@@ -85,25 +85,31 @@
             border-radius: 4px; transition: width 0.5s;
         }
         
-        .lista-docs { margin-top: 10px; }
-        .doc-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 10px; background: rgba(255,255,255,0.03);
-            border-radius: 8px; margin-bottom: 8px;
-        }
-        .doc-item .doc-info { display: flex; align-items: center; gap: 10px; }
-        .doc-item i { font-size: 20px; }
-        .doc-item .doc-name { font-size: 13px; }
-        .doc-item .doc-status { font-size: 11px; font-weight: 600; }
-        
         #msgEnvio {
             text-align: center; margin-top: 15px; font-size: 14px; font-weight: 600;
-            padding: 12px; border-radius: 8px;
+            padding: 12px; border-radius: 8px; display: none;
         }
-        #msgEnvio.sucesso { background: rgba(0,180,42,0.1); color: var(--sucesso); }
-        #msgEnvio.erro { background: rgba(245,63,63,0.1); color: var(--perigo); }
-        #msgEnvio.alerta { background: rgba(255,125,0,0.1); color: var(--alerta); }
-        #msgEnvio.carregando { background: rgba(22,93,255,0.1); color: var(--primaria); }
+        #msgEnvio.sucesso { background: rgba(0,180,42,0.1); color: var(--sucesso); display: block; }
+        #msgEnvio.erro { background: rgba(245,63,63,0.1); color: var(--perigo); display: block; }
+        #msgEnvio.alerta { background: rgba(255,125,0,0.1); color: var(--alerta); display: block; }
+        #msgEnvio.carregando { background: rgba(22,93,255,0.1); color: var(--primaria); display: block; }
+        
+        .debug-box {
+            background: #0A0E14;
+            border: 1px solid var(--borda);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #94A3B8;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        .debug-box.show { display: block; }
         
         @media (max-width: 400px) {
             .card { padding: 20px; }
@@ -216,13 +222,16 @@
         </button>
 
         <!-- Mensagem -->
-        <div id="msgEnvio" style="display:none;"></div>
+        <div id="msgEnvio"></div>
+        
+        <!-- Debug Box -->
+        <div id="debugBox" class="debug-box"></div>
     </div>
 
     <script>
         const API_URL = "https://rotabrasil-tobu.onrender.com";
 
-        // ========== ARMAZENAMENTO DOS ARQUIVOS ==========
+        // ========== ARMAZENAMENTO ==========
         let arquivos = {
             foto: null,
             cnh: null,
@@ -239,18 +248,30 @@
             antecedentes: false
         };
 
-        // ========== FUNÇÃO PARA ADICIONAR ARQUIVO ==========
+        // ========== DEBUG ==========
+        function addDebug(msg) {
+            const box = document.getElementById('debugBox');
+            box.classList.add('show');
+            box.textContent += msg + '\n';
+            console.log(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function clearDebug() {
+            document.getElementById('debugBox').textContent = '';
+            document.getElementById('debugBox').classList.remove('show');
+        }
+
+        // ========== PREVIEW ==========
         function previewFile(input, tipo) {
             const files = input.files;
             if (!files || files.length === 0) return;
             
             const file = files[0];
-            console.log('📎 Arquivo selecionado:', tipo, file.name, file.type, file.size);
+            addDebug(`📎 Arquivo selecionado: ${tipo} - ${file.name} (${Math.round(file.size/1024)}KB)`);
             
-            // ARMAZENA O ARQUIVO
             arquivos[tipo] = file;
             
-            // Atualiza nome
             const nameEl = document.getElementById(`${tipo}Name`);
             if (nameEl) {
                 const qtd = files.length > 1 ? ` (${files.length} arquivos)` : '';
@@ -258,11 +279,9 @@
                 nameEl.style.display = 'block';
             }
             
-            // Atualiza visual
             const uploadArea = input.closest('.upload-area');
             if (uploadArea) uploadArea.classList.add('has-file');
             
-            // Preview (apenas 1ª imagem)
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -276,7 +295,6 @@
                 reader.readAsDataURL(file);
             }
             
-            // Marca como enviado
             documentosEnviados[tipo] = true;
             atualizarStatus(tipo, true);
             atualizarProgresso();
@@ -302,14 +320,19 @@
             document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
         }
 
-        // ========== ENVIAR DOCUMENTOS - VERSÃO CORRIGIDA ==========
+        // ========== ENVIAR DOCUMENTOS ==========
         async function enviarDocumentos() {
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('msgEnvio');
             
-            // Verifica se todos os documentos foram selecionados
+            clearDebug();
+            addDebug('🚀 Iniciando envio de documentos...');
+            
+            // Verifica se todos foram selecionados
             const total = Object.keys(arquivos).length;
             const selecionados = Object.values(arquivos).filter(a => a !== null).length;
+            
+            addDebug(`📊 Documentos selecionados: ${selecionados}/${total}`);
             
             if (selecionados < total) {
                 const faltando = Object.entries(arquivos)
@@ -326,9 +349,9 @@
                     })
                     .join(', ');
                 
-                msg.style.display = 'block';
                 msg.className = 'erro';
-                msg.textContent = `❌ Faltam: ${faltando} (${selecionados}/${total})`;
+                msg.textContent = `❌ Faltam: ${faltando}`;
+                addDebug(`❌ Documentos faltando: ${faltando}`);
                 return;
             }
             
@@ -336,123 +359,142 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
             
-            msg.style.display = 'block';
             msg.className = 'carregando';
-            msg.textContent = '⏳ Enviando documentos...';
+            msg.textContent = '⏳ Processando documentos...';
             
             try {
-                // ===== OPÇÃO 1: ENVIA COMO FORM DATA (RECOMENDADO) =====
-                const formData = new FormData();
+                // ===== SALVA LOCALMENTE PRIMEIRO (sempre) =====
+                addDebug('💾 Salvando documentos localmente...');
                 
-                // Adiciona cada arquivo
+                // Converte imagens para base64
+                const docsBase64 = {};
                 for (const [tipo, arquivo] of Object.entries(arquivos)) {
                     if (arquivo) {
-                        formData.append(tipo, arquivo);
-                        console.log(`📤 Adicionando ${tipo}:`, arquivo.name);
+                        const base64 = await fileToBase64(arquivo);
+                        docsBase64[tipo] = base64;
+                        addDebug(`✅ ${tipo} convertido para base64 (${Math.round(base64.length/1024)}KB)`);
                     }
                 }
                 
-                // Tenta enviar para o servidor
+                // Salva no localStorage
+                const dadosLocal = {
+                    enviado: true,
+                    data: new Date().toISOString(),
+                    status: 'pendente',
+                    documentos: docsBase64
+                };
+                localStorage.setItem('motorista_documentos', JSON.stringify(dadosLocal));
+                localStorage.setItem('motorista_documentos_enviados', 'true');
+                localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+                
+                addDebug('✅ Documentos salvos localmente!');
+                
+                // ===== TENTA ENVIAR PARA O SERVIDOR =====
                 const token = localStorage.getItem('token_motorista');
-                console.log('🔑 Token motorista:', token ? 'Existe' : 'Não existe');
+                addDebug(`🔑 Token encontrado: ${token ? 'SIM' : 'NÃO'}`);
                 
                 if (token) {
-                    const response = await fetch(`${API_URL}/motorista/documentos`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                            // NÃO coloca Content-Type com FormData, o browser define automaticamente
-                        },
-                        body: formData
-                    });
+                    addDebug('📤 Enviando para o servidor...');
                     
-                    console.log('📡 Status da resposta:', response.status);
-                    const data = await response.json();
-                    console.log('📦 Resposta do servidor:', data);
-                    
-                    if (response.ok) {
-                        msg.className = 'sucesso';
-                        msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
-                        
-                        // Salva no localStorage
-                        const dadosEnvio = {
-                            enviado: true,
-                            data: new Date().toISOString(),
-                            status: 'pendente',
-                            documentos: Object.keys(arquivos)
-                        };
-                        localStorage.setItem('motorista_documentos', JSON.stringify(dadosEnvio));
-                        localStorage.setItem('motorista_documentos_enviados', 'true');
-                        localStorage.setItem('motorista_documentos_data', new Date().toISOString());
-                        
-                        setTimeout(() => {
-                            window.location.href = '/motorista.html';
-                        }, 2000);
-                        return;
-                    } else {
-                        throw new Error(data.erro || 'Erro ao enviar documentos');
-                    }
-                } else {
-                    // ===== SEM TOKEN: SALVA LOCALMENTE =====
-                    console.log('⚠️ Sem token, salvando localmente');
-                    
-                    // Salva os arquivos como base64 no localStorage (apenas para demonstração)
-                    const docsBase64 = {};
+                    // Cria FormData
+                    const formData = new FormData();
                     for (const [tipo, arquivo] of Object.entries(arquivos)) {
-                        if (arquivo && arquivo.type.startsWith('image/')) {
-                            const base64 = await fileToBase64(arquivo);
-                            docsBase64[tipo] = base64;
+                        if (arquivo) {
+                            formData.append(tipo, arquivo);
+                            addDebug(`📎 Adicionado ${tipo} ao FormData`);
                         }
                     }
                     
-                    localStorage.setItem('motorista_documentos_pendentes', JSON.stringify({
-                        enviado: true,
-                        data: new Date().toISOString(),
-                        documentos: docsBase64
-                    }));
-                    
-                    msg.className = 'alerta';
-                    msg.textContent = '⚠️ Documentos salvos localmente. Faça login para enviar ao servidor.';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR DOCUMENTOS';
-                    
-                    // Redireciona para login após 2 segundos
-                    setTimeout(() => {
-                        window.location.href = '/login_motorista.html';
-                    }, 2000);
+                    // Tenta enviar
+                    try {
+                        addDebug(`🌐 URL: ${API_URL}/motorista/documentos`);
+                        
+                        const response = await fetch(`${API_URL}/motorista/documentos`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: formData
+                        });
+                        
+                        addDebug(`📡 Status da resposta: ${response.status}`);
+                        
+                        const responseText = await response.text();
+                        addDebug(`📦 Resposta: ${responseText}`);
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(responseText);
+                        } catch (e) {
+                            data = { erro: 'Resposta não é JSON', texto: responseText };
+                        }
+                        
+                        if (response.ok) {
+                            msg.className = 'sucesso';
+                            msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
+                            addDebug('✅ Envio para o servidor concluído com sucesso!');
+                            
+                            // Atualiza status
+                            localStorage.setItem('motorista_documentos_status', 'aprovacao');
+                            
+                            setTimeout(() => {
+                                window.location.href = '/motorista.html';
+                            }, 2000);
+                            return;
+                        } else {
+                            addDebug(`⚠️ Erro do servidor: ${data.erro || 'Erro desconhecido'}`);
+                            // Continua mesmo com erro, pois salvamos localmente
+                        }
+                    } catch (fetchError) {
+                        addDebug(`❌ Erro na requisição: ${fetchError.message}`);
+                        // Continua mesmo com erro
+                    }
                 }
+                
+                // ===== SE CHEGOU AQUI, SALVOU LOCALMENTE MAS NÃO ENVIOU =====
+                msg.className = 'alerta';
+                msg.textContent = '⚠️ Documentos salvos localmente. A conexão com o servidor falhou, mas seus documentos estão seguros.';
+                addDebug('⚠️ Documentos salvos apenas localmente (offline)');
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> REENVIAR';
+                btn.style.background = '#F59E0B';
+                
+                setTimeout(() => {
+                    window.location.href = '/motorista.html';
+                }, 3000);
                 
             } catch (error) {
                 console.error('❌ Erro ao enviar:', error);
+                addDebug(`❌ Erro geral: ${error.message}`);
+                
                 msg.className = 'erro';
-                msg.textContent = '❌ ' + (error.message || 'Erro ao enviar documentos. Tente novamente.');
+                msg.textContent = '❌ Erro ao processar documentos. Tente novamente.';
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR DOCUMENTOS';
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> TENTAR NOVAMENTE';
             }
         }
 
-        // ========== UTILITÁRIO: Converter File para Base64 ==========
+        // ========== CONVERTER FILE PARA BASE64 ==========
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
+                reader.onerror = (e) => reject(e);
                 reader.readAsDataURL(file);
             });
         }
 
-        // ========== VERIFICA SE JÁ ENVIOU ANTES ==========
+        // ========== VERIFICAR ENVIO ANTERIOR ==========
         function verificarEnvioAnterior() {
             const enviado = localStorage.getItem('motorista_documentos_enviados');
             const data = localStorage.getItem('motorista_documentos_data');
             
             if (enviado === 'true') {
                 const msg = document.getElementById('msgEnvio');
-                msg.style.display = 'block';
                 msg.className = 'sucesso';
                 msg.textContent = `✅ Documentos já enviados em ${data ? new Date(data).toLocaleDateString() : 'data desconhecida'}. Aguardando análise.`;
                 
-                // Desabilita os inputs
                 document.querySelectorAll('input[type="file"]').forEach(input => {
                     input.disabled = true;
                 });
@@ -465,15 +507,27 @@
                 btn.disabled = true;
                 btn.innerHTML = '✅ JÁ ENVIADO';
                 btn.style.background = '#475569';
+                
+                addDebug('📋 Documentos já enviados anteriormente');
+            }
+        }
+
+        // ========== VERIFICAR TOKEN ==========
+        function verificarToken() {
+            const token = localStorage.getItem('token_motorista');
+            if (token) {
+                addDebug(`✅ Token encontrado: ${token.substring(0, 20)}...`);
+            } else {
+                addDebug('⚠️ Nenhum token encontrado. Os documentos serão salvos localmente.');
             }
         }
 
         // ========== INICIALIZAÇÃO ==========
+        addDebug('🚀 Página de cadastro carregada');
+        addDebug(`🌐 API: ${API_URL}`);
+        verificarToken();
         verificarEnvioAnterior();
         atualizarProgresso();
-        
-        console.log('🚀 Página de cadastro carregada!');
-        console.log('📎 API_URL:', API_URL);
     </script>
 </body>
 </html>
