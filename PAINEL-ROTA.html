@@ -333,14 +333,51 @@
         }
 
         async function carregarMotoristas() {
-            try {
-                const res = await fetch(`${API}/admin/motoristas`);
-                const data = await res.json();
-                const tbody = document.getElementById('listaMotoristas');
-                if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>'; return; }
-                tbody.innerHTML = data.map(m => `<tr><td>#${m.id}</td><td><img src="${m.foto_perfil||'https://ui-avatars.com/api/?name='+encodeURIComponent(m.nome)+'&size=35&background=334155&color=fff'}" class="avatar" onerror="this.style.display='none'"></td><td><strong>${m.nome}</strong></td><td style="color:#94A3B8;">${m.email}</td><td>${m.carro||'-'}</td><td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa||'-'}</span></td><td><span class="badge ${m.online?'badge-online':'badge-offline'}">${m.online?'🟢 Online':'🔴 Offline'}</span></td><td><button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id},'${m.nome}','motorista')">💵</button><button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button></td></tr>`).join('');
-            } catch (e) {}
+    try {
+        const res = await fetch(`${API}/admin/motoristas`);
+        const data = await res.json();
+        const tbody = document.getElementById('listaMotoristas');
+        
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748B;">Nenhum motorista</td></tr>';
+            return;
         }
+        
+        tbody.innerHTML = data.map(m => `
+            <tr>
+                <td>#${m.id}</td>
+                <td>
+                    <img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=35&background=334155&color=fff'}" 
+                         class="avatar" onerror="this.style.display='none'">
+                </td>
+                <td><strong>${m.nome}</strong></td>
+                <td style="color:#94A3B8;">${m.email}</td>
+                <td>${m.carro || '-'}</td>
+                <td><span style="background:#000;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;">${m.placa || '-'}</span></td>
+                
+                <!-- 🆕 COLUNA DE DOCUMENTOS -->
+                <td>
+                    ${m.documentos_aprovados ? 
+                        '<span class="badge badge-online">✅ Aprovado</span>' : 
+                        m.documentos_enviados ? 
+                            '<span class="badge badge-pendente">⏳ Pendente</span>' : 
+                            '<span class="badge badge-offline">❌ Não enviado</span>'
+                    }
+                </td>
+                
+                <td><span class="badge ${m.online ? 'badge-online' : 'badge-offline'}">${m.online ? '🟢 Online' : '🔴 Offline'}</span></td>
+                
+                <td>
+                    <button class="btn btn-success btn-sm" onclick="abrirModalSaldo(${m.id}, '${m.nome}', 'motorista')">💵</button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirMotorista(${m.id})">🗑</button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (e) {
+        document.getElementById('listaMotoristas').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#EF4444;">Erro ao carregar</td></tr>';
+    }
+}
 
         async function carregarPassageiros() {
             try {
