@@ -116,6 +116,17 @@
         .debug-box .log-warning { color: #FF7D00; }
         .debug-box .log-info { color: #165DFF; }
         
+        .status-online {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status-online.offline { background: rgba(245,63,63,0.2); color: var(--perigo); }
+        .status-online.online { background: rgba(0,180,42,0.2); color: var(--sucesso); }
+        
         @media (max-width: 400px) {
             .card { padding: 20px; }
         }
@@ -127,6 +138,7 @@
             <div class="logo">📋</div>
             <h1>Cadastro do Motorista</h1>
             <p>Envie seus documentos para validação</p>
+            <span class="status-online offline" id="statusServidor">📡 Offline</span>
         </div>
 
         <div class="card">
@@ -374,60 +386,15 @@
             });
         }
 
-        // ========== TENTAR ENVIAR PARA VÁRIAS ROTAS ==========
-        async function tentarEnviar(rota, formData, token) {
-            const url = `${API_URL}${rota}`;
-            log(`🌐 Tentando: ${rota}`, 'info');
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                
-                const status = response.status;
-                log(`📡 Status: ${status}`, 'info');
-                
-                let data;
-                try {
-                    const text = await response.text();
-                    data = JSON.parse(text);
-                    log(`📦 Resposta: ${JSON.stringify(data).substring(0, 200)}`, 'info');
-                } catch (e) {
-                    data = { erro: 'Resposta não é JSON' };
-                }
-                
-                return { success: response.ok, status, data, url };
-                
-            } catch (error) {
-                log(`❌ Erro na rota ${rota}: ${error.message}`, 'error');
-                return { success: false, error: error.message, url };
-            }
-        }
-
-        // ========== ENVIAR DOCUMENTOS ==========
+        // ========== ENVIAR DOCUMENTOS (VERSÃO OFFLINE) ==========
         async function enviarDocumentos() {
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('msgEnvio');
             
             clearLogs();
             log('🚀 INICIANDO ENVIO DE DOCUMENTOS', 'info');
-            log(`🌐 API: ${API_URL}`, 'info');
             
-            const token = localStorage.getItem('token_motorista');
-            log(`🔑 Token: ${token ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO'}`, token ? 'success' : 'error');
-            
-            if (!token) {
-                log('⚠️ Sem token, salvando localmente', 'warning');
-                msg.className = 'alerta';
-                msg.textContent = '⚠️ Faça login para enviar ao servidor. Documentos salvos localmente.';
-                salvarLocalmente();
-                return;
-            }
-            
+            // Verifica se todos os documentos foram selecionados
             const total = Object.keys(arquivos).length;
             const selecionados = Object.values(arquivos).filter(a => a !== null).length;
             log(`📊 Documentos: ${selecionados}/${total} selecionados`, 'info');
@@ -435,7 +402,16 @@
             if (selecionados < total) {
                 const faltando = Object.entries(arquivos)
                     .filter(([_, v]) => v === null)
-                    .map(([k]) => k)
+                    .map(([k]) => {
+                        const nomes = {
+                            foto: 'Foto de Perfil',
+                            cnh: 'CNH',
+                            crlv: 'CRLV',
+                            carro: 'Fotos do Carro',
+                            antecedentes: 'Antecedentes'
+                        };
+                        return nomes[k] || k;
+                    })
                     .join(', ');
                 log(`❌ Faltando: ${faltando}`, 'error');
                 msg.className = 'erro';
@@ -444,89 +420,119 @@
             }
             
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSANDO...';
             msg.className = 'carregando';
-            msg.textContent = '⏳ Enviando para o servidor...';
+            msg.textContent = '⏳ Convertendo documentos...';
             
             try {
-                // Converte para base64 e salva localmente
+                // ===== CONVERTE TODOS PARA BASE64 =====
+                log('🔄 Convertendo documentos para base64...', 'info');
                 const docsBase64 = {};
+                let falhas = [];
+                
                 for (const [tipo, arquivo] of Object.entries(arquivos)) {
                     if (arquivo) {
                         try {
                             docsBase64[tipo] = await fileToBase64(arquivo);
-                            log(`✅ ${tipo} convertido`, 'success');
+                            log(`✅ ${tipo} convertido (${Math.round(docsBase64[tipo].length/1024)}KB)`, 'success');
                         } catch (e) {
-                            log(`⚠️ ${tipo} falhou: ${e.message}`, 'warning');
+                            log(`❌ ${tipo} falhou: ${e.message}`, 'error');
+                            falhas.push(tipo);
                             docsBase64[tipo] = null;
                         }
                     }
                 }
                 
-                // Salva localmente
-                localStorage.setItem('motorista_documentos', JSON.stringify({
-                    enviado: true,
-                    data: new Date().toISOString(),
+                if (falhas.length > 0) {
+                    log(`⚠️ Documentos com falha: ${falhas.join(', ')}`, 'warning');
+                }
+                
+                // ===== SALVA NO LOCALSTORAGE =====
+                log('💾 Salvando no localStorage...', 'info');
+                
+                const dadosMotorista = {
+                    nome: localStorage.getItem('motorista_nome') || 'Motorista',
+                    email: localStorage.getItem('motorista_email') || '',
+                    telefone: localStorage.getItem('motorista_telefone') || '',
+                    documentos: docsBase64,
+                    data_envio: new Date().toISOString(),
                     status: 'pendente',
-                    documentos: docsBase64
-                }));
+                    versao: '1.0'
+                };
+                
+                localStorage.setItem('motorista_documentos', JSON.stringify(dadosMotorista));
                 localStorage.setItem('motorista_documentos_enviados', 'true');
-                log('💾 Salvo localmente', 'success');
+                localStorage.setItem('motorista_documentos_data', new Date().toISOString());
+                localStorage.setItem('motorista_documentos_status', 'pendente');
                 
-                // ===== TENTA VÁRIAS ROTAS =====
-                const rotas = [
-                    '/motorista/documentos',
-                    '/motorista/enviar_documentos',
-                    '/motorista/upload_documentos',
-                    '/motorista/documentos/upload',
-                    '/admin/motorista/documentos',
-                    '/motorista/docs'
-                ];
+                log('✅ Documentos salvos com sucesso!', 'success');
                 
-                let enviado = false;
+                // ===== TENTA ENVIAR PARA O SERVIDOR (OPCIONAL) =====
+                const token = localStorage.getItem('token_motorista');
                 
-                for (const rota of rotas) {
-                    log(`\n📤 Testando rota: ${rota}`, 'info');
+                if (token) {
+                    log('📤 Tentando enviar para o servidor...', 'info');
+                    document.getElementById('statusServidor').className = 'status-online online';
+                    document.getElementById('statusServidor').textContent = '📡 Tentando...';
                     
-                    const formData = new FormData();
-                    for (const [tipo, arquivo] of Object.entries(arquivos)) {
-                        if (arquivo) {
-                            formData.append(tipo, arquivo);
+                    try {
+                        // Tenta enviar como JSON (base64)
+                        const resposta = await fetch(`${API_URL}/motorista/documentos`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                documentos: docsBase64,
+                                data_envio: new Date().toISOString()
+                            })
+                        });
+                        
+                        if (resposta.ok) {
+                            const data = await resposta.json();
+                            log('✅ Enviado para o servidor!', 'success');
+                            document.getElementById('statusServidor').className = 'status-online online';
+                            document.getElementById('statusServidor').textContent = '📡 Online';
+                            
+                            msg.className = 'sucesso';
+                            msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
+                            
+                            localStorage.setItem('motorista_documentos_status', 'aprovacao');
+                            
+                            btn.disabled = false;
+                            btn.innerHTML = '✅ ENVIADO';
+                            btn.style.background = '#00B42A';
+                            
+                            setTimeout(() => {
+                                window.location.href = '/motorista.html';
+                            }, 2000);
+                            return;
+                        } else {
+                            log(`⚠️ Servidor respondeu: ${resposta.status}`, 'warning');
                         }
-                    }
-                    
-                    const resultado = await tentarEnviar(rota, formData, token);
-                    
-                    if (resultado.success) {
-                        log(`✅ SUCESSO na rota: ${rota}`, 'success');
-                        enviado = true;
-                        
-                        msg.className = 'sucesso';
-                        msg.textContent = '✅ Documentos enviados com sucesso! Aguardando aprovação.';
-                        localStorage.setItem('motorista_documentos_status', 'aprovacao');
-                        
-                        btn.disabled = false;
-                        btn.innerHTML = '✅ ENVIADO';
-                        btn.style.background = '#00B42A';
-                        
-                        setTimeout(() => {
-                            window.location.href = '/motorista.html';
-                        }, 2000);
-                        break;
+                    } catch (e) {
+                        log(`⚠️ Servidor offline: ${e.message}`, 'warning');
+                        document.getElementById('statusServidor').className = 'status-online offline';
+                        document.getElementById('statusServidor').textContent = '📡 Offline';
                     }
                 }
                 
-                if (!enviado) {
-                    log('❌ Nenhuma rota funcionou', 'error');
-                    msg.className = 'alerta';
-                    msg.textContent = '⚠️ Não foi possível enviar ao servidor. Documentos salvos localmente.';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-redo"></i> TENTAR NOVAMENTE';
-                    
-                    setTimeout(() => {
-                        window.location.href = '/motorista.html';
-                    }, 3000);
-                }
+                // ===== SE CHEGOU AQUI, SALVOU LOCALMENTE =====
+                log('⚠️ Documentos salvos apenas localmente (offline)', 'warning');
+                document.getElementById('statusServidor').className = 'status-online offline';
+                document.getElementById('statusServidor').textContent = '📡 Offline';
+                
+                msg.className = 'alerta';
+                msg.textContent = '⚠️ Documentos salvos localmente! Quando o servidor estiver online, eles serão enviados automaticamente.';
+                
+                btn.disabled = false;
+                btn.innerHTML = '✅ SALVO LOCALMENTE';
+                btn.style.background = '#F59E0B';
+                
+                setTimeout(() => {
+                    window.location.href = '/motorista.html';
+                }, 3000);
                 
             } catch (error) {
                 log(`❌ ERRO: ${error.message}`, 'error');
@@ -537,63 +543,74 @@
             }
         }
 
-        // ========== SALVAR LOCALMENTE ==========
-        function salvarLocalmente() {
-            const docsBase64 = {};
-            for (const [tipo, arquivo] of Object.entries(arquivos)) {
-                if (arquivo) {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(arquivo);
-                    // Simplificado - só marca como enviado
-                }
-            }
-            
-            localStorage.setItem('motorista_documentos', JSON.stringify({
-                enviado: true,
-                data: new Date().toISOString(),
-                status: 'pendente',
-                documentos: 'salvo_localmente'
-            }));
-            localStorage.setItem('motorista_documentos_enviados', 'true');
-            
-            document.getElementById('msgEnvio').className = 'alerta';
-            document.getElementById('msgEnvio').textContent = '⚠️ Documentos salvos localmente.';
-            
-            setTimeout(() => {
-                window.location.href = '/motorista.html';
-            }, 2000);
-        }
-
-        // ========== VERIFICAR ENVIO ==========
+        // ========== VERIFICAR ENVIO ANTERIOR ==========
         function verificarEnvioAnterior() {
             const enviado = localStorage.getItem('motorista_documentos_enviados');
+            const status = localStorage.getItem('motorista_documentos_status');
+            
             if (enviado === 'true') {
                 const msg = document.getElementById('msgEnvio');
-                msg.className = 'sucesso';
-                msg.textContent = '✅ Documentos já enviados! Aguardando análise.';
+                
+                if (status === 'aprovacao') {
+                    msg.className = 'sucesso';
+                    msg.textContent = '✅ Documentos enviados e aguardando aprovação!';
+                } else {
+                    msg.className = 'alerta';
+                    msg.textContent = '⚠️ Documentos salvos localmente. Aguardando envio ao servidor.';
+                }
+                
                 document.querySelectorAll('input[type="file"]').forEach(i => i.disabled = true);
                 document.querySelectorAll('.upload-area').forEach(el => {
                     el.style.opacity = '0.5';
                     el.style.cursor = 'default';
                 });
+                
                 const btn = document.getElementById('btnEnviar');
                 btn.disabled = true;
-                btn.innerHTML = '✅ JÁ ENVIADO';
-                btn.style.background = '#475569';
+                btn.innerHTML = status === 'aprovacao' ? '✅ ENVIADO' : '📁 SALVO';
+                btn.style.background = status === 'aprovacao' ? '#00B42A' : '#F59E0B';
+                
+                log(`📋 Documentos já enviados (status: ${status || 'pendente'})`, 'warning');
+            }
+        }
+
+        // ========== VERIFICAR STATUS DO SERVIDOR ==========
+        async function verificarServidor() {
+            try {
+                const response = await fetch(`${API_URL}/health`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('statusServidor').className = 'status-online online';
+                    document.getElementById('statusServidor').textContent = '📡 Online';
+                    log('✅ Servidor online!', 'success');
+                } else {
+                    document.getElementById('statusServidor').className = 'status-online offline';
+                    document.getElementById('statusServidor').textContent = '📡 Offline';
+                    log('⚠️ Servidor offline', 'warning');
+                }
+            } catch (e) {
+                document.getElementById('statusServidor').className = 'status-online offline';
+                document.getElementById('statusServidor').textContent = '📡 Offline';
+                log('⚠️ Servidor offline', 'warning');
             }
         }
 
         // ========== INICIALIZAÇÃO ==========
-        log('🚀 Página carregada', 'info');
+        log('🚀 Página de cadastro carregada', 'info');
         log(`🌐 API: ${API_URL}`, 'info');
+        
         verificarEnvioAnterior();
         atualizarProgresso();
+        verificarServidor();
         
         const token = localStorage.getItem('token_motorista');
         if (token) {
-            log(`🔑 Token: ${token.substring(0, 20)}...`, 'success');
+            log(`🔑 Token encontrado: ${token.substring(0, 20)}...`, 'success');
         } else {
-            log('⚠️ Sem token', 'warning');
+            log('⚠️ Sem token - modo offline', 'warning');
         }
     </script>
 </body>
