@@ -1735,6 +1735,25 @@ def admin_ver_documentos(mot_id):
         })
         
     except Exception as e:
+        return jsonify({'erro': str(e)}), 500 
+@app.route('/admin/atualizar_foto', methods=['POST'])
+@jwt_required()
+def admin_atualizar_foto():
+    try:
+        dados = request.get_json()
+        usuario_id = dados.get('usuario_id')
+        tipo = dados.get('tipo')  # 'motorista' ou 'passageiro'
+        foto_base64 = dados.get('foto_base64')
+        
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+        
+        usuario.foto_perfil = foto_base64
+        db.session.commit()
+        
+        return jsonify({'status': 'Foto atualizada com sucesso!'}), 200
+    except Exception as e:
         return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
