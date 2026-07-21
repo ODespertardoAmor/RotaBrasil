@@ -247,7 +247,7 @@
             antecedentes: false
         };
 
-        // ========== LOGS COLORIDOS ==========
+        // ========== LOGS ==========
         function log(msg, tipo = 'info') {
             const box = document.getElementById('debugBox');
             box.classList.add('show');
@@ -283,6 +283,12 @@
             const file = files[0];
             log(`📎 Arquivo: ${tipo} - ${file.name} (${Math.round(file.size/1024)}KB)`, 'info');
             
+            // VERIFICA SE O ARQUIVO É VÁLIDO
+            if (file.size === 0) {
+                log(`❌ Arquivo vazio!`, 'error');
+                return;
+            }
+            
             arquivos[tipo] = file;
             
             const nameEl = document.getElementById(`${tipo}Name`);
@@ -304,6 +310,10 @@
                         preview.src = e.target.result;
                         preview.classList.add('show');
                     }
+                    log(`✅ Preview gerado para ${tipo}`, 'success');
+                };
+                reader.onerror = (e) => {
+                    log(`❌ Erro ao gerar preview: ${e.message}`, 'error');
                 };
                 reader.readAsDataURL(file);
             }
@@ -331,7 +341,61 @@
             document.getElementById('progressText').textContent = `${enviados} de ${total} documentos enviados`;
         }
 
-        // ========== ENVIAR COM LOGS DETALHADOS ==========
+        // ========== FILE TO BASE64 - CORRIGIDO ==========
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                // VALIDAÇÃO DO ARQUIVO
+                if (!file) {
+                    reject(new Error('Arquivo não fornecido'));
+                    return;
+                }
+                
+                if (file.size === 0) {
+                    reject(new Error(`Arquivo "${file.name}" está vazio`));
+                    return;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) { // 10MB
+                    reject(new Error(`Arquivo "${file.name}" é muito grande (${Math.round(file.size/1024/1024)}MB). Máximo 10MB.`));
+                    return;
+                }
+                
+                log(`🔄 Lendo arquivo: ${file.name} (${Math.round(file.size/1024)}KB)`, 'info');
+                
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    try {
+                        const result = event.target.result;
+                        if (!result) {
+                            reject(new Error(`Falha ao ler "${file.name}": resultado vazio`));
+                            return;
+                        }
+                        log(`✅ ${file.name} convertido com sucesso! (${Math.round(result.length/1024)}KB)`, 'success');
+                        resolve(result);
+                    } catch (e) {
+                        reject(new Error(`Erro ao processar "${file.name}": ${e.message}`));
+                    }
+                };
+                
+                reader.onerror = (event) => {
+                    reject(new Error(`Erro ao ler "${file.name}": ${event.target.error?.message || 'Erro desconhecido'}`));
+                };
+                
+                reader.onabort = () => {
+                    reject(new Error(`Leitura de "${file.name}" foi abortada`));
+                };
+                
+                // INICIA A LEITURA
+                try {
+                    reader.readAsDataURL(file);
+                } catch (e) {
+                    reject(new Error(`Falha ao iniciar leitura de "${file.name}": ${e.message}`));
+                }
+            });
+        }
+
+        // ========== ENVIAR DOCUMENTOS ==========
         async function enviarDocumentos() {
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('msgEnvio');
@@ -342,11 +406,7 @@
             
             // Verifica token
             const token = localStorage.getItem('token_motorista');
-            log(`🔑 Token motorista: ${token ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO'}`, token ? 'success' : 'error');
-            
-            if (token) {
-                log(`📝 Token: ${token.substring(0, 30)}...`, 'info');
-            }
+            log(`🔑 Token: ${token ? '✅ ENCONTRADO' : '❌ NÃO ENCONTRADO'}`, token ? 'success' : 'error');
             
             // Verifica documentos
             const total = Object.keys(arquivos).length;
@@ -380,14 +440,22 @@
                 for (const [tipo, arquivo] of Object.entries(arquivos)) {
                     if (arquivo) {
                         try {
+                            log(`⏳ Convertendo ${tipo}...`, 'info');
                             const base64 = await fileToBase64(arquivo);
                             docsBase64[tipo] = base64;
                             log(`✅ ${tipo} convertido (${Math.round(base64.length/1024)}KB)`, 'success');
                         } catch (e) {
                             log(`❌ Erro ao converter ${tipo}: ${e.message}`, 'error');
-                            throw new Error(`Erro ao converter ${tipo}`);
+                            // CONTINUA MESMO COM ERRO
+                            docsBase64[tipo] = null;
                         }
                     }
+                }
+                
+                // Verifica se algum documento falhou
+                const falhas = Object.entries(docsBase64).filter(([_, v]) => v === null).map(([k]) => k);
+                if (falhas.length > 0) {
+                    log(`⚠️ Documentos com falha: ${falhas.join(', ')}`, 'warning');
                 }
                 
                 // ===== SALVA LOCALMENTE =====
@@ -409,11 +477,18 @@
                     
                     try {
                         const formData = new FormData();
+                        let temArquivos = false;
+                        
                         for (const [tipo, arquivo] of Object.entries(arquivos)) {
                             if (arquivo) {
                                 formData.append(tipo, arquivo);
+                                temArquivos = true;
                                 log(`📎 Anexado: ${tipo} (${arquivo.name})`, 'info');
                             }
+                        }
+                        
+                        if (!temArquivos) {
+                            throw new Error('Nenhum arquivo válido para enviar');
                         }
                         
                         const url = `${API_URL}/motorista/documentos`;
@@ -434,14 +509,12 @@
                         let data;
                         try {
                             const text = await response.text();
-                            log(`📦 Resposta bruta: ${text.substring(0, 200)}...`, 'info');
+                            log(`📦 Resposta: ${text.substring(0, 300)}...`, 'info');
                             data = JSON.parse(text);
                         } catch (e) {
                             log(`⚠️ Resposta não é JSON: ${e.message}`, 'warning');
                             data = { erro: 'Resposta inválida' };
                         }
-                        
-                        log(`📋 Dados: ${JSON.stringify(data)}`, 'info');
                         
                         if (response.ok) {
                             log('✅ ENVIO CONCLUÍDO COM SUCESSO!', 'success');
@@ -455,12 +528,12 @@
                             return;
                         } else {
                             log(`❌ Erro do servidor: ${data.erro || 'Desconhecido'}`, 'error');
-                            // Continua mesmo com erro
                         }
                     } catch (fetchError) {
                         log(`❌ ERRO NA REQUISIÇÃO: ${fetchError.message}`, 'error');
-                        log(`📋 Stack: ${fetchError.stack}`, 'error');
-                        // Continua mesmo com erro
+                        if (fetchError.stack) {
+                            log(`📋 Stack: ${fetchError.stack.substring(0, 200)}`, 'error');
+                        }
                     }
                 }
                 
@@ -479,23 +552,15 @@
                 
             } catch (error) {
                 log(`❌ ERRO GERAL: ${error.message}`, 'error');
-                log(`📋 Stack: ${error.stack}`, 'error');
+                if (error.stack) {
+                    log(`📋 Stack: ${error.stack.substring(0, 300)}`, 'error');
+                }
                 
                 msg.className = 'erro';
                 msg.textContent = `❌ Erro: ${error.message}`;
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> TENTAR NOVAMENTE';
             }
-        }
-
-        // ========== FILE TO BASE64 ==========
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = (e) => reject(new Error(`Falha ao ler ${file.name}: ${e.message}`));
-                reader.readAsDataURL(file);
-            });
         }
 
         // ========== VERIFICAR ENVIO ==========
@@ -524,7 +589,6 @@
         verificarEnvioAnterior();
         atualizarProgresso();
         
-        // Mostra token no log
         const token = localStorage.getItem('token_motorista');
         if (token) {
             log(`🔑 Token: ${token.substring(0, 20)}...`, 'success');
