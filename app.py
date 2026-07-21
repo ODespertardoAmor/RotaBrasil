@@ -874,7 +874,6 @@ def gerar_cobranca(corrida_id):
 # ==========================================
 # ROTAS DO PAINEL ADMIN
 # ==========================================
-
 @app.route('/admin/motoristas', methods=['GET'])
 def admin_motoristas():
     """Lista todos os motoristas"""
@@ -888,7 +887,10 @@ def admin_motoristas():
             'foto_perfil': m.foto_perfil or '',
             'carro': m.carro or '',
             'placa': m.placa or '',
-            'online': m.online or False
+            'online': m.online or False,
+            # 🔥 CAMPOS DE DOCUMENTOS
+            'documentos_enviados': m.documentos_enviados or False,
+            'documentos_aprovados': m.documentos_aprovados or False
         } for m in motoristas])
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
