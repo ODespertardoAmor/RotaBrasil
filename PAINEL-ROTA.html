@@ -15,7 +15,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #0F172A; color: #F1F5F9; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
         
-        /* TELA DE LOGIN */
         #loginPainel {
             position: fixed; inset: 0; background: #0F172A;
             display: flex; align-items: center; justify-content: center;
@@ -85,7 +84,7 @@
         .btn:hover { opacity: 0.85; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 600px; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 650px; text-align: center; max-height: 90vh; overflow-y: auto; }
         .modal-box input { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 18px; text-align: center; margin: 15px 0; }
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
         .toast { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; max-width: 350px; }
@@ -146,6 +145,19 @@
         .sem-documentos .icone {
             font-size: 48px;
             margin-bottom: 10px;
+        }
+        .debug-info {
+            background: #0F172A;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #94A3B8;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -297,7 +309,7 @@
         </div>
     </div>
 
-    <!-- MODAL DOCUMENTOS (CORRIGIDO) -->
+    <!-- MODAL DOCUMENTOS - VERSÃO CORRIGIDA -->
     <div class="modal-overlay" id="modalDocumentos">
         <div class="modal-box" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
             <h3 id="modalTituloDocs">📋 Documentos do Motorista</h3>
@@ -307,6 +319,7 @@
                     <p style="margin-top: 10px;">Carregando documentos...</p>
                 </div>
                 <div id="infoMotoristaDocs" style="color:#94A3B8; margin-bottom: 15px; display: none;"></div>
+                <div id="debugInfo" class="debug-info" style="display: none;"></div>
                 <div id="imagensDocumentos" style="display: none;"></div>
                 <div id="erroDocumentos" style="color:#EF4444; display: none; text-align: center; padding: 20px;"></div>
                 <div id="semDocumentos" class="sem-documentos" style="display: none;">
@@ -330,6 +343,7 @@
         const API = 'https://rotabrasil-tobu.onrender.com';
         let usuarioSaldoId = null;
         let motoristaDocumentosId = null;
+        let motoristasCache = [];
 
         // ========== TOAST ==========
         function toast(msg, tipo = 'success') {
@@ -445,6 +459,9 @@
                 const data = await res.json();
                 console.log('📊 Motoristas recebidos:', data);
                 
+                // Guarda no cache
+                motoristasCache = data;
+                
                 const tbody = document.getElementById('listaMotoristas');
                 
                 if (!data || !data.length) {
@@ -510,22 +527,29 @@
         async function verDocumentos(motId) {
             console.log('📄 verDocumentos chamado para motorista ID:', motId);
             
-            // Mostra loading e esconde tudo
+            // Mostra loading
             document.getElementById('modalDocumentos').classList.add('show');
             document.getElementById('loadingDocs').style.display = 'block';
             document.getElementById('infoMotoristaDocs').style.display = 'none';
             document.getElementById('imagensDocumentos').style.display = 'none';
             document.getElementById('erroDocumentos').style.display = 'none';
             document.getElementById('semDocumentos').style.display = 'none';
+            document.getElementById('debugInfo').style.display = 'none';
             
             motoristaDocumentosId = motId;
             
             try {
-                // PRIMEIRO: Busca os dados do motorista
-                console.log(`🔍 Buscando motorista ${motId}...`);
-                const resMotorista = await fetch(`${API}/admin/motoristas`);
-                const motoristas = await resMotorista.json();
-                const motorista = motoristas.find(m => m.id === motId);
+                // BUSCA O MOTORISTA DO CACHE OU DA API
+                let motorista = motoristasCache.find(m => m.id === motId);
+                
+                if (!motorista) {
+                    // Se não tiver no cache, busca da API
+                    console.log('🔍 Motorista não encontrado no cache, buscando da API...');
+                    const res = await fetch(`${API}/admin/motoristas`);
+                    const data = await res.json();
+                    motorista = data.find(m => m.id === motId);
+                    motoristasCache = data;
+                }
                 
                 if (!motorista) {
                     throw new Error('Motorista não encontrado');
@@ -533,67 +557,104 @@
                 
                 console.log('👤 Motorista encontrado:', motorista);
                 
-                // SEGUNDO: Busca os documentos do motorista
-                console.log(`📎 Buscando documentos do motorista ${motId}...`);
-                
-                // Tenta várias rotas possíveis
+                // Busca os documentos do motorista
                 let docs = [];
-                let rotaUsada = '';
+                let debugMsg = `🔍 Buscando documentos do motorista #${motId}\n`;
                 
-                // Rota 1: /admin/ver_documentos/:id
-                try {
-                    const res1 = await fetch(`${API}/admin/ver_documentos/${motId}`);
-                    if (res1.ok) {
-                        const data1 = await res1.json();
-                        console.log('📡 Resposta rota 1:', data1);
-                        if (data1.sucesso && data1.documentos) {
-                            docs = data1.documentos;
-                            rotaUsada = 'rota 1 (/admin/ver_documentos)';
-                        }
-                    }
-                } catch (e) { console.log('Rota 1 falhou:', e); }
-                
-                // Rota 2: /admin/documentos/:id
-                if (docs.length === 0) {
-                    try {
-                        const res2 = await fetch(`${API}/admin/documentos/${motId}`);
-                        if (res2.ok) {
-                            const data2 = await res2.json();
-                            console.log('📡 Resposta rota 2:', data2);
-                            if (data2.sucesso && data2.documentos) {
-                                docs = data2.documentos;
-                                rotaUsada = 'rota 2 (/admin/documentos)';
-                            }
-                        }
-                    } catch (e) { console.log('Rota 2 falhou:', e); }
-                }
-                
-                // Rota 3: /motoristas/:id/documentos
-                if (docs.length === 0) {
-                    try {
-                        const res3 = await fetch(`${API}/motoristas/${motId}/documentos`);
-                        if (res3.ok) {
-                            const data3 = await res3.json();
-                            console.log('📡 Resposta rota 3:', data3);
-                            if (data3.sucesso && data3.documentos) {
-                                docs = data3.documentos;
-                                rotaUsada = 'rota 3 (/motoristas/:id/documentos)';
-                            }
-                        }
-                    } catch (e) { console.log('Rota 3 falhou:', e); }
-                }
-                
-                // Se ainda não encontrou, tenta buscar da lista de motoristas
-                if (docs.length === 0 && motorista.documentos) {
+                // Tenta várias fontes
+                // 1. Verifica se tem documentos no objeto do motorista
+                if (motorista.documentos && Array.isArray(motorista.documentos) && motorista.documentos.length > 0) {
                     docs = motorista.documentos;
-                    rotaUsada = 'dados do motorista';
-                    console.log('📎 Usando documentos do objeto motorista:', docs);
+                    debugMsg += `✅ Encontrado ${docs.length} documentos no objeto do motorista\n`;
+                    console.log('📎 Documentos do motorista:', docs);
                 }
                 
-                console.log(`📎 Total de documentos encontrados: ${docs.length} (${rotaUsada})`);
+                // 2. Tenta a rota /admin/ver_documentos
+                if (docs.length === 0) {
+                    try {
+                        debugMsg += `🔄 Tentando rota: /admin/ver_documentos/${motId}\n`;
+                        const res = await fetch(`${API}/admin/ver_documentos/${motId}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('📡 Resposta rota 1:', data);
+                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
+                                docs = data.documentos;
+                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 1\n`;
+                            } else {
+                                debugMsg += `❌ Rota 1 retornou: ${JSON.stringify(data)}\n`;
+                            }
+                        } else {
+                            debugMsg += `❌ Rota 1 falhou: ${res.status}\n`;
+                        }
+                    } catch (e) {
+                        debugMsg += `❌ Rota 1 erro: ${e.message}\n`;
+                    }
+                }
+                
+                // 3. Tenta a rota /admin/documentos
+                if (docs.length === 0) {
+                    try {
+                        debugMsg += `🔄 Tentando rota: /admin/documentos/${motId}\n`;
+                        const res = await fetch(`${API}/admin/documentos/${motId}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('📡 Resposta rota 2:', data);
+                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
+                                docs = data.documentos;
+                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 2\n`;
+                            } else {
+                                debugMsg += `❌ Rota 2 retornou: ${JSON.stringify(data)}\n`;
+                            }
+                        } else {
+                            debugMsg += `❌ Rota 2 falhou: ${res.status}\n`;
+                        }
+                    } catch (e) {
+                        debugMsg += `❌ Rota 2 erro: ${e.message}\n`;
+                    }
+                }
+                
+                // 4. Tenta a rota /motoristas
+                if (docs.length === 0) {
+                    try {
+                        debugMsg += `🔄 Tentando rota: /motoristas/${motId}/documentos\n`;
+                        const res = await fetch(`${API}/motoristas/${motId}/documentos`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('📡 Resposta rota 3:', data);
+                            if (data.sucesso && data.documentos && data.documentos.length > 0) {
+                                docs = data.documentos;
+                                debugMsg += `✅ Encontrado ${docs.length} documentos na rota 3\n`;
+                            } else {
+                                debugMsg += `❌ Rota 3 retornou: ${JSON.stringify(data)}\n`;
+                            }
+                        } else {
+                            debugMsg += `❌ Rota 3 falhou: ${res.status}\n`;
+                        }
+                    } catch (e) {
+                        debugMsg += `❌ Rota 3 erro: ${e.message}\n`;
+                    }
+                }
+                
+                // 5. Verifica campos específicos no motorista
+                if (docs.length === 0) {
+                    const camposDoc = ['foto_documento', 'foto_cnh', 'foto_crlv', 'foto_carro', 'documento_foto', 'cnh_foto', 'crlv_foto'];
+                    camposDoc.forEach(campo => {
+                        if (motorista[campo]) {
+                            docs.push({ tipo: campo, imagem: motorista[campo] });
+                            debugMsg += `✅ Encontrado campo: ${campo}\n`;
+                        }
+                    });
+                }
+                
+                console.log(`📎 Total de documentos encontrados: ${docs.length}`);
+                debugMsg += `\n📊 Total: ${docs.length} documento(s) encontrado(s)`;
                 
                 // Esconde loading
                 document.getElementById('loadingDocs').style.display = 'none';
+                
+                // Exibe debug
+                document.getElementById('debugInfo').textContent = debugMsg;
+                document.getElementById('debugInfo').style.display = 'block';
                 
                 // Exibe informações do motorista
                 document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${motorista.nome}`;
@@ -602,6 +663,8 @@
                     <strong>Telefone:</strong> ${motorista.telefone || 'N/A'}<br>
                     <strong>Veículo:</strong> ${motorista.carro || 'N/A'} - ${motorista.placa || 'N/A'}<br>
                     <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}
+                    <hr style="border-color:#334155; margin: 10px 0;">
+                    <strong>Total de documentos:</strong> ${docs.length}
                 `;
                 document.getElementById('infoMotoristaDocs').style.display = 'block';
                 
@@ -613,25 +676,33 @@
                 } else {
                     const nomes = {
                         'foto': '📸 Foto de Perfil',
+                        'foto_documento': '📸 Foto de Perfil',
                         'cnh': '🪪 CNH',
+                        'foto_cnh': '🪪 CNH',
                         'crlv': '📄 CRLV',
+                        'foto_crlv': '📄 CRLV',
                         'carro': '🚗 Fotos do Carro',
+                        'foto_carro': '🚗 Fotos do Carro',
                         'antecedentes': '📋 Antecedentes',
-                        'perfil': '📸 Foto de Perfil'
+                        'perfil': '📸 Foto de Perfil',
+                        'documento_foto': '📸 Foto'
                     };
                     
                     let html = '';
                     docs.forEach((doc, index) => {
                         console.log(`📎 Documento ${index+1}:`, doc);
-                        const imagem = doc.imagem || doc.url || doc.foto || doc.path || doc.caminho || '';
+                        const imagem = doc.imagem || doc.url || doc.foto || doc.path || doc.caminho || doc.link || '';
                         const tipo = doc.tipo || doc.nome || 'documento';
+                        const nomeExibicao = nomes[tipo] || tipo;
+                        
                         html += `
                             <div class="documento-card">
-                                <h4>${nomes[tipo] || tipo}</h4>
+                                <h4>${nomeExibicao}</h4>
                                 ${imagem ? 
                                     `<img src="${imagem}" class="documento-imagem" 
-                                          onerror="this.src='https://via.placeholder.com/400x300?text=Imagem+indispon%C3%ADvel'; this.onerror=null;">` : 
-                                    `<p style="color:#94A3B8;">📎 ${tipo} (sem imagem)</p>`
+                                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;"` :
+                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>
+                                     <p style="color:#94A3B8; font-size:12px;">Tipo: ${tipo}</p>`
                                 }
                             </div>
                         `;
@@ -639,7 +710,7 @@
                     
                     document.getElementById('imagensDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').innerHTML = html;
-                    toast(`✅ ${docs.length} documento(s) carregado(s)!`, 'success');
+                    toast(`✅ ${docs.length} documento(s) encontrado(s)!`, 'success');
                 }
                 
             } catch (e) {
