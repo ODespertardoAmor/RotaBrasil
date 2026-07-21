@@ -143,6 +143,15 @@
                 <div class="table-container"><div class="table-header"><h3>Motoristas</h3><button class="btn btn-primary btn-sm" onclick="carregarMotoristas()">🔄 Atualizar</button></div>
                     <div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Carro</th><th>Placa</th><th>Status</th><th>Ações</th></tr></thead>
                     <tbody id="listaMotoristas"><tr><td colspan="8" style="text-align:center;color:#64748B;">Carregando...</td></tr></tbody></table></div>
+                    // Na tabela de motoristas
+<td>
+    ${m.documentos_aprovados ? 
+        '<span class="badge badge-online">✅ Aprovado</span>' : 
+        m.documentos_enviados ? 
+            '<span class="badge badge-pendente">⏳ Pendente</span>' : 
+            '<span class="badge badge-offline">❌ Não enviado</span>'
+    }
+</td>
                 </div>
             </div>
             <div class="tab-content" id="tab-passageiros">
