@@ -156,7 +156,7 @@
             font-size: 11px;
             font-family: monospace;
             color: #94A3B8;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             display: none;
             text-align: left;
@@ -177,6 +177,16 @@
         @media (max-width: 600px) {
             .doc-grid { grid-template-columns: 1fr; }
         }
+        .doc-status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .doc-status-badge.ok { background: rgba(0,180,42,0.2); color: #00B42A; }
+        .doc-status-badge.fail { background: rgba(245,63,63,0.2); color: #F53F3F; }
     </style>
 </head>
 <body>
@@ -535,6 +545,7 @@
                 log('🔍 Buscando documentos do banco...', 'info');
                 
                 let docs = [];
+                let rawResponse = {};
                 
                 // Tenta a rota /admin/ver_documentos
                 try {
@@ -544,27 +555,51 @@
                     
                     if (res.ok) {
                         const data = await res.json();
-                        log(`📦 Dados recebidos: ${JSON.stringify(data).substring(0, 300)}`, 'info');
+                        rawResponse = data;
+                        log(`📦 Dados recebidos: ${JSON.stringify(data).substring(0, 500)}`, 'info');
                         
-                        // Verifica diferentes estruturas de resposta
+                        // ===== VERIFICA TODAS AS ESTRUTURAS POSSÍVEIS =====
+                        
+                        // 1. Array de documentos
                         if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
                             docs = data.documentos;
                             log(`✅ Encontrado ${docs.length} documentos na chave 'documentos'`, 'success');
-                        } else if (data.imagem_base64) {
+                        }
+                        
+                        // 2. Objeto com campos individuais (foto, cnh, crlv, carro, antecedentes)
+                        const camposIndividuais = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
+                        const docsIndividuais = [];
+                        camposIndividuais.forEach(campo => {
+                            if (data[campo]) {
+                                docsIndividuais.push({ tipo: campo, imagem_base64: data[campo] });
+                                log(`✅ Campo '${campo}' encontrado`, 'success');
+                            } else {
+                                log(`❌ Campo '${campo}' não encontrado`, 'warning');
+                            }
+                        });
+                        
+                        // 3. Se encontrou campos individuais, usa eles
+                        if (docsIndividuais.length > 0 && docs.length === 0) {
+                            docs = docsIndividuais;
+                            log(`✅ Encontrado ${docs.length} documentos em campos individuais`, 'success');
+                        } else if (docsIndividuais.length > docs.length) {
+                            // Se tem mais individuais que no array, usa os individuais
+                            docs = docsIndividuais;
+                            log(`✅ Usando campos individuais (${docs.length} documentos)`, 'success');
+                        }
+                        
+                        // 4. Campo único imagem_base64
+                        if (data.imagem_base64 && docs.length === 0) {
                             docs = [{ tipo: 'documento', imagem_base64: data.imagem_base64 }];
                             log(`✅ Encontrado 1 documento (imagem única)`, 'success');
-                        } else if (data.foto || data.cnh || data.crlv || data.carro || data.antecedentes) {
-                            // Tenta pegar campos individuais
-                            const campos = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
-                            campos.forEach(campo => {
-                                if (data[campo]) {
-                                    docs.push({ tipo: campo, imagem_base64: data[campo] });
-                                }
-                            });
-                            log(`✅ Encontrado ${docs.length} documentos em campos individuais`, 'success');
-                        } else {
-                            log(`⚠️ Nenhum documento encontrado na resposta`, 'warning');
                         }
+                        
+                        // 5. Lista de documentos em formato diferente
+                        if (data.lista_documentos && Array.isArray(data.lista_documentos) && docs.length === 0) {
+                            docs = data.lista_documentos;
+                            log(`✅ Encontrado ${docs.length} documentos em 'lista_documentos'`, 'success');
+                        }
+                        
                     } else {
                         log(`❌ Erro na requisição: ${res.status}`, 'error');
                     }
@@ -572,23 +607,15 @@
                     log(`❌ Erro ao buscar documentos: ${e.message}`, 'error');
                 }
                 
-                // Se não encontrou, tenta do localStorage do motorista
-                if (docs.length === 0) {
-                    log('🔍 Tentando buscar do localStorage...', 'info');
-                    const localDocs = localStorage.getItem(`motorista_documentos_${motId}`);
-                    if (localDocs) {
-                        try {
-                            const parsed = JSON.parse(localDocs);
-                            if (parsed.documentos) {
-                                docs = Object.entries(parsed.documentos).map(([tipo, imagem]) => ({
-                                    tipo: tipo,
-                                    imagem_base64: imagem
-                                }));
-                                log(`✅ Encontrado ${docs.length} documentos no localStorage`, 'success');
-                            }
-                        } catch (e) {}
-                    }
-                }
+                // ===== MOSTRA O QUE FOI ENCONTRADO =====
+                log(`📊 Total de documentos encontrados: ${docs.length}`, 'info');
+                
+                // Lista cada documento encontrado
+                docs.forEach((doc, i) => {
+                    const tipo = doc.tipo || doc.nome || 'documento';
+                    const temImagem = !!(doc.imagem_base64 || doc.imagem || doc.url);
+                    log(`📎 Doc ${i+1}: ${tipo} - ${temImagem ? '✅ com imagem' : '❌ sem imagem'}`, temImagem ? 'success' : 'warning');
+                });
                 
                 document.getElementById('loadingDocs').style.display = 'none';
                 
@@ -603,7 +630,7 @@
                 `;
                 document.getElementById('infoMotoristaDocs').style.display = 'block';
                 
-                // Exibe os documentos
+                // ===== EXIBE OS DOCUMENTOS =====
                 if (!docs || docs.length === 0) {
                     document.getElementById('semDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').style.display = 'none';
@@ -626,7 +653,6 @@
                         
                         // Se a imagem não começa com data:image, adiciona o prefixo
                         if (imagem && !imagem.startsWith('data:image')) {
-                            // Verifica se é um base64 puro
                             if (imagem.match(/^[A-Za-z0-9+/=]+$/)) {
                                 imagem = `data:image/jpeg;base64,${imagem}`;
                             } else if (imagem.startsWith('iVBORw0KGgo')) {
@@ -638,17 +664,17 @@
                         
                         const tipo = doc.tipo || 'documento';
                         const nomeExibicao = nomes[tipo] || tipo;
-                        
-                        log(`📎 Doc ${index+1}: ${nomeExibicao} - ${imagem ? '✅ com imagem' : '❌ sem imagem'}`, imagem ? 'success' : 'warning');
+                        const temImagem = imagem && imagem.length > 20;
                         
                         html += `
                             <div class="documento-card">
-                                <h4>${nomeExibicao}</h4>
-                                ${imagem ? 
+                                <h4>${nomeExibicao} ${temImagem ? '<span class="doc-status-badge ok">✅ OK</span>' : '<span class="doc-status-badge fail">❌ Sem imagem</span>'}</h4>
+                                ${temImagem ? 
                                     `<img src="${imagem}" class="documento-imagem" 
                                           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;" 
                                           alt="${nomeExibicao}">` :
-                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>`
+                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>
+                                     <p style="color:#64748B; font-size:12px;">Tipo: ${tipo}</p>`
                                 }
                             </div>
                         `;
@@ -657,8 +683,10 @@
                     
                     document.getElementById('imagensDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').innerHTML = html;
-                    log(`✅ ${docs.length} documento(s) exibido(s)`, 'success');
-                    toast(`✅ ${docs.length} documento(s) carregado(s)!`, 'success');
+                    
+                    const comImagem = docs.filter(d => d.imagem_base64 || d.imagem || d.url).length;
+                    log(`✅ ${docs.length} documento(s) - ${comImagem} com imagem`, 'success');
+                    toast(`✅ ${docs.length} documento(s) carregado(s) (${comImagem} com imagem)`, 'success');
                 }
                 
             } catch (error) {
