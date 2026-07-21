@@ -1079,7 +1079,42 @@ def admin_dashboard2():
         })
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
-
+#==========Admin aprovar docs======
+@app.route('/admin/aprovar_documentos/<int:mot_id>', methods=['POST'])
+def admin_aprovar_documentos(mot_id):
+    """Aprova ou reprova os documentos do motorista"""
+    try:
+        dados = request.get_json()
+        aprovado = dados.get('aprovado', True)
+        
+        print(f"📋 Tentando {'APROVAR' if aprovado else 'REPROVAR'} documentos do motorista {mot_id}")
+        
+        motorista = db.session.get(Usuario, mot_id)
+        if not motorista:
+            print(f"❌ Motorista {mot_id} não encontrado")
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        motorista.documentos_aprovados = aprovado
+        motorista.documentos_enviados = True
+        
+        if aprovado:
+            motorista.data_aprovacao_docs = datetime.utcnow()
+        
+        db.session.commit()
+        
+        status = 'aprovado' if aprovado else 'reprovado'
+        print(f"✅ Documentos {status} para motorista {motorista.nome}")
+        
+        return jsonify({
+            'status': status,
+            'motorista_id': mot_id,
+            'documentos_aprovados': aprovado
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao aprovar: {e}")
+        return jsonify({'erro': str(e)}), 500
 # ==========================================
 # SOCKET.IO
 # ==========================================
