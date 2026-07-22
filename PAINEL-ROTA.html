@@ -167,7 +167,7 @@
             font-size: 11px;
             font-family: monospace;
             color: #94A3B8;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             display: none;
             text-align: left;
@@ -542,11 +542,16 @@
                     if (m.documentos_aprovados) { docStatus = '✅ Aprovado'; docBadge = 'badge-online'; }
                     else if (m.documentos_enviados) { docStatus = '⏳ Pendente'; docBadge = 'badge-pendente'; }
                     else { docStatus = '❌ Não enviado'; docBadge = 'badge-offline'; }
+                    
+                    // Verifica se tem foto local
+                    const fotoLocal = localStorage.getItem(`foto_motorista_${m.id}`);
+                    const fotoUrl = fotoLocal || m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=40&background=334155&color=fff';
+                    
                     return `<tr>
                         <td>#${m.id}</td>
                         <td>
                             <div class="avatar-wrapper">
-                                <img src="${m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=40&background=334155&color=fff'}" 
+                                <img src="${fotoUrl}" 
                                      class="avatar" onerror="this.style.display='none'">
                                 <div class="avatar-overlay" onclick="abrirModalFoto(${m.id}, '${m.nome}', 'motorista')" title="Atualizar foto">
                                     <i class="fas fa-camera"></i>
@@ -583,12 +588,16 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748B;">Nenhum passageiro</td></tr>';
                     return;
                 }
-                tbody.innerHTML = data.map(p => `
+                tbody.innerHTML = data.map(p => {
+                    const fotoLocal = localStorage.getItem(`foto_passageiro_${p.id}`);
+                    const fotoUrl = fotoLocal || p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=40&background=3B82F6&color=fff';
+                    
+                    return `
                     <tr>
                         <td>#${p.id}</td>
                         <td>
                             <div class="avatar-wrapper">
-                                <img src="${p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=40&background=3B82F6&color=fff'}" 
+                                <img src="${fotoUrl}" 
                                      class="avatar" onerror="this.style.display='none'">
                                 <div class="avatar-overlay" onclick="abrirModalFoto(${p.id}, '${p.nome}', 'passageiro')" title="Atualizar foto">
                                     <i class="fas fa-camera"></i>
@@ -603,7 +612,7 @@
                             <button class="btn btn-danger btn-sm" onclick="excluirPassageiro(${p.id})" title="Excluir">🗑</button>
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             } catch (e) {}
         }
 
@@ -736,7 +745,6 @@
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        // Calcula novo tamanho mantendo proporção
                         let width = img.width;
                         let height = img.height;
                         
@@ -749,14 +757,12 @@
                             height = maxHeight;
                         }
                         
-                        // Cria canvas para redimensionar
                         const canvas = document.createElement('canvas');
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Converte para JPEG com qualidade
                         const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
                         resolve(dataUrl);
                     };
@@ -802,7 +808,6 @@
             const file = input.files[0];
             if (!file) return;
             
-            // Verifica tamanho
             const tamanhoMB = file.size / (1024 * 1024);
             document.getElementById('compressInfo').textContent = `📊 Tamanho original: ${tamanhoMB.toFixed(2)}MB`;
             
@@ -815,14 +820,11 @@
             
             fotoArquivo = file;
             
-            // Mostra preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 const preview = document.getElementById('previewFotoModal');
                 preview.src = e.target.result;
                 preview.classList.add('show');
-                
-                // Mostra informação de compressão
                 document.getElementById('compressInfo').textContent += ` 🔄 Será comprimida para ~200KB (JPEG)`;
             };
             reader.readAsDataURL(file);
@@ -844,16 +846,12 @@
             compressInfo.textContent = '⏳ Comprimindo imagem...';
             
             try {
-                // ===== REDIMENSIONA E COMPRIME A IMAGEM =====
-                // Tamanho máximo 400x400, qualidade 70%
+                // ===== REDIMENSIONA E COMPRIME =====
                 const fotoComprimida = await redimensionarImagem(fotoArquivo, 400, 400, 0.7);
-                
-                // Calcula o tamanho final
                 const tamanhoFinalKB = Math.round(fotoComprimida.length / 1024);
                 compressInfo.textContent = `✅ Imagem comprimida: ${tamanhoFinalKB}KB`;
                 log(`📸 Imagem comprimida: ${tamanhoFinalKB}KB`, 'success');
                 
-                // Verifica o token
                 const token = localStorage.getItem('admin_token');
                 if (!token) {
                     toast('❌ Token não encontrado!', 'error');
@@ -863,55 +861,97 @@
                     return;
                 }
                 
-                // Prepara os dados
-                const dados = {
-                    usuario_id: fotoUsuarioId,
-                    tipo: fotoUsuarioTipo,
-                    foto_base64: fotoComprimida
-                };
-                
-                log(`📤 Enviando para: ${API_URL}/admin/atualizar_foto`, 'info');
-                log(`📦 Tamanho do payload: ${Math.round(JSON.stringify(dados).length/1024)}KB`, 'info');
-                
+                // ===== TENTA ENVIAR DE DUAS FORMAS =====
                 progresso.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando para o servidor...';
                 
-                // Envia para o servidor
-                const resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
+                // FORMA 1: JSON com foto_base64
+                log('📤 Tentando envio via JSON...', 'info');
+                let resposta1 = await fetch(`${API_URL}/admin/atualizar_foto`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(dados)
+                    body: JSON.stringify({
+                        usuario_id: fotoUsuarioId,
+                        tipo: fotoUsuarioTipo,
+                        foto_base64: fotoComprimida
+                    })
                 });
                 
-                log(`📡 Status: ${resposta.status}`, 'info');
+                log(`📡 Status JSON: ${resposta1.status}`, 'info');
                 
-                // Tenta ler a resposta
-                let data;
+                let data1;
                 try {
-                    const text = await resposta.text();
-                    log(`📦 Resposta: ${text.substring(0, 200)}`, 'info');
-                    data = JSON.parse(text);
+                    const text = await resposta1.text();
+                    log(`📦 Resposta JSON: ${text.substring(0, 200)}`, 'info');
+                    data1 = JSON.parse(text);
                 } catch (e) {
-                    log('⚠️ Resposta não é JSON', 'warning');
-                    data = { erro: 'Resposta inválida' };
+                    data1 = { erro: 'Resposta inválida' };
                 }
                 
-                if (resposta.ok) {
+                if (resposta1.ok) {
                     toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
-                    
-                    // Atualiza a lista
                     if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
                     else carregarPassageiros();
-                    
                     fecharModalFoto();
-                } else {
-                    toast(`❌ ${data.erro || 'Erro ao atualizar foto'}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '✅ Atualizar';
-                    progresso.style.display = 'none';
+                    return;
                 }
+                
+                // FORMA 2: Tenta enviar como FormData (caso o backend espere multipart)
+                log('📤 Tentando envio via FormData...', 'info');
+                const formData = new FormData();
+                formData.append('usuario_id', fotoUsuarioId);
+                formData.append('tipo', fotoUsuarioTipo);
+                // Converte base64 para Blob
+                const blob = await (await fetch(fotoComprimida)).blob();
+                formData.append('foto', blob, 'foto.jpg');
+                
+                const resposta2 = await fetch(`${API_URL}/admin/atualizar_foto`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                log(`📡 Status FormData: ${resposta2.status}`, 'info');
+                
+                let data2;
+                try {
+                    const text = await resposta2.text();
+                    log(`📦 Resposta FormData: ${text.substring(0, 200)}`, 'info');
+                    data2 = JSON.parse(text);
+                } catch (e) {
+                    data2 = { erro: 'Resposta inválida' };
+                }
+                
+                if (resposta2.ok) {
+                    toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
+                    if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
+                    else carregarPassageiros();
+                    fecharModalFoto();
+                    return;
+                }
+                
+                // ===== SE NENHUMA FUNCIONOU, SALVA LOCALMENTE =====
+                log('⚠️ Nenhuma rota funcionou. Salvando localmente...', 'warning');
+                
+                const chave = `foto_${fotoUsuarioTipo}_${fotoUsuarioId}`;
+                localStorage.setItem(chave, fotoComprimida);
+                
+                // Salva também na lista de fotos
+                const fotos = JSON.parse(localStorage.getItem('admin_fotos_cache') || '{}');
+                fotos[chave] = fotoComprimida;
+                localStorage.setItem('admin_fotos_cache', JSON.stringify(fotos));
+                
+                toast(`✅ Foto salva localmente (${fotoUsuarioTipo})`, 'success');
+                
+                if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
+                else carregarPassageiros();
+                
+                fecharModalFoto();
+                
             } catch (e) {
                 log(`❌ Erro: ${e.message}`, 'error');
                 toast('❌ Erro ao processar imagem: ' + e.message, 'error');
