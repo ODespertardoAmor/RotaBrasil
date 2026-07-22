@@ -107,7 +107,7 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.show { display: flex; }
         .modal-box { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 90%; max-width: 500px; text-align: center; max-height: 90vh; overflow-y: auto; }
-        .modal-box input[type="file"] { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; margin: 15px 0; }
+        .modal-box input[type="url"] { width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; margin: 10px 0; }
         .modal-box .preview-foto { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #334155; margin: 10px auto; display: none; }
         .modal-box .preview-foto.show { display: block; }
         
@@ -167,7 +167,7 @@
             font-size: 11px;
             font-family: monospace;
             color: #94A3B8;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
             display: none;
             text-align: left;
@@ -214,11 +214,9 @@
         .acao-botoes { display: flex; gap: 5px; flex-wrap: wrap; }
         .acao-botoes .btn { margin: 2px; }
         
-        .compress-info {
-            font-size: 12px;
-            color: #94A3B8;
-            margin-top: 5px;
-        }
+        .link-info { font-size: 12px; color: #94A3B8; margin-top: 5px; display: none; }
+        .link-info.valido { color: #10B981; display: block; }
+        .link-info.invalido { color: #EF4444; display: block; }
     </style>
 </head>
 <body>
@@ -264,6 +262,7 @@
         </div>
 
         <div class="content">
+            <!-- TAB MOTORISTAS -->
             <div class="tab-content active" id="tab-motoristas">
                 <div class="table-container">
                     <div class="table-header">
@@ -282,6 +281,8 @@
                     </div>
                 </div>
             </div>
+
+            <!-- TAB PASSAGEIROS -->
             <div class="tab-content" id="tab-passageiros">
                 <div class="table-container">
                     <div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
@@ -291,6 +292,8 @@
                     </table></div>
                 </div>
             </div>
+
+            <!-- TAB CORRIDAS -->
             <div class="tab-content" id="tab-corridas">
                 <div class="table-container">
                     <div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
@@ -300,6 +303,8 @@
                     </table></div>
                 </div>
             </div>
+
+            <!-- TAB AVALIAÇÕES -->
             <div class="tab-content" id="tab-avaliacoes">
                 <div class="table-container">
                     <div class="table-header"><h3>Avaliações</h3></div>
@@ -309,6 +314,8 @@
                     </table></div>
                 </div>
             </div>
+
+            <!-- TAB TRANSAÇÕES -->
             <div class="tab-content" id="tab-transacoes">
                 <div class="table-container">
                     <div class="table-header"><h3>Transações</h3></div>
@@ -318,6 +325,8 @@
                     </table></div>
                 </div>
             </div>
+
+            <!-- TAB TARIFAS -->
             <div class="tab-content" id="tab-tarifas">
                 <div class="table-container">
                     <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
@@ -348,20 +357,46 @@
         </div>
     </div>
 
-    <!-- MODAL FOTO -->
+    <!-- MODAL FOTO - VERSÃO COM LINK -->
     <div class="modal-overlay" id="modalFoto">
         <div class="modal-box">
             <h3 id="modalFotoTitulo">📸 Atualizar Foto</h3>
             <p id="modalFotoInfo" style="color:#94A3B8; font-size:14px;"></p>
-            <img class="preview-foto" id="previewFotoModal" src="" alt="Preview">
-            <input type="file" id="inputFotoModal" accept="image/*" onchange="previewFotoModal(this)">
-            <div id="compressInfo" class="compress-info"></div>
+            
+            <!-- CAMPO PARA COLE O LINK -->
+            <div style="text-align: left; margin-top: 10px;">
+                <label style="color:#94A3B8; font-size:13px; display:block; margin-bottom:5px;">
+                    <i class="fas fa-link"></i> URL da imagem:
+                </label>
+                <input type="url" id="inputFotoLink" 
+                       placeholder="https://exemplo.com/foto.jpg" 
+                       style="width:100%; padding:12px; background:#0F172A; border:1px solid #334155; border-radius:8px; color:white; font-size:14px;">
+                <div style="margin-top:8px; display:flex; gap:8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="testarLinkFoto()" style="flex:1;">
+                        <i class="fas fa-eye"></i> Testar
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="limparLinkFoto()" style="flex:1;">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PREVIEW DO LINK -->
+            <img class="preview-foto" id="previewFotoModal" src="" alt="Preview" style="margin-top:10px;">
+            
+            <div id="linkInfo" class="link-info">
+                <i class="fas fa-check-circle" style="color:#00B42A;"></i> Link válido
+            </div>
+            
             <div style="display:flex;gap:10px;margin-top:15px;">
-                <button class="btn btn-success" onclick="confirmarFoto()" style="flex:1;" id="btnConfirmarFoto">✅ Atualizar</button>
+                <button class="btn btn-success" onclick="confirmarFotoLink()" style="flex:1;" id="btnConfirmarFoto">
+                    ✅ Atualizar com Link
+                </button>
                 <button class="btn btn-danger" onclick="fecharModalFoto()" style="flex:1;">❌ Cancelar</button>
             </div>
+            
             <div id="fotoProgresso" style="display:none; margin-top:10px; color:#94A3B8;">
-                <i class="fas fa-spinner fa-spin"></i> Processando...
+                <i class="fas fa-spinner fa-spin"></i> Atualizando...
             </div>
         </div>
     </div>
@@ -401,7 +436,7 @@
         let usuarioSaldoId = null;
         let fotoUsuarioId = null;
         let fotoUsuarioTipo = null;
-        let fotoArquivo = null;
+        let fotoLinkAtual = null;
         let motoristaDocumentosId = null;
         let motoristasCache = [];
 
@@ -543,9 +578,7 @@
                     else if (m.documentos_enviados) { docStatus = '⏳ Pendente'; docBadge = 'badge-pendente'; }
                     else { docStatus = '❌ Não enviado'; docBadge = 'badge-offline'; }
                     
-                    // Verifica se tem foto local
-                    const fotoLocal = localStorage.getItem(`foto_motorista_${m.id}`);
-                    const fotoUrl = fotoLocal || m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=40&background=334155&color=fff';
+                    const fotoUrl = m.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(m.nome) + '&size=40&background=334155&color=fff';
                     
                     return `<tr>
                         <td>#${m.id}</td>
@@ -589,8 +622,7 @@
                     return;
                 }
                 tbody.innerHTML = data.map(p => {
-                    const fotoLocal = localStorage.getItem(`foto_passageiro_${p.id}`);
-                    const fotoUrl = fotoLocal || p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=40&background=3B82F6&color=fff';
+                    const fotoUrl = p.foto_perfil || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.nome) + '&size=40&background=3B82F6&color=fff';
                     
                     return `
                     <tr>
@@ -738,61 +770,23 @@
             await aprovarDocumentos(motoristaDocumentosId, aprovado);
         }
 
-        // ========== REDIMENSIONAR IMAGEM ==========
-        function redimensionarImagem(file, maxWidth = 400, maxHeight = 400, qualidade = 0.7) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > maxWidth) {
-                            height = (maxWidth / width) * height;
-                            width = maxWidth;
-                        }
-                        if (height > maxHeight) {
-                            width = (maxHeight / height) * width;
-                            height = maxHeight;
-                        }
-                        
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
-                        resolve(dataUrl);
-                    };
-                    img.onerror = function() {
-                        reject(new Error('Erro ao carregar a imagem'));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.onerror = function() {
-                    reject(new Error('Erro ao ler o arquivo'));
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // ========== MODAL FOTO - CORRIGIDO ==========
+        // ========== MODAL FOTO - VERSÃO COM LINK ==========
         function abrirModalFoto(id, nome, tipo) {
             fotoUsuarioId = id;
             fotoUsuarioTipo = tipo;
-            fotoArquivo = null;
+            fotoLinkAtual = null;
             
             document.getElementById('modalFotoTitulo').textContent = `📸 Atualizar Foto - ${nome}`;
             document.getElementById('modalFotoInfo').textContent = `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} #${id}`;
+            
+            document.getElementById('inputFotoLink').value = '';
             document.getElementById('previewFotoModal').classList.remove('show');
             document.getElementById('previewFotoModal').src = '';
-            document.getElementById('inputFotoModal').value = '';
+            document.getElementById('linkInfo').className = 'link-info';
+            document.getElementById('linkInfo').textContent = '';
             document.getElementById('fotoProgresso').style.display = 'none';
-            document.getElementById('compressInfo').textContent = '';
             document.getElementById('btnConfirmarFoto').disabled = false;
-            document.getElementById('btnConfirmarFoto').innerHTML = '✅ Atualizar';
+            document.getElementById('btnConfirmarFoto').innerHTML = '✅ Atualizar com Link';
             
             document.getElementById('modalFoto').classList.add('show');
         }
@@ -801,164 +795,147 @@
             document.getElementById('modalFoto').classList.remove('show');
             fotoUsuarioId = null;
             fotoUsuarioTipo = null;
-            fotoArquivo = null;
+            fotoLinkAtual = null;
         }
 
-        function previewFotoModal(input) {
-            const file = input.files[0];
-            if (!file) return;
+        document.getElementById('modalFoto').addEventListener('click', function(e) {
+            if (e.target === this) fecharModalFoto();
+        });
+
+        function testarLinkFoto() {
+            const link = document.getElementById('inputFotoLink').value.trim();
+            const infoEl = document.getElementById('linkInfo');
             
-            const tamanhoMB = file.size / (1024 * 1024);
-            document.getElementById('compressInfo').textContent = `📊 Tamanho original: ${tamanhoMB.toFixed(2)}MB`;
-            
-            if (file.size > 10 * 1024 * 1024) {
-                toast('❌ Imagem muito grande! Máximo 10MB.', 'error');
-                input.value = '';
-                document.getElementById('compressInfo').textContent = '❌ Imagem muito grande!';
+            if (!link) {
+                infoEl.className = 'link-info invalido';
+                infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Cole uma URL primeiro!';
+                infoEl.style.display = 'block';
                 return;
             }
             
-            fotoArquivo = file;
+            try {
+                new URL(link);
+            } catch (e) {
+                infoEl.className = 'link-info invalido';
+                infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> URL inválida!';
+                infoEl.style.display = 'block';
+                return;
+            }
             
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const preview = document.getElementById('previewFotoModal');
-                preview.src = e.target.result;
-                preview.classList.add('show');
-                document.getElementById('compressInfo').textContent += ` 🔄 Será comprimida para ~200KB (JPEG)`;
+            // Testa a imagem
+            const preview = document.getElementById('previewFotoModal');
+            preview.src = link;
+            preview.classList.add('show');
+            
+            preview.onload = function() {
+                infoEl.className = 'link-info valido';
+                infoEl.innerHTML = '<i class="fas fa-check-circle"></i> Imagem carregou com sucesso!';
+                infoEl.style.display = 'block';
+                fotoLinkAtual = link;
+                toast('✅ Imagem carregada!', 'success');
             };
-            reader.readAsDataURL(file);
+            
+            preview.onerror = function() {
+                infoEl.className = 'link-info invalido';
+                infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Erro ao carregar imagem. Verifique o link.';
+                infoEl.style.display = 'block';
+                fotoLinkAtual = null;
+                toast('❌ Erro ao carregar imagem', 'error');
+            };
         }
 
-        async function confirmarFoto() {
-            if (!fotoArquivo) {
-                toast('❌ Selecione uma imagem primeiro!', 'error');
+        function limparLinkFoto() {
+            document.getElementById('inputFotoLink').value = '';
+            document.getElementById('previewFotoModal').classList.remove('show');
+            document.getElementById('previewFotoModal').src = '';
+            document.getElementById('linkInfo').className = 'link-info';
+            document.getElementById('linkInfo').textContent = '';
+            fotoLinkAtual = null;
+        }
+
+        document.getElementById('inputFotoLink').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') testarLinkFoto();
+        });
+
+        async function confirmarFotoLink() {
+            const link = document.getElementById('inputFotoLink').value.trim();
+            const infoEl = document.getElementById('linkInfo');
+            
+            if (!link) {
+                infoEl.className = 'link-info invalido';
+                infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Cole uma URL da imagem!';
+                infoEl.style.display = 'block';
+                toast('❌ Cole uma URL da imagem!', 'error');
+                return;
+            }
+            
+            try {
+                new URL(link);
+            } catch (e) {
+                infoEl.className = 'link-info invalido';
+                infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> URL inválida!';
+                infoEl.style.display = 'block';
+                toast('❌ URL inválida!', 'error');
                 return;
             }
             
             const btn = document.getElementById('btnConfirmarFoto');
             const progresso = document.getElementById('fotoProgresso');
-            const compressInfo = document.getElementById('compressInfo');
             
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comprimindo...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
             progresso.style.display = 'block';
-            compressInfo.textContent = '⏳ Comprimindo imagem...';
+            progresso.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
             
             try {
-                // ===== REDIMENSIONA E COMPRIME =====
-                const fotoComprimida = await redimensionarImagem(fotoArquivo, 400, 400, 0.7);
-                const tamanhoFinalKB = Math.round(fotoComprimida.length / 1024);
-                compressInfo.textContent = `✅ Imagem comprimida: ${tamanhoFinalKB}KB`;
-                log(`📸 Imagem comprimida: ${tamanhoFinalKB}KB`, 'success');
-                
                 const token = localStorage.getItem('admin_token');
                 if (!token) {
                     toast('❌ Token não encontrado!', 'error');
                     btn.disabled = false;
-                    btn.innerHTML = '✅ Atualizar';
+                    btn.innerHTML = '✅ Atualizar com Link';
                     progresso.style.display = 'none';
                     return;
                 }
                 
-                // ===== TENTA ENVIAR DE DUAS FORMAS =====
-                progresso.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando para o servidor...';
+                const dados = {
+                    usuario_id: fotoUsuarioId,
+                    tipo: fotoUsuarioTipo,
+                    foto_url: link
+                };
                 
-                // FORMA 1: JSON com foto_base64
-                log('📤 Tentando envio via JSON...', 'info');
-                let resposta1 = await fetch(`${API_URL}/admin/atualizar_foto`, {
+                console.log('📤 Enviando link:', link);
+                
+                const resposta = await fetch(`${API_URL}/admin/atualizar_foto_url`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        usuario_id: fotoUsuarioId,
-                        tipo: fotoUsuarioTipo,
-                        foto_base64: fotoComprimida
-                    })
+                    body: JSON.stringify(dados)
                 });
                 
-                log(`📡 Status JSON: ${resposta1.status}`, 'info');
+                const data = await resposta.json();
                 
-                let data1;
-                try {
-                    const text = await resposta1.text();
-                    log(`📦 Resposta JSON: ${text.substring(0, 200)}`, 'info');
-                    data1 = JSON.parse(text);
-                } catch (e) {
-                    data1 = { erro: 'Resposta inválida' };
-                }
-                
-                if (resposta1.ok) {
+                if (resposta.ok) {
                     toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
+                    
                     if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
                     else carregarPassageiros();
+                    
                     fecharModalFoto();
-                    return;
+                } else {
+                    toast(`❌ ${data.erro || 'Erro ao atualizar foto'}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '✅ Atualizar com Link';
+                    progresso.style.display = 'none';
                 }
-                
-                // FORMA 2: Tenta enviar como FormData (caso o backend espere multipart)
-                log('📤 Tentando envio via FormData...', 'info');
-                const formData = new FormData();
-                formData.append('usuario_id', fotoUsuarioId);
-                formData.append('tipo', fotoUsuarioTipo);
-                // Converte base64 para Blob
-                const blob = await (await fetch(fotoComprimida)).blob();
-                formData.append('foto', blob, 'foto.jpg');
-                
-                const resposta2 = await fetch(`${API_URL}/admin/atualizar_foto`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-                
-                log(`📡 Status FormData: ${resposta2.status}`, 'info');
-                
-                let data2;
-                try {
-                    const text = await resposta2.text();
-                    log(`📦 Resposta FormData: ${text.substring(0, 200)}`, 'info');
-                    data2 = JSON.parse(text);
-                } catch (e) {
-                    data2 = { erro: 'Resposta inválida' };
-                }
-                
-                if (resposta2.ok) {
-                    toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
-                    if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
-                    else carregarPassageiros();
-                    fecharModalFoto();
-                    return;
-                }
-                
-                // ===== SE NENHUMA FUNCIONOU, SALVA LOCALMENTE =====
-                log('⚠️ Nenhuma rota funcionou. Salvando localmente...', 'warning');
-                
-                const chave = `foto_${fotoUsuarioTipo}_${fotoUsuarioId}`;
-                localStorage.setItem(chave, fotoComprimida);
-                
-                // Salva também na lista de fotos
-                const fotos = JSON.parse(localStorage.getItem('admin_fotos_cache') || '{}');
-                fotos[chave] = fotoComprimida;
-                localStorage.setItem('admin_fotos_cache', JSON.stringify(fotos));
-                
-                toast(`✅ Foto salva localmente (${fotoUsuarioTipo})`, 'success');
-                
-                if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
-                else carregarPassageiros();
-                
-                fecharModalFoto();
                 
             } catch (e) {
-                log(`❌ Erro: ${e.message}`, 'error');
-                toast('❌ Erro ao processar imagem: ' + e.message, 'error');
+                console.error('❌ Erro:', e);
+                toast('❌ Erro ao atualizar: ' + e.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '✅ Atualizar';
+                btn.innerHTML = '✅ Atualizar com Link';
                 progresso.style.display = 'none';
-                compressInfo.textContent = '❌ Erro ao comprimir imagem';
             }
         }
 
@@ -1119,9 +1096,6 @@
 
         document.getElementById('modalSaldo').addEventListener('click', function(e) {
             if (e.target === this) fecharModal();
-        });
-        document.getElementById('modalFoto').addEventListener('click', function(e) {
-            if (e.target === this) fecharModalFoto();
         });
         document.getElementById('modalValor').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') confirmarSaldo();
