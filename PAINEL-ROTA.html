@@ -213,6 +213,12 @@
         @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tarifas-form { grid-template-columns: 1fr; } }
         .acao-botoes { display: flex; gap: 5px; flex-wrap: wrap; }
         .acao-botoes .btn { margin: 2px; }
+        
+        .compress-info {
+            font-size: 12px;
+            color: #94A3B8;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -349,12 +355,13 @@
             <p id="modalFotoInfo" style="color:#94A3B8; font-size:14px;"></p>
             <img class="preview-foto" id="previewFotoModal" src="" alt="Preview">
             <input type="file" id="inputFotoModal" accept="image/*" onchange="previewFotoModal(this)">
+            <div id="compressInfo" class="compress-info"></div>
             <div style="display:flex;gap:10px;margin-top:15px;">
                 <button class="btn btn-success" onclick="confirmarFoto()" style="flex:1;" id="btnConfirmarFoto">✅ Atualizar</button>
                 <button class="btn btn-danger" onclick="fecharModalFoto()" style="flex:1;">❌ Cancelar</button>
             </div>
             <div id="fotoProgresso" style="display:none; margin-top:10px; color:#94A3B8;">
-                <i class="fas fa-spinner fa-spin"></i> Enviando...
+                <i class="fas fa-spinner fa-spin"></i> Processando...
             </div>
         </div>
     </div>
@@ -722,6 +729,49 @@
             await aprovarDocumentos(motoristaDocumentosId, aprovado);
         }
 
+        // ========== REDIMENSIONAR IMAGEM ==========
+        function redimensionarImagem(file, maxWidth = 400, maxHeight = 400, qualidade = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Calcula novo tamanho mantendo proporção
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxWidth) {
+                            height = (maxWidth / width) * height;
+                            width = maxWidth;
+                        }
+                        if (height > maxHeight) {
+                            width = (maxHeight / height) * width;
+                            height = maxHeight;
+                        }
+                        
+                        // Cria canvas para redimensionar
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Converte para JPEG com qualidade
+                        const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+                        resolve(dataUrl);
+                    };
+                    img.onerror = function() {
+                        reject(new Error('Erro ao carregar a imagem'));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    reject(new Error('Erro ao ler o arquivo'));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         // ========== MODAL FOTO - CORRIGIDO ==========
         function abrirModalFoto(id, nome, tipo) {
             fotoUsuarioId = id;
@@ -734,6 +784,7 @@
             document.getElementById('previewFotoModal').src = '';
             document.getElementById('inputFotoModal').value = '';
             document.getElementById('fotoProgresso').style.display = 'none';
+            document.getElementById('compressInfo').textContent = '';
             document.getElementById('btnConfirmarFoto').disabled = false;
             document.getElementById('btnConfirmarFoto').innerHTML = '✅ Atualizar';
             
@@ -751,19 +802,28 @@
             const file = input.files[0];
             if (!file) return;
             
-            if (file.size > 5 * 1024 * 1024) {
-                toast('❌ Imagem muito grande! Máximo 5MB.', 'error');
+            // Verifica tamanho
+            const tamanhoMB = file.size / (1024 * 1024);
+            document.getElementById('compressInfo').textContent = `📊 Tamanho original: ${tamanhoMB.toFixed(2)}MB`;
+            
+            if (file.size > 10 * 1024 * 1024) {
+                toast('❌ Imagem muito grande! Máximo 10MB.', 'error');
                 input.value = '';
+                document.getElementById('compressInfo').textContent = '❌ Imagem muito grande!';
                 return;
             }
             
             fotoArquivo = file;
             
+            // Mostra preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 const preview = document.getElementById('previewFotoModal');
                 preview.src = e.target.result;
                 preview.classList.add('show');
+                
+                // Mostra informação de compressão
+                document.getElementById('compressInfo').textContent += ` 🔄 Será comprimida para ~200KB (JPEG)`;
             };
             reader.readAsDataURL(file);
         }
@@ -776,15 +836,22 @@
             
             const btn = document.getElementById('btnConfirmarFoto');
             const progresso = document.getElementById('fotoProgresso');
+            const compressInfo = document.getElementById('compressInfo');
             
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comprimindo...';
             progresso.style.display = 'block';
+            compressInfo.textContent = '⏳ Comprimindo imagem...';
             
             try {
-                // Converte para base64
-                const base64 = await fileToBase64(fotoArquivo);
-                console.log('📸 Foto convertida, tamanho:', Math.round(base64.length/1024), 'KB');
+                // ===== REDIMENSIONA E COMPRIME A IMAGEM =====
+                // Tamanho máximo 400x400, qualidade 70%
+                const fotoComprimida = await redimensionarImagem(fotoArquivo, 400, 400, 0.7);
+                
+                // Calcula o tamanho final
+                const tamanhoFinalKB = Math.round(fotoComprimida.length / 1024);
+                compressInfo.textContent = `✅ Imagem comprimida: ${tamanhoFinalKB}KB`;
+                log(`📸 Imagem comprimida: ${tamanhoFinalKB}KB`, 'success');
                 
                 // Verifica o token
                 const token = localStorage.getItem('admin_token');
@@ -800,15 +867,13 @@
                 const dados = {
                     usuario_id: fotoUsuarioId,
                     tipo: fotoUsuarioTipo,
-                    foto_base64: base64
+                    foto_base64: fotoComprimida
                 };
                 
-                console.log('📤 Enviando para:', `${API_URL}/admin/atualizar_foto`);
-                console.log('📦 Dados enviados:', {
-                    usuario_id: dados.usuario_id,
-                    tipo: dados.tipo,
-                    foto_base64: base64.substring(0, 100) + '...'
-                });
+                log(`📤 Enviando para: ${API_URL}/admin/atualizar_foto`, 'info');
+                log(`📦 Tamanho do payload: ${Math.round(JSON.stringify(dados).length/1024)}KB`, 'info');
+                
+                progresso.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando para o servidor...';
                 
                 // Envia para o servidor
                 const resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
@@ -820,17 +885,16 @@
                     body: JSON.stringify(dados)
                 });
                 
-                console.log('📡 Status:', resposta.status);
-                console.log('📡 StatusText:', resposta.statusText);
+                log(`📡 Status: ${resposta.status}`, 'info');
                 
                 // Tenta ler a resposta
                 let data;
                 try {
                     const text = await resposta.text();
-                    console.log('📦 Resposta bruta:', text);
+                    log(`📦 Resposta: ${text.substring(0, 200)}`, 'info');
                     data = JSON.parse(text);
                 } catch (e) {
-                    console.log('⚠️ Resposta não é JSON');
+                    log('⚠️ Resposta não é JSON', 'warning');
                     data = { erro: 'Resposta inválida' };
                 }
                 
@@ -849,21 +913,13 @@
                     progresso.style.display = 'none';
                 }
             } catch (e) {
-                console.error('❌ Erro:', e);
-                toast('❌ Erro ao enviar foto: ' + e.message, 'error');
+                log(`❌ Erro: ${e.message}`, 'error');
+                toast('❌ Erro ao processar imagem: ' + e.message, 'error');
                 btn.disabled = false;
                 btn.innerHTML = '✅ Atualizar';
                 progresso.style.display = 'none';
+                compressInfo.textContent = '❌ Erro ao comprimir imagem';
             }
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(new Error('Falha ao ler o arquivo'));
-                reader.readAsDataURL(file);
-            });
         }
 
         // ========== CORRIDAS ==========
