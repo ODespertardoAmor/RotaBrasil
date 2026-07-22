@@ -258,7 +258,6 @@
         </div>
 
         <div class="content">
-            <!-- TAB MOTORISTAS -->
             <div class="tab-content active" id="tab-motoristas">
                 <div class="table-container">
                     <div class="table-header">
@@ -268,17 +267,7 @@
                     <div style="overflow-x:auto;">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Foto</th>
-                                    <th>Nome</th>
-                                    <th>Email</th>
-                                    <th>Carro</th>
-                                    <th>Placa</th>
-                                    <th>Docs</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
+                                <tr><th>ID</th><th>Foto</th><th>Nome</th><th>Email</th><th>Carro</th><th>Placa</th><th>Docs</th><th>Status</th><th>Ações</th></tr>
                             </thead>
                             <tbody id="listaMotoristas">
                                 <tr><td colspan="9" style="text-align:center;color:#64748B;">Carregando...</td></tr>
@@ -287,8 +276,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- TAB PASSAGEIROS -->
             <div class="tab-content" id="tab-passageiros">
                 <div class="table-container">
                     <div class="table-header"><h3>Passageiros</h3><button class="btn btn-primary btn-sm" onclick="carregarPassageiros()">🔄 Atualizar</button></div>
@@ -298,8 +285,6 @@
                     </table></div>
                 </div>
             </div>
-
-            <!-- TAB CORRIDAS -->
             <div class="tab-content" id="tab-corridas">
                 <div class="table-container">
                     <div class="table-header"><h3>Corridas</h3><button class="btn btn-primary btn-sm" onclick="carregarCorridas()">🔄 Atualizar</button></div>
@@ -309,8 +294,6 @@
                     </table></div>
                 </div>
             </div>
-
-            <!-- TAB AVALIAÇÕES -->
             <div class="tab-content" id="tab-avaliacoes">
                 <div class="table-container">
                     <div class="table-header"><h3>Avaliações</h3></div>
@@ -320,8 +303,6 @@
                     </table></div>
                 </div>
             </div>
-
-            <!-- TAB TRANSAÇÕES -->
             <div class="tab-content" id="tab-transacoes">
                 <div class="table-container">
                     <div class="table-header"><h3>Transações</h3></div>
@@ -331,8 +312,6 @@
                     </table></div>
                 </div>
             </div>
-
-            <!-- TAB TARIFAS -->
             <div class="tab-content" id="tab-tarifas">
                 <div class="table-container">
                     <div class="table-header"><h3>🔧 Configuração de Tarifas</h3></div>
@@ -511,7 +490,6 @@
             if (e.key === 'Enter') entrarPainel();
         });
 
-        // ========== TABS ==========
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -622,10 +600,8 @@
             } catch (e) {}
         }
 
-        // ========== VER DOCUMENTOS - COMPLETO ==========
+        // ========== VER DOCUMENTOS ==========
         async function verDocumentos(motId) {
-            console.log('📄 verDocumentos chamado para motorista ID:', motId);
-            
             document.getElementById('modalDocumentos').classList.add('show');
             document.getElementById('loadingDocs').style.display = 'block';
             document.getElementById('infoMotoristaDocs').style.display = 'none';
@@ -633,7 +609,6 @@
             document.getElementById('erroDocumentos').style.display = 'none';
             document.getElementById('semDocumentos').style.display = 'none';
             clearLogs();
-            
             motoristaDocumentosId = motId;
             
             try {
@@ -644,119 +619,62 @@
                     motorista = data.find(m => m.id === motId);
                     motoristasCache = data;
                 }
+                if (!motorista) throw new Error('Motorista não encontrado');
                 
-                if (!motorista) {
-                    throw new Error('Motorista não encontrado');
-                }
-                
-                log(`👤 Motorista: ${motorista.nome} (ID: ${motId})`, 'info');
-                log(`📋 Status documentos: ${motorista.documentos_enviados ? 'Enviados' : 'Não enviados'}`, 'info');
-                
+                log(`👤 Motorista: ${motorista.nome}`, 'info');
                 let docs = [];
-                let rawResponse = {};
                 
                 try {
-                    log(`🌐 GET /admin/ver_documentos/${motId}`, 'info');
                     const res = await fetch(`${API_URL}/admin/ver_documentos/${motId}`);
-                    log(`📡 Status: ${res.status}`, 'info');
-                    
                     if (res.ok) {
                         const data = await res.json();
-                        rawResponse = data;
-                        log(`📦 Dados recebidos: ${JSON.stringify(data).substring(0, 500)}`, 'info');
-                        
                         if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
                             docs = data.documentos;
-                            log(`✅ Encontrado ${docs.length} documentos na chave 'documentos'`, 'success');
                         }
-                        
-                        const camposIndividuais = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
-                        const docsIndividuais = [];
-                        camposIndividuais.forEach(campo => {
+                        const campos = ['foto', 'cnh', 'crlv', 'carro', 'antecedentes'];
+                        campos.forEach(campo => {
                             if (data[campo]) {
-                                docsIndividuais.push({ tipo: campo, imagem_base64: data[campo] });
-                                log(`✅ Campo '${campo}' encontrado`, 'success');
+                                docs.push({ tipo: campo, imagem_base64: data[campo] });
                             }
                         });
-                        
-                        if (docsIndividuais.length > 0 && docs.length === 0) {
-                            docs = docsIndividuais;
-                            log(`✅ Encontrado ${docs.length} documentos em campos individuais`, 'success');
-                        }
-                        
-                        if (data.imagem_base64 && docs.length === 0) {
-                            docs = [{ tipo: 'documento', imagem_base64: data.imagem_base64 }];
-                            log(`✅ Encontrado 1 documento (imagem única)`, 'success');
-                        }
                     }
-                } catch (e) {
-                    log(`❌ Erro ao buscar documentos: ${e.message}`, 'error');
-                }
+                } catch (e) {}
                 
                 document.getElementById('loadingDocs').style.display = 'none';
-                
                 document.getElementById('modalTituloDocs').textContent = `📋 Documentos de ${motorista.nome}`;
                 document.getElementById('infoMotoristaDocs').innerHTML = `
                     <strong>Email:</strong> ${motorista.email}<br>
-                    <strong>Telefone:</strong> ${motorista.telefone || 'N/A'}<br>
                     <strong>Veículo:</strong> ${motorista.carro || 'N/A'} - ${motorista.placa || 'N/A'}<br>
                     <strong>Status:</strong> ${motorista.documentos_aprovados ? '✅ Aprovado' : motorista.documentos_enviados ? '⏳ Pendente' : '❌ Não enviado'}<br>
-                    <strong>Total de documentos:</strong> ${docs.length}
+                    <strong>Total:</strong> ${docs.length} documentos
                 `;
                 document.getElementById('infoMotoristaDocs').style.display = 'block';
                 
                 if (!docs || docs.length === 0) {
                     document.getElementById('semDocumentos').style.display = 'block';
-                    document.getElementById('imagensDocumentos').style.display = 'none';
-                    log('📭 Nenhum documento encontrado', 'warning');
                     toast('📭 Nenhum documento encontrado', 'warning');
                 } else {
-                    const nomes = {
-                        'foto': '📸 Foto de Perfil',
-                        'cnh': '🪪 CNH',
-                        'crlv': '📄 CRLV',
-                        'carro': '🚗 Fotos do Carro',
-                        'antecedentes': '📋 Antecedentes',
-                        'documento': '📄 Documento'
-                    };
-                    
+                    const nomes = { 'foto': '📸 Foto', 'cnh': '🪪 CNH', 'crlv': '📄 CRLV', 'carro': '🚗 Carro', 'antecedentes': '📋 Anteced.' };
                     let html = '<div class="doc-grid">';
-                    docs.forEach((doc) => {
-                        let imagem = doc.imagem_base64 || doc.imagem || doc.url || '';
+                    docs.forEach(doc => {
+                        let imagem = doc.imagem_base64 || doc.imagem || '';
                         if (imagem && !imagem.startsWith('data:image')) {
-                            if (imagem.match(/^[A-Za-z0-9+/=]+$/)) {
-                                imagem = `data:image/jpeg;base64,${imagem}`;
-                            } else {
-                                imagem = `data:image/jpeg;base64,${imagem}`;
-                            }
+                            imagem = `data:image/jpeg;base64,${imagem}`;
                         }
                         const tipo = doc.tipo || 'documento';
-                        const nomeExibicao = nomes[tipo] || tipo;
-                        const temImagem = imagem && imagem.length > 20;
-                        
                         html += `
                             <div class="documento-card">
-                                <h4>${nomeExibicao} ${temImagem ? '<span class="doc-status-badge ok">✅ OK</span>' : '<span class="doc-status-badge fail">❌ Sem imagem</span>'}</h4>
-                                ${temImagem ? 
-                                    `<img src="${imagem}" class="documento-imagem" 
-                                          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%231E293B%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%22200%22 y=%22150%22 font-family=%22Arial%22 font-size=%2218%22 fill=%22%2394A3B8%22 text-anchor=%22middle%22%3EImagem indisponível%3C/text%3E%3C/svg%3E'; this.onerror=null;" 
-                                          alt="${nomeExibicao}">` :
-                                    `<p style="color:#F59E0B;">⚠️ Documento enviado, mas sem imagem</p>`
-                                }
+                                <h4>${nomes[tipo] || tipo}</h4>
+                                ${imagem ? `<img src="${imagem}" class="documento-imagem" onerror="this.onerror=null;this.src='';">` : '<p style="color:#F59E0B;">⚠️ Sem imagem</p>'}
                             </div>
                         `;
                     });
                     html += '</div>';
-                    
                     document.getElementById('imagensDocumentos').style.display = 'block';
                     document.getElementById('imagensDocumentos').innerHTML = html;
-                    const comImagem = docs.filter(d => d.imagem_base64 || d.imagem || d.url).length;
-                    log(`✅ ${docs.length} documento(s) - ${comImagem} com imagem`, 'success');
-                    toast(`✅ ${docs.length} documento(s) carregado(s)`, 'success');
+                    toast(`✅ ${docs.length} documentos carregados`, 'success');
                 }
-                
             } catch (error) {
-                console.error('❌ Erro ao ver documentos:', error);
                 document.getElementById('loadingDocs').style.display = 'none';
                 document.getElementById('erroDocumentos').textContent = `❌ ${error.message}`;
                 document.getElementById('erroDocumentos').style.display = 'block';
@@ -804,7 +722,7 @@
             await aprovarDocumentos(motoristaDocumentosId, aprovado);
         }
 
-        // ========== MODAL FOTO ==========
+        // ========== MODAL FOTO - CORRIGIDO ==========
         function abrirModalFoto(id, nome, tipo) {
             fotoUsuarioId = id;
             fotoUsuarioTipo = tipo;
@@ -864,29 +782,66 @@
             progresso.style.display = 'block';
             
             try {
+                // Converte para base64
                 const base64 = await fileToBase64(fotoArquivo);
+                console.log('📸 Foto convertida, tamanho:', Math.round(base64.length/1024), 'KB');
                 
+                // Verifica o token
                 const token = localStorage.getItem('admin_token');
+                if (!token) {
+                    toast('❌ Token não encontrado!', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '✅ Atualizar';
+                    progresso.style.display = 'none';
+                    return;
+                }
+                
+                // Prepara os dados
+                const dados = {
+                    usuario_id: fotoUsuarioId,
+                    tipo: fotoUsuarioTipo,
+                    foto_base64: base64
+                };
+                
+                console.log('📤 Enviando para:', `${API_URL}/admin/atualizar_foto`);
+                console.log('📦 Dados enviados:', {
+                    usuario_id: dados.usuario_id,
+                    tipo: dados.tipo,
+                    foto_base64: base64.substring(0, 100) + '...'
+                });
+                
+                // Envia para o servidor
                 const resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        usuario_id: fotoUsuarioId,
-                        tipo: fotoUsuarioTipo,
-                        foto_base64: base64
-                    })
+                    body: JSON.stringify(dados)
                 });
                 
-                const data = await resposta.json();
+                console.log('📡 Status:', resposta.status);
+                console.log('📡 StatusText:', resposta.statusText);
+                
+                // Tenta ler a resposta
+                let data;
+                try {
+                    const text = await resposta.text();
+                    console.log('📦 Resposta bruta:', text);
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.log('⚠️ Resposta não é JSON');
+                    data = { erro: 'Resposta inválida' };
+                }
                 
                 if (resposta.ok) {
                     toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
-                    fecharModalFoto();
+                    
+                    // Atualiza a lista
                     if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
                     else carregarPassageiros();
+                    
+                    fecharModalFoto();
                 } else {
                     toast(`❌ ${data.erro || 'Erro ao atualizar foto'}`, 'error');
                     btn.disabled = false;
@@ -894,7 +849,8 @@
                     progresso.style.display = 'none';
                 }
             } catch (e) {
-                toast('❌ Erro de conexão', 'error');
+                console.error('❌ Erro:', e);
+                toast('❌ Erro ao enviar foto: ' + e.message, 'error');
                 btn.disabled = false;
                 btn.innerHTML = '✅ Atualizar';
                 progresso.style.display = 'none';
@@ -905,7 +861,7 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e);
+                reader.onerror = (e) => reject(new Error('Falha ao ler o arquivo'));
                 reader.readAsDataURL(file);
             });
         }
