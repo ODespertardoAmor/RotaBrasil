@@ -67,7 +67,9 @@ class Usuario(db.Model):
     senha = db.Column(db.String(200), nullable=False)
     telefone = db.Column(db.String(20))
     tipo = db.Column(db.String(20), default="passageiro")
-    foto_perfil = db.Column(db.String(255), nullable=True)
+    #foto_perfil = db.Column(db.String(255), nullable=True)
+    foto_perfil = db.Column(db.Text, nullable=True)
+
     carro = db.Column(db.String(50), nullable=True)
     placa = db.Column(db.String(20), nullable=True)
     online = db.Column(db.Boolean, default=False)
