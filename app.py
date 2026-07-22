@@ -1754,6 +1754,290 @@ def admin_atualizar_foto():
         
         return jsonify({'status': 'Foto atualizada com sucesso!'}), 200
     except Exception as e:
+        return jsonify({'erro': str(e)}), 500 
+# ==========================================
+# CORREÇÃO 1: ALTERAR O MODELO (FAÇA ISSO UMA VEZ)
+# ==========================================
+# No modelo Usuario, altere:
+# foto_perfil = db.Column(db.String(255), nullable=True)
+# PARA:
+# foto_perfil = db.Column(db.Text, nullable=True)
+
+# Para aplicar a mudança, execute no terminal:
+# flask db migrate -m "Alterar foto_perfil para Text"
+# flask db upgrade
+
+# ==========================================
+# CORREÇÃO 2: ADICIONAR ROTAS FALTANTES
+# ==========================================
+
+@app.route('/motorista/perfil', methods=['GET'])
+@jwt_required()
+def motorista_perfil():
+    """Retorna o perfil do motorista"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        motorista = Usuario.query.get(motorista_id)
+        
+        if not motorista:
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        if motorista.tipo != 'motorista':
+            return jsonify({'erro': 'Usuário não é um motorista'}), 400
+        
+        # Conta corridas de hoje
+        hoje = datetime.utcnow().date()
+        corridas_hoje = Corrida.query.filter(
+            Corrida.motorista_id == motorista_id,
+            db.func.date(Corrida.created_at) == hoje,
+            Corrida.status == 'finalizada'
+        ).count()
+        
+        return jsonify({
+            'id': motorista.id,
+            'nome': motorista.nome,
+            'email': motorista.email,
+            'saldo': motorista.saldo or 0,
+            'online': motorista.online or False,
+            'corridas_hoje': corridas_hoje,
+            'documentos_aprovados': motorista.documentos_aprovados or False
+        }), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corridas/disponiveis', methods=['GET'])
+@jwt_required()
+def motorista_corridas_disponiveis():
+    """Lista corridas disponíveis para o motorista"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        motorista = Usuario.query.get(motorista_id)
+        
+        if not motorista or motorista.tipo != 'motorista':
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        # Busca corridas pendentes
+        corridas = Corrida.query.filter(
+            Corrida.status.in_(['pendente', 'buscando']),
+            Corrida.motorista_id.is_(None)
+        ).order_by(Corrida.created_at.desc()).limit(20).all()
+        
+        return jsonify([{
+            'id': c.id,
+            'origem': c.origem,
+            'destino': c.destino,
+            'valor': c.valor,
+            'distancia': c.distancia or 0,
+            'forma_pagamento': c.forma_pagamento
+        } for c in corridas]), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corrida/aceitar', methods=['POST'])
+@jwt_required()
+def motorista_aceitar_corrida():
+    """Aceita uma corrida"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        corrida_id = dados.get('corrida_id')
+        
+        if not corrida_id:
+            return jsonify({'erro': 'ID da corrida é obrigatório'}), 400
+        
+        motorista = Usuario.query.get(motorista_id)
+        if not motorista or motorista.tipo != 'motorista':
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        if not motorista.documentos_aprovados:
+            return jsonify({'erro': 'Documentos não aprovados'}), 403
+        
+        corrida = Corrida.query.get(corrida_id)
+        if not corrida:
+            return jsonify({'erro': 'Corrida não encontrada'}), 404
+        
+        if corrida.motorista_id is not None:
+            return jsonify({'erro': 'Corrida já foi aceita por outro motorista'}), 400
+        
+        corrida.motorista_id = motorista_id
+        corrida.status = 'aceita'
+        db.session.commit()
+        
+        # Notifica via socket
+        socketio.emit("corrida_aceita", {
+            "corrida_id": corrida.id,
+            "motorista_id": motorista.id,
+            "motorista_nome": motorista.nome,
+            "motorista_foto": motorista.foto_perfil,
+            "carro": motorista.carro,
+            "placa": motorista.placa
+        }, room=f"corrida_{corrida_id}")
+        
+        return jsonify({
+            'status': 'Corrida aceita com sucesso!',
+            'corrida_id': corrida.id
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corrida/recusar', methods=['POST'])
+@jwt_required()
+def motorista_recusar_corrida():
+    """Recusa uma corrida"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        corrida_id = dados.get('corrida_id')
+        
+        if not corrida_id:
+            return jsonify({'erro': 'ID da corrida é obrigatório'}), 400
+        
+        corrida = Corrida.query.get(corrida_id)
+        if not corrida:
+            return jsonify({'erro': 'Corrida não encontrada'}), 404
+        
+        return jsonify({'status': 'Corrida recusada'}), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corridas/andamento', methods=['GET'])
+@jwt_required()
+def motorista_corridas_andamento():
+    """Lista corridas em andamento do motorista"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        
+        corridas = Corrida.query.filter(
+            Corrida.motorista_id == motorista_id,
+            Corrida.status.in_(['aceita', 'iniciada', 'em_andamento'])
+        ).all()
+        
+        return jsonify([{
+            'id': c.id,
+            'origem': c.origem,
+            'destino': c.destino,
+            'valor': c.valor,
+            'status': c.status,
+            'forma_pagamento': c.forma_pagamento
+        } for c in corridas]), 200
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corrida/finalizar', methods=['POST'])
+@jwt_required()
+def motorista_finalizar_corrida():
+    """Finaliza uma corrida"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        corrida_id = dados.get('corrida_id')
+        
+        if not corrida_id:
+            return jsonify({'erro': 'ID da corrida é obrigatório'}), 400
+        
+        corrida = Corrida.query.get(corrida_id)
+        if not corrida:
+            return jsonify({'erro': 'Corrida não encontrada'}), 404
+        
+        if corrida.motorista_id != motorista_id:
+            return jsonify({'erro': 'Você não é o motorista desta corrida'}), 403
+        
+        corrida.status = 'finalizada'
+        corrida.data_finalizacao = datetime.utcnow()
+        
+        # Adiciona o valor ao saldo do motorista
+        motorista = Usuario.query.get(motorista_id)
+        if motorista:
+            # Verifica se tem carteira, se não cria
+            carteira = Carteira.query.filter_by(usuario_id=motorista_id).first()
+            if not carteira:
+                carteira = Carteira(usuario_id=motorista_id, saldo=0, saldo_bloqueado=0)
+                db.session.add(carteira)
+            
+            # Libera pagamento (se for pix)
+            if corrida.forma_pagamento == 'pix':
+                liberar_pagamento(corrida.passageiro_id, motorista_id, corrida.valor)
+            
+            # Registra transação
+            transacao = Transacao(
+                usuario_id=motorista_id,
+                tipo='credito',
+                valor=corrida.valor * 0.85,  # 15% plataforma
+                descricao=f'Corrida #{corrida.id} finalizada'
+            )
+            db.session.add(transacao)
+        
+        db.session.commit()
+        
+        socketio.emit('viagem_finalizada', {
+            'corrida_id': corrida_id,
+            'valor': corrida.valor,
+            'motorista_id': motorista_id
+        }, room=f"corrida_{corrida_id}")
+        
+        return jsonify({
+            'status': 'Corrida finalizada com sucesso!',
+            'valor': corrida.valor
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/corrida/cancelar', methods=['POST'])
+@jwt_required()
+def motorista_cancelar_corrida():
+    """Cancela uma corrida pelo motorista"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        corrida_id = dados.get('corrida_id')
+        
+        if not corrida_id:
+            return jsonify({'erro': 'ID da corrida é obrigatório'}), 400
+        
+        corrida = Corrida.query.get(corrida_id)
+        if not corrida:
+            return jsonify({'erro': 'Corrida não encontrada'}), 404
+        
+        if corrida.motorista_id != motorista_id:
+            return jsonify({'erro': 'Você não é o motorista desta corrida'}), 403
+        
+        corrida.status = 'cancelada'
+        db.session.commit()
+        
+        socketio.emit('corrida_cancelada', {'corrida_id': corrida_id}, room=f"corrida_{corrida_id}")
+        
+        return jsonify({'status': 'Corrida cancelada'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500
+
+@app.route('/motorista/online', methods=['POST'])
+@jwt_required()
+def motorista_online():
+    """Alterna o status online/offline do motorista"""
+    try:
+        motorista_id = int(get_jwt_identity())
+        dados = request.get_json()
+        online = dados.get('online', False)
+        
+        motorista = Usuario.query.get(motorista_id)
+        if not motorista:
+            return jsonify({'erro': 'Motorista não encontrado'}), 404
+        
+        if motorista.tipo != 'motorista':
+            return jsonify({'erro': 'Usuário não é um motorista'}), 400
+        
+        motorista.online = online
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'online' if online else 'offline',
+            'online': online
+        }), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
