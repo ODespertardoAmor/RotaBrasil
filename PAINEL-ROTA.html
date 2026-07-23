@@ -857,6 +857,8 @@
             if (e.key === 'Enter') testarLinkFoto();
         });
 
+        
+    
         async function confirmarFotoLink() {
     const link = document.getElementById('inputFotoLink').value.trim();
     const infoEl = document.getElementById('linkInfo');
@@ -897,18 +899,16 @@
             return;
         }
         
-        // 🔥 TENTA AS DUAS FORMAS
-        // Primeiro tenta com 'foto_perfil' (igual ao cadastro)
+        // 🔥 USA O MESMO CAMPO DO CADASTRO: 'foto_perfil'
         const dados = {
             usuario_id: fotoUsuarioId,
-            tipo: fotoUsuarioTipo,
-            foto_perfil: link  // ← MUDOU para foto_perfil
+            foto_perfil: link  // ← MESMO NOME DO CADASTRO!
         };
         
-        console.log('📤 Enviando link como foto_perfil:', link);
+        console.log('📤 Enviando:', dados);
         
-        // 🔥 TENTA A ROTA /admin/atualizar_foto
-        let resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
+        // 🔥 USA A NOVA ROTA
+        const resposta = await fetch(`${API_URL}/admin/atualizar_foto_perfil`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -917,33 +917,11 @@
             body: JSON.stringify(dados)
         });
         
-        // Se falhar (404), tenta a rota específica para link
-        if (resposta.status === 404) {
-            console.log('🔄 Rota /admin/atualizar_foto não encontrada, tentando /admin/atualizar_foto_url...');
-            
-            const dados2 = {
-                usuario_id: fotoUsuarioId,
-                tipo: fotoUsuarioTipo,
-                foto_url: link
-            };
-            
-            resposta = await fetch(`${API_URL}/admin/atualizar_foto_url`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(dados2)
-            });
-        }
-        
-        console.log('📡 Status:', resposta.status);
-        
         const data = await resposta.json();
         console.log('📦 Resposta:', data);
         
         if (resposta.ok) {
-            toast(`✅ Foto de ${fotoUsuarioTipo} atualizada com sucesso!`, 'success');
+            toast(`✅ Foto atualizada com sucesso!`, 'success');
             
             // Recarrega as listas
             if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
