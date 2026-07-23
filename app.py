@@ -2065,30 +2065,39 @@ def motorista_online():
     except Exception as e:
         db.session.rollback()
         return jsonify({'erro': str(e)}), 500  
-@app.route('/admin/atualizar_foto_url', methods=['POST'])
+@app.route('/admin/atualizar_foto_perfil', methods=['POST'])
 @jwt_required()
-def admin_atualizar_foto_url():
-    """Atualiza a foto do usuário com uma URL (link)"""
+def admin_atualizar_foto_perfil():
+    """Atualiza a foto do usuário - MESMA LÓGICA DO CADASTRO"""
     try:
         dados = request.get_json()
         usuario_id = dados.get('usuario_id')
-        tipo = dados.get('tipo')
-        foto_url = dados.get('foto_url')
+        foto_perfil = dados.get('foto_perfil')  # ← MESMO NOME DO CADASTRO!
         
-        print(f"📸 Atualizando foto do {tipo} #{usuario_id} com link")
-        print(f"🔗 Link: {foto_url}")
+        print(f"📸 Atualizando foto do usuário #{usuario_id}")
+        print(f"🔗 Link: {foto_perfil}")
+        
+        if not foto_perfil:
+            return jsonify({'erro': 'URL da foto não fornecida'}), 400
         
         usuario = Usuario.query.get(usuario_id)
         if not usuario:
             return jsonify({'erro': 'Usuário não encontrado'}), 404
         
-        usuario.foto_perfil = foto_url
+        # 🔥 SALVA IGUAL AO CADASTRO
+        usuario.foto_perfil = foto_perfil
         db.session.commit()
         
-        return jsonify({'status': 'Foto atualizada com sucesso!'}), 200
+        print(f"✅ Foto atualizada com sucesso!")
+        
+        return jsonify({
+            'status': 'Foto atualizada com sucesso!',
+            'foto_perfil': usuario.foto_perfil
+        }), 200
         
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Erro: {str(e)}")
         return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
