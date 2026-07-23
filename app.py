@@ -2065,20 +2065,16 @@ def motorista_online():
     except Exception as e:
         db.session.rollback()
         return jsonify({'erro': str(e)}), 500  
-@app.route('/admin/atualizar_foto_perfil', methods=['POST'])
+@app.route('/admin/atualizar_foto', methods=['POST'])
 @jwt_required()
-def admin_atualizar_foto_perfil():
-    """Atualiza a foto do usuário - MESMA LÓGICA DO CADASTRO"""
+def admin_atualizar_foto():
     try:
         dados = request.get_json()
         usuario_id = dados.get('usuario_id')
-        foto_perfil = dados.get('foto_perfil')  # ← MESMO NOME DO CADASTRO!
+        foto_perfil = dados.get('foto_perfil')
         
-        print(f"📸 Atualizando foto do usuário #{usuario_id}")
-        print(f"🔗 Link: {foto_perfil}")
-        
-        if not foto_perfil:
-            return jsonify({'erro': 'URL da foto não fornecida'}), 400
+        if not usuario_id or not foto_perfil:
+            return jsonify({'erro': 'Dados incompletos'}), 400
         
         usuario = Usuario.query.get(usuario_id)
         if not usuario:
@@ -2088,16 +2084,10 @@ def admin_atualizar_foto_perfil():
         usuario.foto_perfil = foto_perfil
         db.session.commit()
         
-        print(f"✅ Foto atualizada com sucesso!")
-        
-        return jsonify({
-            'status': 'Foto atualizada com sucesso!',
-            'foto_perfil': usuario.foto_perfil
-        }), 200
+        return jsonify({'status': 'Foto atualizada com sucesso!'}), 200
         
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Erro: {str(e)}")
         return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
