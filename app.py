@@ -2040,6 +2040,31 @@ def motorista_online():
         }), 200
     except Exception as e:
         db.session.rollback()
+        return jsonify({'erro': str(e)}), 500  
+@app.route('/admin/atualizar_foto_url', methods=['POST'])
+@jwt_required()
+def admin_atualizar_foto_url():
+    """Atualiza a foto do usuário com uma URL (link)"""
+    try:
+        dados = request.get_json()
+        usuario_id = dados.get('usuario_id')
+        tipo = dados.get('tipo')
+        foto_url = dados.get('foto_url')
+        
+        print(f"📸 Atualizando foto do {tipo} #{usuario_id} com link")
+        print(f"🔗 Link: {foto_url}")
+        
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 404
+        
+        usuario.foto_perfil = foto_url
+        db.session.commit()
+        
+        return jsonify({'status': 'Foto atualizada com sucesso!'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'erro': str(e)}), 500        
 # ==========================================
 # INICIAR
