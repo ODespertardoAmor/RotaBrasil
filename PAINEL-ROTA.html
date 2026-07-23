@@ -857,27 +857,11 @@
             if (e.key === 'Enter') testarLinkFoto();
         });
 
-        
-    
         async function confirmarFotoLink() {
     const link = document.getElementById('inputFotoLink').value.trim();
-    const infoEl = document.getElementById('linkInfo');
     
     if (!link) {
-        infoEl.className = 'link-info invalido';
-        infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Cole uma URL da imagem!';
-        infoEl.style.display = 'block';
-        toast('❌ Cole uma URL da imagem!', 'error');
-        return;
-    }
-    
-    try {
-        new URL(link);
-    } catch (e) {
-        infoEl.className = 'link-info invalido';
-        infoEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> URL inválida!';
-        infoEl.style.display = 'block';
-        toast('❌ URL inválida!', 'error');
+        toast('❌ Cole uma URL!', 'error');
         return;
     }
     
@@ -887,62 +871,47 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
     progresso.style.display = 'block';
-    progresso.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     
     try {
         const token = localStorage.getItem('admin_token');
-        if (!token) {
-            toast('❌ Token não encontrado!', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '✅ Atualizar com Link';
-            progresso.style.display = 'none';
-            return;
-        }
         
-        // 🔥 USA O MESMO CAMPO DO CADASTRO: 'foto_perfil'
-        const dados = {
-            usuario_id: fotoUsuarioId,
-            foto_perfil: link  // ← MESMO NOME DO CADASTRO!
-        };
-        
-        console.log('📤 Enviando:', dados);
-        
-        // 🔥 USA A NOVA ROTA
-        const resposta = await fetch(`${API_URL}/admin/atualizar_foto_perfil`, {
+        // 🔥 SIMPLES: só envia o link
+        const resposta = await fetch(`${API_URL}/admin/atualizar_foto`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(dados)
+            body: JSON.stringify({
+                usuario_id: fotoUsuarioId,
+                foto_perfil: link
+            })
         });
         
         const data = await resposta.json();
-        console.log('📦 Resposta:', data);
         
         if (resposta.ok) {
-            toast(`✅ Foto atualizada com sucesso!`, 'success');
-            
-            // Recarrega as listas
+            toast(`✅ Foto atualizada!`, 'success');
             if (fotoUsuarioTipo === 'motorista') carregarMotoristas();
             else carregarPassageiros();
-            
             fecharModalFoto();
         } else {
-            toast(`❌ ${data.erro || 'Erro ao atualizar foto'}`, 'error');
+            toast(`❌ ${data.erro || 'Erro'}`, 'error');
             btn.disabled = false;
             btn.innerHTML = '✅ Atualizar com Link';
             progresso.style.display = 'none';
         }
         
     } catch (e) {
-        console.error('❌ Erro:', e);
-        toast('❌ Erro ao atualizar: ' + e.message, 'error');
+        toast('❌ Erro: ' + e.message, 'error');
         btn.disabled = false;
         btn.innerHTML = '✅ Atualizar com Link';
         progresso.style.display = 'none';
     }
 }
+    
+        
+        
 
         // ========== CORRIDAS ==========
         async function carregarCorridas() {
