@@ -1738,49 +1738,7 @@ def admin_ver_documentos(mot_id):
         
     except Exception as e:
         return jsonify({'erro': str(e)}), 500 
-@app.route('/admin/atualizar_foto', methods=['POST'])
-@jwt_required()
-def admin_atualizar_foto():
-    try:
-        dados = request.get_json()
-        print(f"📦 Dados recebidos: {dados}")
-        
-        usuario_id = dados.get('usuario_id')
-        tipo = dados.get('tipo')
-        foto_perfil = dados.get('foto_perfil') or dados.get('foto_url') or dados.get('link')
-        
-        if not usuario_id:
-            return jsonify({'erro': 'ID do usuário não fornecido'}), 400
-        
-        if not foto_perfil:
-            return jsonify({'erro': 'URL da foto não fornecida'}), 400
-        
-        # 🔥 BUSCA E SALVA
-        usuario = Usuario.query.get(usuario_id)
-        if not usuario:
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
-        
-        # 🔥 SALVA DIRETO
-        usuario.foto_perfil = foto_perfil
-        db.session.commit()
-        
-        # 🔥 VERIFICA SE SALVOU
-        usuario_atualizado = Usuario.query.get(usuario_id)
-        
-        return jsonify({
-            'status': 'Foto atualizada com sucesso!',
-            'usuario_id': usuario_id,
-            'tipo': tipo,
-            'foto_perfil': usuario_atualizado.foto_perfil,
-            'salvou': usuario_atualizado.foto_perfil == foto_perfil
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Erro: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'erro': str(e)}), 500
+
 # ==========================================
 # CORREÇÃO 1: ALTERAR O MODELO (FAÇA ISSO UMA VEZ)
 # ==========================================
